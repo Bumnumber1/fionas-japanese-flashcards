@@ -2310,6 +2310,16 @@
             document.getElementById('gfGameArea').style.display = 'block';
             document.getElementById('gfGameover').classList.remove('active');
 
+            // Show/hide mic based on support
+            gfMicSupported = !!GFSpeechRecognition;
+            document.getElementById('gfMicBtn').style.display = gfMicSupported ? 'flex' : 'none';
+            document.getElementById('gfMicHint').textContent = gfMicSupported
+                ? 'Tap mic & say the phrase, or tap Ask!'
+                : 'Tap Ask! to ask the AI';
+
+            // Resume audio context for iOS
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
             gfCheckPairs('player');
             gfCheckPairs('ai');
             gfRender();
@@ -2372,53 +2382,113 @@
             gfProcessPlayerAsk(card);
         }
 
+        let gfRecognition = null;
+        let gfMicSupported = !!GFSpeechRecognition;
+
         function gfStartListening() {
-            if (!GFSpeechRecognition) {
-                gfSetMsg('', 'Mic not supported - tap Ask!', '');
+            if (!gfMicSupported) {
+                gfSetMsg('', 'Mic not available - tap Ask!', '');
                 return;
             }
+
+            // Resume audio context (required on iOS after user gesture)
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            // Stop any previous recognition
+            if (gfRecognition) {
+                try { gfRecognition.abort(); } catch(e) {}
+            }
+
             const btn = document.getElementById('gfMicBtn');
+            const hint = document.getElementById('gfMicHint');
             btn.classList.add('recording');
-            document.getElementById('gfMicHint').textContent = 'Listening... say the phrase!';
+            hint.textContent = 'Listening... speak now!';
 
-            const recognition = new GFSpeechRecognition();
-            recognition.lang = 'ja-JP';
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 3;
+            const card = gfSelectedCard !== null ? gfPlayerCards[gfSelectedCard] : null;
+            if (!card) return;
 
-            recognition.onresult = (event) => {
-                btn.classList.remove('recording');
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('gfMicHint').textContent = `Heard: "${transcript}"`;
+            gfRecognition = new GFSpeechRecognition();
+            gfRecognition.lang = 'ja-JP';
+            gfRecognition.continuous = false;
+            gfRecognition.interimResults = true;
+            gfRecognition.maxAlternatives = 5;
 
-                if (gfSelectedCard !== null) {
-                    const card = gfPlayerCards[gfSelectedCard];
-                    // Check if the spoken phrase contains the card's Japanese text
-                    if (transcript.includes(card.japanese) || transcript.includes('もってい') || transcript.includes('持って')) {
+            let gotResult = false;
+
+            gfRecognition.onresult = (event) => {
+                // Show what's being heard in real time
+                let transcript = '';
+                let isFinal = false;
+                for (let i = 0; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                    if (event.results[i].isFinal) isFinal = true;
+                }
+
+                hint.textContent = `Hearing: "${transcript}"`;
+
+                if (isFinal && !gotResult) {
+                    gotResult = true;
+                    btn.classList.remove('recording');
+                    hint.textContent = `You said: "${transcript}"`;
+
+                    // Very lenient matching: accept if they said anything
+                    // containing the word, or any variant of motteimasu ka,
+                    // or even just any Japanese speech (they're practicing!)
+                    const jp = card.japanese;
+                    const loose = transcript.length > 0;
+                    const good = transcript.includes(jp) ||
+                                 transcript.includes('持って') ||
+                                 transcript.includes('もってい') ||
+                                 transcript.includes('もって') ||
+                                 transcript.includes('ますか');
+
+                    if (good) {
                         playSfx('correct');
+                        hint.textContent = `Great! "${transcript}"`;
+                        gfProcessPlayerAsk(card);
+                    } else if (loose) {
+                        // Accept any speech but give gentle feedback
+                        playSfx('correct');
+                        hint.textContent = `Good try! "${transcript}"`;
                         gfProcessPlayerAsk(card);
                     } else {
                         playSfx('wrong');
-                        gfSetMsg('', `Try again! Say: "${card.japanese} を もっていますか？"`, `Heard: "${transcript}"`);
+                        gfSetMsg('', `Try again! Say: "${jp} を もっていますか？"`, '');
+                        hint.textContent = 'Tap mic to try again, or tap Ask!';
                     }
                 }
             };
 
-            recognition.onerror = (event) => {
+            gfRecognition.onerror = (event) => {
                 btn.classList.remove('recording');
-                if (event.error === 'not-allowed') {
-                    document.getElementById('gfMicHint').textContent = 'Mic permission denied. Tap Ask! instead.';
+                console.log('Speech error:', event.error);
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    hint.textContent = 'Microphone permission needed. Use Ask! button.';
+                    gfMicSupported = false;
+                    btn.style.display = 'none';
+                } else if (event.error === 'no-speech') {
+                    hint.textContent = 'No speech detected. Tap mic and speak clearly.';
+                } else if (event.error === 'network') {
+                    hint.textContent = 'Network needed for speech. Use Ask! button.';
                 } else {
-                    document.getElementById('gfMicHint').textContent = 'Could not hear. Try again or tap Ask!';
+                    hint.textContent = `Mic error (${event.error}). Tap mic to retry or tap Ask!`;
                 }
             };
 
-            recognition.onend = () => {
+            gfRecognition.onend = () => {
                 btn.classList.remove('recording');
+                if (!gotResult) {
+                    hint.textContent = 'Didn\'t catch that. Tap mic to try again!';
+                }
             };
 
-            recognition.start();
+            try {
+                gfRecognition.start();
+            } catch(e) {
+                btn.classList.remove('recording');
+                hint.textContent = 'Mic error. Use Ask! button.';
+                console.log('Recognition start error:', e);
+            }
         }
 
         function gfProcessPlayerAsk(card) {
