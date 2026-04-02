@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fiona's Workbook">
+    <title>Fiona's Japanese Workbook</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 30%, #e0f7fa 60%, #fff3e0 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(255, 183, 197, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(179, 229, 252, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 245, 157, 0.2) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px 20px 16px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .header-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .header-links a {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 700;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .header-links a:active {
+            transform: scale(0.95);
+        }
+
+        .back-link {
+            background: linear-gradient(135deg, #fff9c4, #ffe0b2);
+            color: #f57f17;
+        }
+
+        .toc-link {
+            background: linear-gradient(135deg, #e1bee7, #ce93d8);
+            color: #6a1b9a;
+        }
+
+        /* Page Counter */
+        .page-counter {
+            text-align: center;
+            padding: 8px;
+            font-size: 1em;
+            font-weight: 700;
+            color: #78909c;
+            position: relative;
+            z-index: 10;
+        }
+
+        .page-counter .page-title {
+            display: block;
+            font-size: 0.85em;
+            color: #b0bec5;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Book Container */
+        .book-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 8px 12px 12px;
+            /* Fill remaining viewport */
+            min-height: calc(100vh - 180px);
+        }
+
+        .book-viewport {
+            position: relative;
+            width: 100%;
+            max-width: 720px;
+            aspect-ratio: auto;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow:
+                0 4px 24px rgba(0, 0, 0, 0.12),
+                0 1px 4px rgba(0, 0, 0, 0.08),
+                inset 0 0 0 1px rgba(0,0,0,0.04);
+        }
+
+        .page-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .page-wrapper img {
+            display: block;
+            width: 100%;
+            height: auto;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .page-wrapper img.slide-out-left {
+            opacity: 0;
+            transform: translateX(-60px);
+        }
+
+        .page-wrapper img.slide-out-right {
+            opacity: 0;
+            transform: translateX(60px);
+        }
+
+        .page-wrapper img.slide-in-left {
+            opacity: 0;
+            transform: translateX(60px);
+        }
+
+        .page-wrapper img.slide-in-right {
+            opacity: 0;
+            transform: translateX(-60px);
+        }
+
+        .page-wrapper img.slide-in-active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Navigation Arrows */
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            font-size: 1.6em;
+            color: #7b1fa2;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-btn:active {
+            transform: translateY(-50%) scale(0.9);
+            background: rgba(206, 147, 216, 0.5);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.25;
+            cursor: default;
+        }
+
+        .nav-btn:disabled:active {
+            transform: translateY(-50%) scale(1);
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .nav-prev {
+            left: 8px;
+        }
+
+        .nav-next {
+            right: 8px;
+        }
+
+        /* Swipe hint on first load */
+        .swipe-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            font-size: 0.85em;
+            font-weight: 700;
+            padding: 8px 20px;
+            border-radius: 20px;
+            z-index: 30;
+            pointer-events: none;
+            opacity: 0;
+            animation: hintFade 3s ease 1s forwards;
+        }
+
+        @keyframes hintFade {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; display: none; }
+        }
+
+        /* Table of Contents Overlay */
+        .toc-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .toc-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .toc-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .toc-panel {
+            position: relative;
+            width: 92%;
+            max-width: 500px;
+            max-height: 80vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px;
+            box-shadow: 0 16px 64px rgba(0,0,0,0.2);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(30px);
+            transition: transform 0.3s ease;
+        }
+
+        .toc-overlay.open .toc-panel {
+            transform: translateY(0);
+        }
+
+        .toc-header {
+            padding: 20px 24px 12px;
+            border-bottom: 2px solid rgba(0,0,0,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toc-header h2 {
+            font-size: 1.3em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .toc-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: linear-gradient(135deg, #ffcdd2, #f8bbd0);
+            border-radius: 50%;
+            font-size: 1.2em;
+            color: #c62828;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .toc-close:active {
+            transform: scale(0.9);
+        }
+
+        .toc-list {
+            list-style: none;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 16px 20px;
+        }
+
+        .toc-list li {
+            margin-bottom: 4px;
+        }
+
+        .toc-list button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #455a64;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toc-list button:active,
+        .toc-list button:hover {
+            background: linear-gradient(135deg, #f3e5f5, #e8eaf6);
+            color: #7b1fa2;
+        }
+
+        .toc-list button .toc-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ce93d8, #9fa8da);
+            color: #fff;
+            font-size: 0.8em;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .toc-list button.current {
+            background: linear-gradient(135deg, #e1bee7, #c5cae9);
+            color: #4a148c;
+        }
+
+        .toc-list button.current .toc-num {
+            background: linear-gradient(135deg, #ab47bc, #5c6bc0);
+        }
+
+        /* Progress bar */
+        .progress-bar-track {
+            height: 4px;
+            background: rgba(0,0,0,0.06);
+            position: relative;
+            z-index: 10;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            transition: width 0.4s ease;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .header {
+                padding: 14px 16px 12px;
+            }
+
+            .nav-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 1.4em;
+            }
+
+            .nav-prev {
+                left: 4px;
+            }
+
+            .nav-next {
+                right: 4px;
+            }
+
+            .book-container {
+                padding: 4px 6px 8px;
+                min-height: calc(100vh - 155px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.25em;
+            }
+
+            .nav-btn {
+                width: 42px;
+                height: 42px;
+                font-size: 1.2em;
+            }
+        }
+
+        /* Keyboard focus styles */
+        .nav-btn:focus-visible,
+        .toc-list button:focus-visible {
+            outline: 3px solid #7b1fa2;
+            outline-offset: 2px;
+        }
+
+        /* Loading shimmer */
+        .page-loading {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, #f5f5f5 25%, #e0e0e0 50%, #f5f5f5 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bdbdbd;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Fiona's Japanese Workbook</h1>
+        <div class="header-links">
+            <a href="index.html" class="back-link">Back to Flashcards</a>
+            <a href="#" class="toc-link" id="tocToggle">Contents</a>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressBar" style="width: 4.55%"></div>
+    </div>
+
+    <!-- Page Counter -->
+    <div class="page-counter">
+        <span id="pageCounter">Page 1 of 22</span>
+        <span class="page-title" id="pageTitle">Meeting Someone for the First Time</span>
+    </div>
+
+    <!-- Book Area -->
+    <div class="book-container">
+        <button class="nav-btn nav-prev" id="prevBtn" disabled aria-label="Previous page">&#9664;</button>
+
+        <div class="book-viewport" id="bookViewport">
+            <div class="page-wrapper" id="pageWrapper">
+                <div class="page-loading" id="pageLoading">Loading...</div>
+                <img id="pageImage" src="" alt="Workbook page" draggable="false" />
+            </div>
+            <div class="swipe-hint" id="swipeHint">Swipe or tap arrows to turn pages</div>
+        </div>
+
+        <button class="nav-btn nav-next" id="nextBtn" aria-label="Next page">&#9654;</button>
+    </div>
+
+    <!-- Table of Contents Overlay -->
+    <div class="toc-overlay" id="tocOverlay">
+        <div class="toc-backdrop" id="tocBackdrop"></div>
+        <div class="toc-panel">
+            <div class="toc-header">
+                <h2>Table of Contents</h2>
+                <button class="toc-close" id="tocClose" aria-label="Close table of contents">&times;</button>
+            </div>
+            <ul class="toc-list" id="tocList"></ul>
+        </div>
+    </div>
+
+    <script>
+        // Page data: ordered by lesson progression
+        const pages = [
+            { file: '26_MeetingSomeone_FirstTime.png', title: 'Meeting Someone for the First Time' },
+            { file: '25_GreetingPractice.png', title: 'Greeting Practice' },
+            { file: '22_JapanesePronouns.png', title: 'Japanese Pronouns' },
+            { file: '19_Possession_No.png', title: 'Possession with \u306e (no)' },
+            { file: '23_PleaseAndThankYou.png', title: 'Please and Thank You' },
+            { file: '06_PolitelySayingNo.png', title: 'Politely Saying No' },
+            { file: '17_DaysOfTheWeek.png', title: 'Days of the Week' },
+            { file: '16_TodayTomorrowYesterday.png', title: 'Today, Tomorrow, Yesterday' },
+            { file: '12_DoThingsOnDays.png', title: 'Do Things on Days' },
+            { file: '21_TelephoneNumbers.png', title: 'Telephone Numbers' },
+            { file: '18_EverydayObjects.png', title: 'Everyday Objects' },
+            { file: '15_Verbs_Vocabulary.png', title: 'Verbs Vocabulary' },
+            { file: '01_Shopping_VocabAndMatching.png', title: 'Shopping - Vocab and Matching' },
+            { file: '04_Shopping_SimpleVersion.png', title: 'Shopping - Simple Version' },
+            { file: '07_TastyWords_Desserts.png', title: 'Tasty Words / Desserts' },
+            { file: '11_BeforeAndAfterEating.png', title: 'Before and After Eating' },
+            { file: '08_AskingForFood_AtTable.png', title: 'Asking for Food at the Table' },
+            { file: '09_AskingForDrinks.png', title: 'Asking for Drinks' },
+            { file: '10_AskingAtTheTable.png', title: 'Asking at the Table' },
+            { file: '30_Flashcards_AnimalsAndMore.png', title: 'Flashcards - Animals and More' },
+            { file: '29_LetsPlay_SukiKirai.png', title: "Let's Play - Suki / Kirai" },
+            { file: '20_Practice_FillInBlanks.png', title: 'Practice - Fill in the Blanks' }
+        ];
+
+        const IMAGE_BASE = 'WorkbookPages_Correct/';
+        let currentPage = 0;
+        let isAnimating = false;
+
+        // DOM references
+        const pageImage = document.getElementById('pageImage');
+        const pageCounter = document.getElementById('pageCounter');
+        const pageTitle = document.getElementById('pageTitle');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const progressBar = document.getElementById('progressBar');
+        const pageLoading = document.getElementById('pageLoading');
+        const bookViewport = document.getElementById('bookViewport');
+        const tocOverlay = document.getElementById('tocOverlay');
+        const tocList = document.getElementById('tocList');
+        const tocToggle = document.getElementById('tocToggle');
+        const tocClose = document.getElementById('tocClose');
+        const tocBackdrop = document.getElementById('tocBackdrop');
+        const swipeHint = document.getElementById('swipeHint');
+
+        // Preload adjacent images for smooth transitions
+        function preloadImage(index) {
+            if (index >= 0 && index < pages.length) {
+                const img = new Image();
+                img.src = IMAGE_BASE + pages[index].file;
+            }
+        }
+
+        // Load and display a page
+        function showPage(index, direction) {
+            if (index < 0 || index >= pages.length || isAnimating) return;
+            isAnimating = true;
+
+            const outClass = direction === 'next' ? 'slide-out-left' : 'slide-out-right';
+            const inClass = direction === 'next' ? 'slide-in-left' : 'slide-in-right';
+
+            // Slide current image out
+            pageImage.classList.add(outClass);
+
+            setTimeout(() => {
+                // Update source
+                pageLoading.style.display = 'flex';
+                pageImage.style.visibility = 'hidden';
+                pageImage.classList.remove(outClass, 'slide-in-left', 'slide-in-right', 'slide-in-active');
+
+                pageImage.onload = function () {
+                    pageLoading.style.display = 'none';
+                    pageImage.style.visibility = 'visible';
+                    pageImage.classList.add(inClass);
+                    // Trigger reflow then animate in
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            pageImage.classList.add('slide-in-active');
+                            pageImage.classList.remove(inClass);
+                            setTimeout(() => {
+                                isAnimating = false;
+                            }, 350);
+                        });
+                    });
+                };
+
+                pageImage.onerror = function () {
+                    pageLoading.textContent = 'Image not found';
+                    pageImage.style.visibility = 'hidden';
+                    isAnimating = false;
+                };
+
+                pageImage.src = IMAGE_BASE + pages[index].file;
+                currentPage = index;
+                updateUI();
+
+                // Preload neighbors
+                preloadImage(index - 1);
+                preloadImage(index + 1);
+            }, 300);
+        }
+
+        function updateUI() {
+            pageCounter.textContent = `Page ${currentPage + 1} of ${pages.length}`;
+            pageTitle.textContent = pages[currentPage].title;
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage === pages.length - 1;
+            progressBar.style.width = ((currentPage + 1) / pages.length * 100) + '%';
+
+            // Update TOC current indicator
+            const tocButtons = tocList.querySelectorAll('button');
+            tocButtons.forEach((btn, i) => {
+                btn.classList.toggle('current', i === currentPage);
+            });
+        }
+
+        function goNext() {
+            if (currentPage < pages.length - 1) {
+                showPage(currentPage + 1, 'next');
+            }
+        }
+
+        function goPrev() {
+            if (currentPage > 0) {
+                showPage(currentPage - 1, 'prev');
+            }
+        }
+
+        function goToPage(index) {
+            if (index === currentPage) {
+                closeToc();
+                return;
+            }
+            const direction = index > currentPage ? 'next' : 'prev';
+            closeToc();
+            setTimeout(() => showPage(index, direction), 200);
+        }
+
+        // Button clicks
+        prevBtn.addEventListener('click', goPrev);
+        nextBtn.addEventListener('click', goNext);
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function (e) {
+            if (tocOverlay.classList.contains('open')) {
+                if (e.key === 'Escape') closeToc();
+                return;
+            }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goPrev();
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                e.preventDefault();
+                goNext();
+            }
+        });
+
+        // Touch swipe support
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchMoved = false;
+
+        bookViewport.addEventListener('touchstart', function (e) {
+            touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
+            touchMoved = false;
+        }, { passive: true });
+
+        bookViewport.addEventListener('touchmove', function (e) {
+            touchMoved = true;
+        }, { passive: true });
+
+        bookViewport.addEventListener('touchend', function (e) {
+            if (!touchMoved) return;
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffX = touchStartX - touchEndX;
+            const diffY = touchStartY - touchEndY;
+
+            // Only register horizontal swipes (must be more horizontal than vertical)
+            if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) {
+                    goNext(); // swipe left = next
+                } else {
+                    goPrev(); // swipe right = prev
+                }
+            }
+        }, { passive: true });
+
+        // Table of Contents
+        function buildToc() {
+            pages.forEach((page, i) => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                btn.innerHTML = `<span class="toc-num">${i + 1}</span><span>${page.title}</span>`;
+                if (i === currentPage) btn.classList.add('current');
+                btn.addEventListener('click', () => goToPage(i));
+                li.appendChild(btn);
+                tocList.appendChild(li);
+            });
+        }
+
+        function openToc() {
+            updateUI(); // refresh current indicators
+            tocOverlay.classList.add('open');
+            // Scroll current item into view
+            const currentBtn = tocList.querySelector('.current');
+            if (currentBtn) {
+                setTimeout(() => currentBtn.scrollIntoView({ block: 'center', behavior: 'smooth' }), 200);
+            }
+        }
+
+        function closeToc() {
+            tocOverlay.classList.remove('open');
+        }
+
+        tocToggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            openToc();
+        });
+
+        tocClose.addEventListener('click', closeToc);
+        tocBackdrop.addEventListener('click', closeToc);
+
+        // Initialize
+        buildToc();
+
+        // Load first page directly (no animation)
+        pageImage.onload = function () {
+            pageLoading.style.display = 'none';
+            pageImage.style.visibility = 'visible';
+            pageImage.style.opacity = '1';
+            isAnimating = false;
+        };
+        pageImage.onerror = function () {
+            pageLoading.textContent = 'Image not found';
+        };
+        pageImage.src = IMAGE_BASE + pages[0].file;
+        updateUI();
+        preloadImage(1);
+
+        // Hide swipe hint after animation
+        setTimeout(() => {
+            if (swipeHint) swipeHint.style.display = 'none';
+        }, 5000);
+    </script>
+</body>
+</html>
