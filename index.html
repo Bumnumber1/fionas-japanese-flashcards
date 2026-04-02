@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fiona's Japanese">
     <title>Fiona's Japanese Flashcards</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
@@ -221,6 +224,7 @@
             height: 100%;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
         }
 
         .flashcard.flipped .flashcard-inner {
@@ -232,6 +236,7 @@
             width: 100%;
             height: 100%;
             backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
             border-radius: 20px;
             display: flex;
             flex-direction: column;
@@ -723,17 +728,30 @@
             gap: 12px;
         }
 
+        .conc-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+        .conc-grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
+        .conc-grid.cols-8 { grid-template-columns: repeat(8, 1fr); }
+        .conc-grid.cols-10 { grid-template-columns: repeat(10, 1fr); }
+
         .conc-card {
             perspective: 800px;
             height: 130px;
             cursor: pointer;
         }
 
+        .conc-grid.cols-6 .conc-card,
+        .conc-grid.cols-5 .conc-card { height: 115px; }
+        .conc-grid.cols-8 .conc-card { height: 100px; }
+        .conc-grid.cols-10 .conc-card { height: 90px; }
+        .conc-grid.cols-8 .conc-text,
+        .conc-grid.cols-10 .conc-text { font-size: 1.1em; }
+
         .conc-card-inner {
             position: relative;
             width: 100%; height: 100%;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
         }
 
         .conc-card.flipped .conc-card-inner,
@@ -745,6 +763,7 @@
             position: absolute;
             width: 100%; height: 100%;
             backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
             border-radius: 16px;
             display: flex;
             flex-direction: column;
@@ -846,6 +865,93 @@
 
         .conc-play-again:hover { transform: translateY(-2px); }
 
+        /* Leaderboard & name input */
+        .conc-name-input {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .conc-name-input.active { display: block; }
+
+        .conc-name-input p {
+            font-weight: 700;
+            color: #ff6f00;
+            margin-bottom: 8px;
+        }
+
+        .conc-name-input input {
+            padding: 10px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1em;
+            font-weight: 700;
+            width: 180px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .conc-name-input input:focus { border-color: #7c4dff; }
+
+        .conc-name-input button {
+            margin-left: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #7c4dff, #536dfe);
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .conc-name-input button:hover { transform: translateY(-2px); }
+
+        .conc-leaderboard {
+            margin-top: 18px;
+            text-align: left;
+            max-width: 380px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .conc-leaderboard h3 {
+            text-align: center;
+            color: #546e7a;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .conc-lb-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        .conc-lb-table th {
+            background: #f5f5f5;
+            padding: 6px 10px;
+            font-weight: 700;
+            color: #78909c;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .conc-lb-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #eee;
+            color: #455a64;
+        }
+
+        .conc-lb-table tr.highlight td {
+            background: #fff9c4;
+            font-weight: 700;
+        }
+
+        .conc-lb-table .rank { font-weight: 800; color: #ff6f00; }
+
         /* Filter screen inside concentration overlay */
         .conc-filter-screen {
             max-width: 500px;
@@ -877,10 +983,28 @@
             cursor: pointer;
         }
 
+        /* iPad landscape */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .card-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+            .conc-grid { gap: 10px; }
+            .conc-card { height: 120px; }
+            .controls button { padding: 12px 24px; font-size: 1em; }
+        }
+
         @media (max-width: 600px) {
             .conc-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .conc-card { height: 110px; }
             .conc-card-back .conc-text { font-size: 1.2em; }
+        }
+
+        /* Touch-friendly: bigger tap targets */
+        @media (pointer: coarse) {
+            .audio-btn { width: 42px; height: 42px; font-size: 1.2em; }
+            .quiz-option { padding: 16px; font-size: 1.15em; }
+            .conc-card { min-height: 100px; }
+            .quiz-filter-grid label { padding: 8px 12px; font-size: 1em; }
+            .quiz-filter-grid input[type="checkbox"] { width: 22px; height: 22px; }
+            .conc-pair-select select { padding: 10px 16px; font-size: 1.05em; }
         }
 
         /* Print section (hidden on screen) */
@@ -1127,6 +1251,16 @@
                         <option value="8" selected>8</option>
                         <option value="10">10</option>
                         <option value="12">12</option>
+                        <option value="16">16</option>
+                        <option value="20">20</option>
+                        <option value="25">25</option>
+                        <option value="30">30</option>
+                        <option value="40">40</option>
+                        <option value="50">50</option>
+                        <option value="60">60</option>
+                        <option value="80">80</option>
+                        <option value="100">100</option>
+                        <option value="120">120</option>
                     </select>
                 </div>
                 <div class="conc-pair-select">
@@ -1154,6 +1288,12 @@
                     <div class="big-emoji" id="concCompleteEmoji"></div>
                     <h2 id="concCompleteTitle"></h2>
                     <p id="concCompleteMsg"></p>
+                    <div class="conc-name-input" id="concNameInput">
+                        <p id="concRecordMsg">New record! Enter your name:</p>
+                        <input type="text" id="concNameField" placeholder="Your name" maxlength="20">
+                        <button onclick="saveRecord()">Save</button>
+                    </div>
+                    <div class="conc-leaderboard" id="concLeaderboard"></div>
                     <button class="conc-play-again" onclick="openConcentration()">Play Again</button>
                 </div>
             </div>
@@ -1760,6 +1900,15 @@
             updateConcTurn();
             renderConcGrid();
 
+            // Set grid columns based on card count
+            const grid = document.getElementById('concGrid');
+            grid.className = 'conc-grid';
+            const totalCards = concCards.length;
+            if (totalCards > 160) grid.classList.add('cols-10');
+            else if (totalCards > 100) grid.classList.add('cols-8');
+            else if (totalCards > 40) grid.classList.add('cols-6');
+            else if (totalCards > 24) grid.classList.add('cols-5');
+
             clearInterval(concTimerInterval);
             concTimerInterval = setInterval(() => {
                 concSeconds++;
@@ -1873,21 +2022,21 @@
             const el = document.getElementById('concComplete');
             el.classList.add('active');
             const timeStr = `${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
+            const nameInput = document.getElementById('concNameInput');
+            const lbDiv = document.getElementById('concLeaderboard');
 
             if (concIs2P) {
-                let emoji, title, msg;
-                if (concP1Score > concP2Score) {
-                    emoji = '&#x1F3C6;'; title = 'Player 1 Wins!';
-                } else if (concP2Score > concP1Score) {
-                    emoji = '&#x1F3C6;'; title = 'Player 2 Wins!';
-                } else {
-                    emoji = '&#x1F91D;'; title = "It's a Tie!";
-                }
+                let emoji, title;
+                if (concP1Score > concP2Score) { emoji = '&#x1F3C6;'; title = 'Player 1 Wins!'; }
+                else if (concP2Score > concP1Score) { emoji = '&#x1F3C6;'; title = 'Player 2 Wins!'; }
+                else { emoji = '&#x1F91D;'; title = "It's a Tie!"; }
                 document.getElementById('concCompleteEmoji').innerHTML = emoji;
                 document.getElementById('concCompleteTitle').textContent = title;
                 document.getElementById('concCompleteMsg').innerHTML =
                     `<strong>P1: ${concP1Score}</strong> &nbsp; vs &nbsp; <strong>P2: ${concP2Score}</strong><br>` +
                     `${concMoves} moves in ${timeStr}`;
+                nameInput.classList.remove('active');
+                lbDiv.innerHTML = '';
             } else {
                 let emoji, title;
                 if (concMoves <= concTotal * 1.5) { emoji = '&#x1F3C6;'; title = 'Amazing Memory!'; }
@@ -1896,7 +2045,62 @@
                 document.getElementById('concCompleteEmoji').innerHTML = emoji;
                 document.getElementById('concCompleteTitle').textContent = title;
                 document.getElementById('concCompleteMsg').innerHTML = `You matched all <strong>${concTotal}</strong> pairs in <strong>${concMoves}</strong> moves and <strong>${timeStr}</strong>!`;
+
+                // Check if this is a record
+                const key = `conc_records_${concTotal}`;
+                const records = JSON.parse(localStorage.getItem(key) || '[]');
+                const isRecord = records.length < 10 || concSeconds < records[records.length - 1].time;
+
+                if (isRecord) {
+                    nameInput.classList.add('active');
+                    document.getElementById('concRecordMsg').textContent =
+                        records.length === 0 ? 'First completion! Enter your name:' : 'New record! Enter your name:';
+                    document.getElementById('concNameField').value = localStorage.getItem('conc_last_name') || '';
+                    document.getElementById('concNameField').focus();
+                } else {
+                    nameInput.classList.remove('active');
+                }
+
+                renderLeaderboard(concTotal, -1);
             }
+        }
+
+        function saveRecord() {
+            const name = document.getElementById('concNameField').value.trim() || 'Anonymous';
+            localStorage.setItem('conc_last_name', name);
+            const key = `conc_records_${concTotal}`;
+            const records = JSON.parse(localStorage.getItem(key) || '[]');
+            const timeStr = `${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
+            records.push({ name, time: concSeconds, timeStr, moves: concMoves, date: new Date().toLocaleDateString() });
+            records.sort((a, b) => a.time - b.time || a.moves - b.moves);
+            if (records.length > 10) records.length = 10;
+            localStorage.setItem(key, JSON.stringify(records));
+
+            document.getElementById('concNameInput').classList.remove('active');
+            playSfx('correct');
+
+            // Find the index of the just-saved record
+            const idx = records.findIndex(r => r.time === concSeconds && r.moves === concMoves && r.name === name);
+            renderLeaderboard(concTotal, idx);
+        }
+
+        function renderLeaderboard(pairCount, highlightIdx) {
+            const key = `conc_records_${pairCount}`;
+            const records = JSON.parse(localStorage.getItem(key) || '[]');
+            const div = document.getElementById('concLeaderboard');
+            if (records.length === 0) { div.innerHTML = ''; return; }
+
+            const medals = ['&#x1F947;', '&#x1F948;', '&#x1F949;'];
+            let html = `<h3>Best Times - ${pairCount} Pairs</h3>`;
+            html += `<table class="conc-lb-table">`;
+            html += `<tr><th>#</th><th>Name</th><th>Time</th><th>Moves</th></tr>`;
+            records.forEach((r, i) => {
+                const cls = i === highlightIdx ? ' class="highlight"' : '';
+                const rank = medals[i] || (i + 1);
+                html += `<tr${cls}><td class="rank">${rank}</td><td>${r.name}</td><td>${r.timeStr}</td><td>${r.moves}</td></tr>`;
+            });
+            html += `</table>`;
+            div.innerHTML = html;
         }
 
         function closeConcentration() {
