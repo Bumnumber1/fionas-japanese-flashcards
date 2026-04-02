@@ -144,6 +144,11 @@
             color: white;
         }
 
+        .btn-concentration {
+            background: linear-gradient(135deg, #ffcc80, #ffa726);
+            color: white;
+        }
+
         /* Score display */
         .score-bar {
             display: none;
@@ -638,6 +643,209 @@
             margin: 10px 0 20px;
         }
 
+        /* Concentration game overlay */
+        .conc-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .conc-overlay.active {
+            display: block;
+        }
+
+        .conc-close {
+            position: fixed;
+            top: 15px; right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+            z-index: 1010;
+        }
+
+        .conc-close:hover { transform: scale(1.2); }
+
+        .conc-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px 30px;
+        }
+
+        .conc-stats {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 18px;
+            font-weight: 700;
+            flex-wrap: wrap;
+        }
+
+        .conc-stats .conc-moves { color: #7c4dff; }
+        .conc-stats .conc-pairs { color: #43a047; }
+        .conc-stats .conc-timer { color: #ff6f00; }
+
+        .conc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .conc-card {
+            perspective: 800px;
+            height: 130px;
+            cursor: pointer;
+        }
+
+        .conc-card-inner {
+            position: relative;
+            width: 100%; height: 100%;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .conc-card.flipped .conc-card-inner,
+        .conc-card.matched .conc-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .conc-card-face {
+            position: absolute;
+            width: 100%; height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+
+        .conc-card-front {
+            background: linear-gradient(135deg, #7c4dff, #536dfe);
+            color: white;
+            font-size: 2.5em;
+        }
+
+        .conc-card-back {
+            background: white;
+            transform: rotateY(180deg);
+        }
+
+        .conc-card-back .conc-text {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #37474f;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .conc-card-back .conc-sub {
+            font-size: 0.75em;
+            color: #90a4ae;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .conc-card.matched .conc-card-back {
+            background: #e8f5e9;
+            border: 3px solid #66bb6a;
+        }
+
+        .conc-card.matched {
+            pointer-events: none;
+        }
+
+        .conc-card.wrong .conc-card-back {
+            animation: concShake 0.4s ease;
+        }
+
+        @keyframes concShake {
+            0%, 100% { transform: rotateY(180deg) translateX(0); }
+            25% { transform: rotateY(180deg) translateX(-6px); }
+            75% { transform: rotateY(180deg) translateX(6px); }
+        }
+
+        .conc-complete-msg {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 24px;
+            margin-top: 20px;
+        }
+
+        .conc-complete-msg.active { display: block; }
+        .conc-complete-msg .big-emoji { font-size: 3.5em; }
+        .conc-complete-msg h2 { font-size: 1.8em; margin: 10px 0; color: #37474f; }
+        .conc-complete-msg p { color: #546e7a; font-size: 1.1em; font-weight: 600; }
+
+        .conc-play-again {
+            margin-top: 14px;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #ffa726, #ff9800);
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .conc-play-again:hover { transform: translateY(-2px); }
+
+        /* Filter screen inside concentration overlay */
+        .conc-filter-screen {
+            max-width: 500px;
+            margin: 80px auto 0;
+            background: white;
+            border-radius: 28px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+
+        .conc-pair-select {
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 700;
+            color: #546e7a;
+        }
+
+        .conc-pair-select select {
+            padding: 8px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            .conc-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .conc-card { height: 110px; }
+            .conc-card-back .conc-text { font-size: 1.2em; }
+        }
+
         /* Print section (hidden on screen) */
         .print-section {
             display: none;
@@ -756,7 +964,7 @@
 
             body::before { display: none !important; }
 
-            .header, .controls, .score-bar, #cardContainer, .quiz-overlay, .audio-btn {
+            .header, .controls, .score-bar, #cardContainer, .quiz-overlay, .conc-overlay, .audio-btn {
                 display: none !important;
             }
 
@@ -805,6 +1013,7 @@
             <button class="btn-reset" onclick="resetAll()">Hide All</button>
             <button class="btn-quiz" onclick="startQuiz()">Quiz Me!</button>
             <button class="btn-print" onclick="printCards()">Print Cards</button>
+            <button class="btn-concentration" onclick="openConcentration()">Concentration</button>
         </div>
 
         <div class="score-bar" id="scoreBar">
@@ -856,6 +1065,48 @@
                 <div class="final-score" id="finalScore"></div>
                 <button class="quiz-next" style="display:inline-block" onclick="closeQuiz()">Done!</button>
                 <button class="quiz-next" style="display:inline-block; background: linear-gradient(135deg, #ff6f00, #ff8f00);" onclick="startQuiz()">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Concentration game overlay -->
+    <div class="conc-overlay" id="concOverlay">
+        <span class="conc-close" onclick="closeConcentration()">&times;</span>
+        <div class="conc-inner">
+            <div class="conc-filter-screen" id="concFilterScreen">
+                <h2 style="margin-bottom:6px;">Concentration</h2>
+                <p style="color:#90a4ae;font-weight:600;margin-bottom:16px;">Match the Japanese with the English!</p>
+                <div class="quiz-filter">
+                    <div class="quiz-filter-grid" id="concFilterGrid"></div>
+                    <div class="quiz-filter-actions">
+                        <button onclick="document.querySelectorAll('#concFilterGrid input').forEach(c=>c.checked=true)">Select All</button>
+                        <button onclick="document.querySelectorAll('#concFilterGrid input').forEach(c=>c.checked=false)">Deselect All</button>
+                    </div>
+                </div>
+                <div class="conc-pair-select">
+                    <label for="concPairCount">Number of pairs:</label>
+                    <select id="concPairCount">
+                        <option value="6">6</option>
+                        <option value="8" selected>8</option>
+                        <option value="10">10</option>
+                        <option value="12">12</option>
+                    </select>
+                </div>
+                <button class="quiz-start-btn" onclick="beginConcentration()">Start Game</button>
+            </div>
+            <div id="concGameArea" style="display:none;">
+                <div class="conc-stats">
+                    <span class="conc-moves" id="concMoves">Moves: 0</span>
+                    <span class="conc-pairs" id="concPairs">Pairs: 0 / 0</span>
+                    <span class="conc-timer" id="concTimer">Time: 0:00</span>
+                </div>
+                <div class="conc-grid" id="concGrid"></div>
+                <div class="conc-complete-msg" id="concComplete">
+                    <div class="big-emoji" id="concCompleteEmoji"></div>
+                    <h2 id="concCompleteTitle"></h2>
+                    <p id="concCompleteMsg"></p>
+                    <button class="conc-play-again" onclick="openConcentration()">Play Again</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1030,6 +1281,11 @@
             card.classList.toggle('flipped');
             if (card.classList.contains('flipped')) {
                 createSparkles(card);
+                // Speak the word when card is flipped
+                const idx = card.dataset.index;
+                if (idx !== undefined && words[idx]) {
+                    speak(words[idx].japanese);
+                }
             }
         }
 
@@ -1301,6 +1557,166 @@
             if (quizIndex < quizWords.length) {
                 speak(quizWords[quizIndex].japanese, document.getElementById('quizAudioBtn'));
             }
+        }
+
+        // Concentration game
+        let concPairCount = 8;
+        let concCards = [];
+        let concFlipped = [];
+        let concMatched = 0;
+        let concMoves = 0;
+        let concTotal = 0;
+        let concLocked = false;
+        let concTimerInterval = null;
+        let concSeconds = 0;
+
+        function openConcentration() {
+            const grid = document.getElementById('concFilterGrid');
+            const cats = [...new Set(words.map(w => w.category))];
+            grid.innerHTML = '';
+            cats.forEach(cat => {
+                const count = words.filter(w => w.category === cat).length;
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${cat}" checked> ${cat} (${count})`;
+                grid.appendChild(label);
+            });
+            document.getElementById('concFilterScreen').style.display = 'block';
+            document.getElementById('concGameArea').style.display = 'none';
+            document.getElementById('concOverlay').classList.add('active');
+            clearInterval(concTimerInterval);
+        }
+
+        function beginConcentration() {
+            const selected = [...document.querySelectorAll('#concFilterGrid input:checked')].map(cb => cb.value);
+            if (selected.length === 0) return;
+
+            concPairCount = parseInt(document.getElementById('concPairCount').value);
+            const pool = words.filter(w => selected.includes(w.category));
+            const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
+            const chosen = shuffledPool.slice(0, Math.min(concPairCount, shuffledPool.length));
+
+            // Create pairs: one card with Japanese, one with English
+            concCards = [];
+            chosen.forEach((w, i) => {
+                concCards.push({ id: i, type: 'jp', text: w.japanese, sub: w.romaji || '', pairId: i, word: w });
+                concCards.push({ id: i, type: 'en', text: w.english, sub: w.emoji ? '' : '', pairId: i, word: w });
+            });
+            // Shuffle cards
+            concCards.sort(() => Math.random() - 0.5);
+
+            concFlipped = [];
+            concMatched = 0;
+            concMoves = 0;
+            concTotal = chosen.length;
+            concLocked = false;
+            concSeconds = 0;
+
+            document.getElementById('concFilterScreen').style.display = 'none';
+            document.getElementById('concGameArea').style.display = 'block';
+            document.getElementById('concComplete').classList.remove('active');
+
+            updateConcStats();
+            renderConcGrid();
+
+            clearInterval(concTimerInterval);
+            concTimerInterval = setInterval(() => {
+                concSeconds++;
+                document.getElementById('concTimer').textContent = `Time: ${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        function renderConcGrid() {
+            const grid = document.getElementById('concGrid');
+            grid.innerHTML = '';
+            concCards.forEach((card, idx) => {
+                const div = document.createElement('div');
+                div.className = 'conc-card';
+                div.dataset.idx = idx;
+                div.onclick = () => flipConcCard(idx, div);
+                const emoji = card.word.emoji || '';
+                const emojiHtml = card.type === 'en' && emoji ? `<div style="font-size:1.5em;margin-bottom:2px;">${emoji}</div>` : '';
+                div.innerHTML = `
+                    <div class="conc-card-inner">
+                        <div class="conc-card-face conc-card-front">&#x2753;</div>
+                        <div class="conc-card-face conc-card-back">
+                            ${emojiHtml}
+                            <div class="conc-text">${card.text}</div>
+                            ${card.sub ? `<div class="conc-sub">${card.sub}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function flipConcCard(idx, el) {
+            if (concLocked) return;
+            if (el.classList.contains('flipped') || el.classList.contains('matched')) return;
+            if (concFlipped.length >= 2) return;
+
+            el.classList.add('flipped');
+            // Speak the Japanese text when card is flipped
+            speak(concCards[idx].word.japanese);
+            concFlipped.push({ idx, el });
+
+            if (concFlipped.length === 2) {
+                concMoves++;
+                updateConcStats();
+                const [a, b] = concFlipped;
+                const cardA = concCards[a.idx];
+                const cardB = concCards[b.idx];
+
+                if (cardA.pairId === cardB.pairId && cardA.type !== cardB.type) {
+                    // Match!
+                    setTimeout(() => {
+                        a.el.classList.add('matched');
+                        b.el.classList.add('matched');
+                        concMatched++;
+                        updateConcStats();
+                        concFlipped = [];
+                        if (concMatched === concTotal) {
+                            clearInterval(concTimerInterval);
+                            showConcComplete();
+                        }
+                    }, 500);
+                } else {
+                    // No match
+                    concLocked = true;
+                    setTimeout(() => {
+                        a.el.classList.add('wrong');
+                        b.el.classList.add('wrong');
+                    }, 300);
+                    setTimeout(() => {
+                        a.el.classList.remove('flipped', 'wrong');
+                        b.el.classList.remove('flipped', 'wrong');
+                        concFlipped = [];
+                        concLocked = false;
+                    }, 1100);
+                }
+            }
+        }
+
+        function updateConcStats() {
+            document.getElementById('concMoves').textContent = `Moves: ${concMoves}`;
+            document.getElementById('concPairs').textContent = `Pairs: ${concMatched} / ${concTotal}`;
+        }
+
+        function showConcComplete() {
+            const el = document.getElementById('concComplete');
+            el.classList.add('active');
+            const timeStr = `${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
+            let emoji, title;
+            if (concMoves <= concTotal * 1.5) { emoji = '&#x1F3C6;'; title = 'Amazing Memory!'; }
+            else if (concMoves <= concTotal * 2.5) { emoji = '&#x1F31F;'; title = 'Great Job!'; }
+            else { emoji = '&#x1F44D;'; title = 'Well Done!'; }
+            document.getElementById('concCompleteEmoji').innerHTML = emoji;
+            document.getElementById('concCompleteTitle').textContent = title;
+            document.getElementById('concCompleteMsg').innerHTML = `You matched all <strong>${concTotal}</strong> pairs in <strong>${concMoves}</strong> moves and <strong>${timeStr}</strong>!`;
+        }
+
+        function closeConcentration() {
+            document.getElementById('concOverlay').classList.remove('active');
+            clearInterval(concTimerInterval);
         }
 
         // Initialize
