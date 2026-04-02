@@ -2491,89 +2491,119 @@
             }
         }
 
+        let gfTurnTimer = null; // prevent overlapping timeouts
+
+        function gfClearTimer() {
+            if (gfTurnTimer) { clearTimeout(gfTurnTimer); gfTurnTimer = null; }
+        }
+
+        function gfHideResponseBtns() {
+            document.getElementById('gfResponseBtns').style.display = 'none';
+        }
+
         function gfProcessPlayerAsk(card) {
+            gfClearTimer();
             gfTurn = 'waiting';
+            gfHideResponseBtns();
             gfRender();
 
-            // Check if AI has a matching card
-            const aiIdx = gfAiCards.findIndex(c => c.japanese === card.japanese && c.uid !== card.uid);
+            const aiIdx = gfAiCards.findIndex(c => c.japanese === card.japanese);
 
             if (aiIdx !== -1) {
-                // AI has it!
+                // AI has it - player gets a pair!
                 gfSetMsg('AI', 'はい、どうぞ！', 'Yes, here you go!');
                 speak('はい、どうぞ');
                 playSfx('match');
-                setTimeout(() => {
+                gfTurnTimer = setTimeout(() => {
+                    if (!gfGameActive) return;
                     gfAiCards.splice(aiIdx, 1);
-                    gfPlayerCards.splice(gfPlayerCards.indexOf(card), 1);
+                    const pIdx = gfPlayerCards.indexOf(card);
+                    if (pIdx !== -1) gfPlayerCards.splice(pIdx, 1);
                     gfPlayerPairCount++;
                     gfPlayerPairsList.push(card);
                     gfSelectedCard = null;
-                    gfCheckGameEnd() || gfStartPlayerTurn();
+                    gfRender();
+                    if (!gfCheckGameEnd()) gfStartPlayerTurn(); // player goes again on match
                 }, 1800);
             } else {
                 // Go Fish!
                 gfSetMsg('AI', 'いいえ、Go Fish！', 'No, go fish!');
                 speak('いいえ、ゴーフィッシュ');
                 playSfx('wrong');
-                setTimeout(() => {
+                gfTurnTimer = setTimeout(() => {
+                    if (!gfGameActive) return;
                     if (gfDeck.length > 0) {
                         const drawn = gfDeck.pop();
                         gfPlayerCards.push(drawn);
                         gfSetMsg('', `You drew: ${drawn.japanese} (${drawn.english})`, '');
                         speak(drawn.japanese);
                         gfCheckPairs('player');
+                    } else {
+                        gfSetMsg('', 'Deck is empty! No card to draw.', '');
                     }
                     gfSelectedCard = null;
-                    setTimeout(() => {
-                        gfCheckGameEnd() || gfStartAiTurn();
+                    gfRender();
+                    gfTurnTimer = setTimeout(() => {
+                        if (!gfGameActive) return;
+                        if (!gfCheckGameEnd()) gfStartAiTurn();
                     }, 1200);
                 }, 1800);
             }
         }
 
         function gfStartPlayerTurn() {
+            gfClearTimer();
+            gfHideResponseBtns();
+            // Draw if hand empty but deck has cards
             if (gfPlayerCards.length === 0 && gfDeck.length > 0) {
                 gfPlayerCards.push(gfDeck.pop());
+                gfCheckPairs('player');
             }
-            if (gfPlayerCards.length === 0) { gfCheckGameEnd(); return; }
+            if (gfCheckGameEnd()) return;
             gfTurn = 'player';
+            gfSelectedCard = null;
             gfSetMsg('', 'Your turn! Tap a card to ask for it.', '');
             gfRender();
         }
 
         function gfStartAiTurn() {
+            gfClearTimer();
+            gfHideResponseBtns();
+            // Draw if hand empty but deck has cards
             if (gfAiCards.length === 0 && gfDeck.length > 0) {
                 gfAiCards.push(gfDeck.pop());
+                gfCheckPairs('ai');
             }
-            if (gfAiCards.length === 0) { gfCheckGameEnd(); return; }
+            if (gfCheckGameEnd()) return;
             gfTurn = 'ai';
             gfSelectedCard = null;
             gfRender();
 
-            // AI picks a card to ask for (prefers cards it has duplicates of, or random)
+            // AI picks a card to ask for (prefers singles)
             const cardCounts = {};
             gfAiCards.forEach(c => { cardCounts[c.japanese] = (cardCounts[c.japanese] || 0) + 1; });
-            // Pick a random card (prefer ones AI doesn't have pairs for yet)
             const singles = gfAiCards.filter(c => cardCounts[c.japanese] === 1);
-            const askCard = singles.length > 0 ? singles[Math.floor(Math.random() * singles.length)] : gfAiCards[Math.floor(Math.random() * gfAiCards.length)];
+            const askCard = singles.length > 0
+                ? singles[Math.floor(Math.random() * singles.length)]
+                : gfAiCards[Math.floor(Math.random() * gfAiCards.length)];
 
-            const phrase = `${askCard.japanese} を もっていますか？`;
-            gfSetMsg('AI', phrase, `Do you have ${askCard.english}?`);
-            speak(askCard.japanese + ' を もっていますか？');
-
-            // Show response buttons
-            const btns = document.getElementById('gfResponseBtns');
-            btns.style.display = 'flex';
-
-            // Store what AI is asking for
             gfAiAsking = askCard;
+
+            // Small delay so player sees it's AI's turn before the question
+            gfTurnTimer = setTimeout(() => {
+                if (!gfGameActive) return;
+                const phrase = `${askCard.japanese} を もっていますか？`;
+                gfSetMsg('AI', phrase, `Do you have ${askCard.english}?`);
+                speak(askCard.japanese + ' を もっていますか？');
+                document.getElementById('gfResponseBtns').style.display = 'flex';
+            }, 600);
         }
 
         let gfAiAsking = null;
 
         function gfPlayerRespond(saidHai) {
-            document.getElementById('gfResponseBtns').style.display = 'none';
+            gfClearTimer();
+            gfHideResponseBtns();
             const hasCard = gfPlayerCards.some(c => c.japanese === gfAiAsking.japanese);
 
             if (saidHai && hasCard) {
@@ -2581,35 +2611,39 @@
                 playSfx('correct');
                 speak('はい、どうぞ');
                 const idx = gfPlayerCards.findIndex(c => c.japanese === gfAiAsking.japanese);
-                const given = gfPlayerCards.splice(idx, 1)[0];
-                gfAiCards.splice(gfAiCards.indexOf(gfAiAsking), 1);
+                gfPlayerCards.splice(idx, 1);
+                const aiIdx = gfAiCards.indexOf(gfAiAsking);
+                if (aiIdx !== -1) gfAiCards.splice(aiIdx, 1);
                 gfAiPairCount++;
                 gfAiPairsList.push(gfAiAsking);
                 gfSetMsg('', `Correct! You gave ${gfAiAsking.japanese} to the AI.`, 'AI made a pair!');
                 gfRender();
-                setTimeout(() => {
-                    gfCheckGameEnd() || gfStartAiTurn();
+                gfTurnTimer = setTimeout(() => {
+                    if (!gfGameActive) return;
+                    if (!gfCheckGameEnd()) gfStartAiTurn(); // AI goes again on match
                 }, 1800);
             } else if (!saidHai && !hasCard) {
                 // Correct - player doesn't have it and said no
                 playSfx('correct');
                 speak('いいえ');
                 gfSetMsg('', 'Correct! AI goes fishing...', '');
-                setTimeout(() => {
-                    if (gfDeck.length > 0) gfAiCards.push(gfDeck.pop());
-                    gfCheckPairs('ai');
+                gfTurnTimer = setTimeout(() => {
+                    if (!gfGameActive) return;
+                    if (gfDeck.length > 0) {
+                        gfAiCards.push(gfDeck.pop());
+                        gfCheckPairs('ai');
+                    }
                     gfRender();
-                    setTimeout(() => {
-                        gfCheckGameEnd() || gfStartPlayerTurn();
+                    gfTurnTimer = setTimeout(() => {
+                        if (!gfGameActive) return;
+                        if (!gfCheckGameEnd()) gfStartPlayerTurn();
                     }, 800);
                 }, 1200);
             } else if (saidHai && !hasCard) {
-                // Wrong - said yes but doesn't have it
                 playSfx('wrong');
                 gfSetMsg('', `Look again! You don't have ${gfAiAsking.japanese}.`, 'Tap いいえ');
                 document.getElementById('gfResponseBtns').style.display = 'flex';
             } else {
-                // Wrong - said no but has it
                 playSfx('wrong');
                 gfSetMsg('', `Look again! You DO have ${gfAiAsking.japanese}!`, 'Tap はい');
                 document.getElementById('gfResponseBtns').style.display = 'flex';
@@ -2618,30 +2652,59 @@
 
         function gfCheckPairs(who) {
             const hand = who === 'player' ? gfPlayerCards : gfAiCards;
-            const counts = {};
-            hand.forEach(c => { counts[c.japanese] = (counts[c.japanese] || 0) + 1; });
-            for (const [jp, count] of Object.entries(counts)) {
-                if (count >= 2) {
-                    // Remove 2 cards of this type
-                    let removed = 0;
-                    for (let i = hand.length - 1; i >= 0 && removed < 2; i--) {
-                        if (hand[i].japanese === jp) { hand.splice(i, 1); removed++; }
+            let foundPair = true;
+            while (foundPair) {
+                foundPair = false;
+                const counts = {};
+                hand.forEach(c => { counts[c.japanese] = (counts[c.japanese] || 0) + 1; });
+                for (const [jp, count] of Object.entries(counts)) {
+                    if (count >= 2) {
+                        let removed = 0;
+                        for (let i = hand.length - 1; i >= 0 && removed < 2; i--) {
+                            if (hand[i].japanese === jp) { hand.splice(i, 1); removed++; }
+                        }
+                        const matchWord = gfPool.find(w => w.japanese === jp);
+                        if (who === 'player') { gfPlayerPairCount++; gfPlayerPairsList.push(matchWord); }
+                        else { gfAiPairCount++; gfAiPairsList.push(matchWord); }
+                        playSfx('match');
+                        foundPair = true;
+                        break; // restart count after modifying array
                     }
-                    const matchWord = gfPool.find(w => w.japanese === jp);
-                    if (who === 'player') { gfPlayerPairCount++; gfPlayerPairsList.push(matchWord); }
-                    else { gfAiPairCount++; gfAiPairsList.push(matchWord); }
-                    playSfx('match');
                 }
             }
         }
 
         function gfCheckGameEnd() {
-            const allEmpty = gfPlayerCards.length === 0 && gfAiCards.length === 0;
-            const deckEmpty = gfDeck.length === 0 && (gfPlayerCards.length === 0 || gfAiCards.length === 0);
-            if (!allEmpty && !deckEmpty) return false;
+            // Count total possible pairs from the pool used
+            const totalPossiblePairs = Math.floor((gfPlayerCards.length + gfAiCards.length + gfDeck.length + (gfPlayerPairCount + gfAiPairCount) * 2) / 2);
+            const allPairsFound = (gfPlayerPairCount + gfAiPairCount) === totalPossiblePairs;
+
+            const bothEmpty = gfPlayerCards.length === 0 && gfAiCards.length === 0;
+            const noMovesLeft = gfDeck.length === 0 && (gfPlayerCards.length === 0 || gfAiCards.length === 0);
+
+            // Also detect stuck: deck empty and neither player can match
+            let stuck = false;
+            if (gfDeck.length === 0 && gfPlayerCards.length > 0 && gfAiCards.length > 0) {
+                const playerWords = new Set(gfPlayerCards.map(c => c.japanese));
+                const aiWords = new Set(gfAiCards.map(c => c.japanese));
+                // Check if any word exists in both hands (potential ask-and-get)
+                let hasOverlap = false;
+                for (const w of playerWords) { if (aiWords.has(w)) { hasOverlap = true; break; } }
+                for (const w of aiWords) { if (playerWords.has(w)) { hasOverlap = true; break; } }
+                // Check if either hand has pairs within it
+                const pCounts = {}, aCounts = {};
+                gfPlayerCards.forEach(c => { pCounts[c.japanese] = (pCounts[c.japanese] || 0) + 1; });
+                gfAiCards.forEach(c => { aCounts[c.japanese] = (aCounts[c.japanese] || 0) + 1; });
+                const hasSelfPair = Object.values(pCounts).some(v => v >= 2) || Object.values(aCounts).some(v => v >= 2);
+                if (!hasOverlap && !hasSelfPair) stuck = true;
+            }
+
+            if (!allPairsFound && !bothEmpty && !noMovesLeft && !stuck) return false;
 
             gfGameActive = false;
             gfTurn = 'done';
+            gfClearTimer();
+            gfHideResponseBtns();
             gfRender();
 
             const el = document.getElementById('gfGameover');
@@ -2668,6 +2731,7 @@
         function closeGoFish() {
             document.getElementById('gfOverlay').classList.remove('active');
             gfGameActive = false;
+            gfClearTimer();
         }
 
         // Initialize
