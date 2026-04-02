@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiona's Japanese Flashcards</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 30%, #e0f7fa 60%, #fff3e0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            background-attachment: fixed;
+        }
+
+        /* Floating background decorations */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(255, 183, 197, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(179, 229, 252, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 245, 157, 0.2) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #78909c;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .header .hint {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #fff9c4, #ffe0b2);
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #f57f17;
+            font-weight: 700;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .controls button {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .controls button:active {
+            transform: translateY(0);
+        }
+
+        .btn-shuffle {
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            color: white;
+        }
+
+        .btn-reveal {
+            background: linear-gradient(135deg, #80cbc4, #4db6ac);
+            color: white;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #ffab91, #ff8a65);
+            color: white;
+        }
+
+        .btn-quiz {
+            background: linear-gradient(135deg, #90caf9, #64b5f6);
+            color: white;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #a5d6a7, #66bb6a);
+            color: white;
+        }
+
+        /* Score display */
+        .score-bar {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 14px 24px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            font-weight: 700;
+            font-size: 1.05em;
+        }
+
+        .score-bar.active {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .score-correct { color: #43a047; }
+        .score-wrong { color: #e53935; }
+        .score-remaining { color: #7e57c2; }
+
+        /* Category sections */
+        .category {
+            margin-bottom: 35px;
+        }
+
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding: 12px 22px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .category-title .emoji {
+            font-size: 1.6em;
+        }
+
+        .category-title h2 {
+            font-size: 1.3em;
+            font-weight: 800;
+            color: #546e7a;
+        }
+
+        /* Card grid */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 18px;
+        }
+
+        /* Flashcard */
+        .flashcard {
+            perspective: 1000px;
+            height: 240px;
+            cursor: pointer;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+        }
+
+        .flashcard-front {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+        }
+
+        .flashcard-back {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            transform: rotateY(180deg);
+        }
+
+        .flashcard:hover .flashcard-inner {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .flashcard:hover:not(.flipped) .flashcard-front {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-emoji {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        .card-japanese {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: #37474f;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .card-romaji {
+            font-size: 0.95em;
+            color: #90a4ae;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .card-english {
+            font-size: 1.6em;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .card-type {
+            font-size: 0.8em;
+            padding: 3px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        /* Category color themes */
+        .theme-days .flashcard-front { border-top: 4px solid #e91e63; }
+        .theme-days .card-english { color: #c2185b; }
+        .theme-days .card-type { background: #fce4ec; color: #e91e63; }
+
+        .theme-time .flashcard-front { border-top: 4px solid #9c27b0; }
+        .theme-time .card-english { color: #7b1fa2; }
+        .theme-time .card-type { background: #f3e5f5; color: #9c27b0; }
+
+        .theme-food .flashcard-front { border-top: 4px solid #ff9800; }
+        .theme-food .card-english { color: #ef6c00; }
+        .theme-food .card-type { background: #fff3e0; color: #ff9800; }
+
+        .theme-objects .flashcard-front { border-top: 4px solid #2196f3; }
+        .theme-objects .card-english { color: #1565c0; }
+        .theme-objects .card-type { background: #e3f2fd; color: #2196f3; }
+
+        .theme-people .flashcard-front { border-top: 4px solid #4caf50; }
+        .theme-people .card-english { color: #2e7d32; }
+        .theme-people .card-type { background: #e8f5e9; color: #4caf50; }
+
+        .theme-pronouns .flashcard-front { border-top: 4px solid #ff5722; }
+        .theme-pronouns .card-english { color: #d84315; }
+        .theme-pronouns .card-type { background: #fbe9e7; color: #ff5722; }
+
+        /* Back side keeps the theme color on top too */
+        .theme-days .flashcard-back { border-top: 4px solid #e91e63; }
+        .theme-time .flashcard-back { border-top: 4px solid #9c27b0; }
+        .theme-food .flashcard-back { border-top: 4px solid #ff9800; }
+        .theme-objects .flashcard-back { border-top: 4px solid #2196f3; }
+        .theme-people .flashcard-back { border-top: 4px solid #4caf50; }
+        .theme-pronouns .flashcard-back { border-top: 4px solid #ff5722; }
+
+        /* Sparkle animation on flip */
+        @keyframes sparkle {
+            0% { opacity: 0; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0) rotate(360deg); }
+        }
+
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            font-size: 1.2em;
+            animation: sparkle 0.6s ease-out forwards;
+        }
+
+        /* Quiz mode overlay */
+        .quiz-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quiz-overlay.active {
+            display: flex;
+        }
+
+        .quiz-card {
+            background: white;
+            border-radius: 28px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .quiz-card .card-emoji {
+            font-size: 3.5em;
+        }
+
+        .quiz-card .card-japanese {
+            font-size: 2.8em;
+            margin: 15px 0;
+        }
+
+        .quiz-card .card-romaji {
+            font-size: 1.1em;
+            margin-bottom: 25px;
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .quiz-option {
+            padding: 14px;
+            border: 3px solid #e0e0e0;
+            border-radius: 16px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .quiz-option:hover {
+            border-color: #90caf9;
+            background: #e3f2fd;
+            transform: translateY(-2px);
+        }
+
+        .quiz-option.correct {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+            animation: correctPop 0.4s ease;
+        }
+
+        .quiz-option.wrong {
+            border-color: #ef5350;
+            background: #ffebee;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes correctPop {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .quiz-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .quiz-close:hover {
+            transform: scale(1.2);
+        }
+
+        .quiz-result {
+            margin-top: 20px;
+            font-size: 1.3em;
+            font-weight: 800;
+            display: none;
+        }
+
+        .quiz-next {
+            margin-top: 16px;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #7c4dff, #536dfe);
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            transition: transform 0.2s;
+        }
+
+        .quiz-next:hover { transform: translateY(-2px); }
+
+        /* Completion screen */
+        .quiz-complete {
+            display: none;
+        }
+
+        .quiz-complete h2 {
+            font-size: 2em;
+            margin: 15px 0;
+        }
+
+        .quiz-complete .big-emoji {
+            font-size: 4em;
+        }
+
+        .quiz-complete .final-score {
+            font-size: 1.3em;
+            color: #546e7a;
+            margin: 10px 0 20px;
+        }
+
+        /* Print section (hidden on screen) */
+        .print-section {
+            display: none;
+        }
+
+        .print-page-title {
+            font-family: 'Nunito', sans-serif;
+            font-size: 18pt;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 6px;
+            color: #37474f;
+        }
+
+        .print-page-subtitle {
+            font-family: 'Nunito', sans-serif;
+            font-size: 10pt;
+            text-align: center;
+            color: #90a4ae;
+            margin-bottom: 16px;
+        }
+
+        .print-category-header {
+            font-family: 'Nunito', sans-serif;
+            font-size: 13pt;
+            font-weight: 800;
+            color: #546e7a;
+            margin: 14px 0 8px 4px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .print-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+        }
+
+        .print-card {
+            border: 2px dashed #ccc;
+            padding: 14px 10px;
+            text-align: center;
+            page-break-inside: avoid;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .print-card-emoji {
+            font-size: 24pt;
+            margin-bottom: 4px;
+        }
+
+        .print-card-japanese {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 20pt;
+            font-weight: 700;
+            color: #37474f;
+        }
+
+        .print-card-romaji {
+            font-size: 9pt;
+            color: #90a4ae;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .print-card-english {
+            font-family: 'Nunito', sans-serif;
+            font-size: 13pt;
+            font-weight: 800;
+            margin-top: 6px;
+            padding: 3px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .print-card-english.theme-days { color: #c2185b; background: #fce4ec; }
+        .print-card-english.theme-time { color: #7b1fa2; background: #f3e5f5; }
+        .print-card-english.theme-food { color: #ef6c00; background: #fff3e0; }
+        .print-card-english.theme-objects { color: #1565c0; background: #e3f2fd; }
+        .print-card-english.theme-people { color: #2e7d32; background: #e8f5e9; }
+        .print-card-english.theme-pronouns { color: #d84315; background: #fbe9e7; }
+
+        .print-card .scissors {
+            position: absolute;
+            top: -9px;
+            left: 6px;
+            font-size: 11px;
+            color: #bbb;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .card-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+            .flashcard { height: 210px; }
+            .card-japanese { font-size: 1.6em; }
+            .card-emoji { font-size: 2.2em; }
+            .quiz-options { grid-template-columns: 1fr; }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            body::before { display: none !important; }
+
+            .header, .controls, .score-bar, #cardContainer, .quiz-overlay {
+                display: none !important;
+            }
+
+            .print-section {
+                display: block !important;
+            }
+
+            .print-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .print-card {
+                border: 2px dashed #bbb;
+                min-height: 130px;
+            }
+
+            .print-card-english.theme-days { background: #fce4ec !important; color: #c2185b !important; }
+            .print-card-english.theme-time { background: #f3e5f5 !important; color: #7b1fa2 !important; }
+            .print-card-english.theme-food { background: #fff3e0 !important; color: #ef6c00 !important; }
+            .print-card-english.theme-objects { background: #e3f2fd !important; color: #1565c0 !important; }
+            .print-card-english.theme-people { background: #e8f5e9 !important; color: #2e7d32 !important; }
+            .print-card-english.theme-pronouns { background: #fbe9e7 !important; color: #d84315 !important; }
+
+            .print-category-header {
+                page-break-after: avoid;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fiona's Japanese Flashcards</h1>
+            <p>Click a card to flip it!</p>
+            <span class="hint">Tap to reveal the English meaning</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn-shuffle" onclick="shuffleCards()">Shuffle Cards</button>
+            <button class="btn-reveal" onclick="revealAll()">Reveal All</button>
+            <button class="btn-reset" onclick="resetAll()">Hide All</button>
+            <button class="btn-quiz" onclick="startQuiz()">Quiz Me!</button>
+            <button class="btn-print" onclick="printCards()">Print Cards</button>
+        </div>
+
+        <div class="score-bar" id="scoreBar">
+            <span class="score-correct" id="scoreCorrect">Correct: 0</span>
+            <span class="score-wrong" id="scoreWrong">Wrong: 0</span>
+            <span class="score-remaining" id="scoreRemaining">Remaining: 0</span>
+        </div>
+
+        <div id="cardContainer">
+            <!-- Cards are rendered by JS -->
+        </div>
+
+        <!-- Print-only section -->
+        <div class="print-section" id="printSection">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- Quiz overlay -->
+    <div class="quiz-overlay" id="quizOverlay">
+        <span class="quiz-close" onclick="closeQuiz()">&times;</span>
+        <div class="quiz-card" id="quizCard">
+            <div id="quizQuestion">
+                <div class="card-emoji" id="quizEmoji"></div>
+                <div class="card-japanese" id="quizJapanese"></div>
+                <div class="card-romaji" id="quizRomaji"></div>
+                <div class="quiz-options" id="quizOptions"></div>
+                <div class="quiz-result" id="quizResult"></div>
+                <button class="quiz-next" id="quizNext" onclick="nextQuizQuestion()">Next</button>
+            </div>
+            <div class="quiz-complete" id="quizComplete">
+                <div class="big-emoji" id="completeEmoji"></div>
+                <h2 id="completeTitle"></h2>
+                <div class="final-score" id="finalScore"></div>
+                <button class="quiz-next" style="display:inline-block" onclick="closeQuiz()">Done!</button>
+                <button class="quiz-next" style="display:inline-block; background: linear-gradient(135deg, #ff6f00, #ff8f00);" onclick="startQuiz()">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            // Days of the week
+            { japanese: 'にちようび', romaji: 'nichiyoubi', english: 'Sunday', emoji: '&#x1F31E;', category: 'Days of the Week', theme: 'days' },
+            { japanese: 'げつようび', romaji: 'getsuyoubi', english: 'Monday', emoji: '&#x1F319;', category: 'Days of the Week', theme: 'days' },
+            { japanese: 'かようび', romaji: 'kayoubi', english: 'Tuesday', emoji: '&#x1F525;', category: 'Days of the Week', theme: 'days' },
+            { japanese: 'すいようび', romaji: 'suiyoubi', english: 'Wednesday', emoji: '&#x1F4A7;', category: 'Days of the Week', theme: 'days' },
+            { japanese: 'もくようび', romaji: 'mokuyoubi', english: 'Thursday', emoji: '&#x1F333;', category: 'Days of the Week', theme: 'days' },
+            { japanese: 'きんようび', romaji: 'kinyoubi', english: 'Friday', emoji: '&#x2728;', category: 'Days of the Week', theme: 'days' },
+            { japanese: 'どようび', romaji: 'doyoubi', english: 'Saturday', emoji: '&#x1F389;', category: 'Days of the Week', theme: 'days' },
+            // Time words
+            { japanese: 'きょう', romaji: 'kyou', english: 'Today', emoji: '&#x1F4C5;', category: 'Time Words', theme: 'time' },
+            { japanese: 'あした', romaji: 'ashita', english: 'Tomorrow', emoji: '&#x1F305;', category: 'Time Words', theme: 'time' },
+            { japanese: 'きのう', romaji: 'kinou', english: 'Yesterday', emoji: '&#x1F303;', category: 'Time Words', theme: 'time' },
+            // Food & Drinks
+            { japanese: 'たべもの', romaji: 'tabemono', english: 'Food', emoji: '&#x1F371;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'のみもの', romaji: 'nomimono', english: 'Drink', emoji: '&#x1F964;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'ケーキ', romaji: 'keeki', english: 'Cake', emoji: '&#x1F370;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'アイスクリーム', romaji: 'aisukuriimu', english: 'Ice Cream', emoji: '&#x1F366;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'クッキー', romaji: 'kukkii', english: 'Cookie', emoji: '&#x1F36A;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'プリン', romaji: 'purin', english: 'Pudding', emoji: '&#x1F36E;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'だんご', romaji: 'dango', english: 'Dango', emoji: '&#x1F361;', category: 'Food & Drinks', theme: 'food' },
+            // Everyday Objects
+            { japanese: 'えんぴつ', romaji: 'enpitsu', english: 'Pencil', emoji: '&#x270F;&#xFE0F;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'ペン', romaji: 'pen', english: 'Pen', emoji: '&#x1F58A;&#xFE0F;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'みず', romaji: 'mizu', english: 'Water', emoji: '&#x1F4A6;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'ほん', romaji: 'hon', english: 'Book', emoji: '&#x1F4D6;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'かばん', romaji: 'kaban', english: 'Bag', emoji: '&#x1F392;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'でんわ', romaji: 'denwa', english: 'Telephone', emoji: '&#x1F4DE;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'なまえ', romaji: 'namae', english: 'Name', emoji: '&#x1F4DB;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'でんわばんごう', romaji: 'denwa bangou', english: 'Phone Number', emoji: '&#x1F4F1;', category: 'Everyday Objects', theme: 'objects' },
+            // People & Animals
+            { japanese: 'おかあさん', romaji: 'okaasan', english: 'Mom', emoji: '&#x1F469;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'おとうさん', romaji: 'otousan', english: 'Dad', emoji: '&#x1F468;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'せんせい', romaji: 'sensei', english: 'Teacher', emoji: '&#x1F9D1;&#x200D;&#x1F3EB;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'ともだち', romaji: 'tomodachi', english: 'Friend', emoji: '&#x1F46B;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'いぬ', romaji: 'inu', english: 'Dog', emoji: '&#x1F436;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'ねこ', romaji: 'neko', english: 'Cat', emoji: '&#x1F431;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'がっこう', romaji: 'gakkou', english: 'School', emoji: '&#x1F3EB;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'うち', romaji: 'uchi', english: 'Home', emoji: '&#x1F3E0;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'くるま', romaji: 'kuruma', english: 'Car', emoji: '&#x1F697;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'はな', romaji: 'hana', english: 'Flower', emoji: '&#x1F338;', category: 'People & Animals', theme: 'people' },
+            // Pronouns
+            { japanese: 'わたし', romaji: 'watashi', english: 'I / Me', emoji: '&#x1F64B;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'ぼく', romaji: 'boku', english: 'I / Me (boys)', emoji: '&#x1F466;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'あなた', romaji: 'anata', english: 'You', emoji: '&#x1F449;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'かれ', romaji: 'kare', english: 'He / Him', emoji: '&#x1F471;&#x200D;&#x2642;&#xFE0F;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'かのじょ', romaji: 'kanojo', english: 'She / Her', emoji: '&#x1F471;&#x200D;&#x2640;&#xFE0F;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'わたしたち', romaji: 'watashitachi', english: 'We / Us', emoji: '&#x1F46A;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'かれら', romaji: 'karera', english: 'They / Them', emoji: '&#x1F465;', category: 'Pronouns', theme: 'pronouns' },
+            { japanese: 'みんな', romaji: 'minna', english: 'Everyone', emoji: '&#x1F30D;', category: 'Pronouns', theme: 'pronouns' },
+        ];
+
+        const categoryEmojis = {
+            'Days of the Week': '&#x1F4C6;',
+            'Time Words': '&#x23F0;',
+            'Food & Drinks': '&#x1F354;',
+            'Everyday Objects': '&#x1F3D2;',
+            'People & Animals': '&#x1F43E;',
+            'Pronouns': '&#x1F4AC;'
+        };
+
+        function renderCards() {
+            const container = document.getElementById('cardContainer');
+            const categories = {};
+
+            words.forEach((word, index) => {
+                if (!categories[word.category]) {
+                    categories[word.category] = [];
+                }
+                categories[word.category].push({ ...word, index });
+            });
+
+            let html = '';
+            for (const [cat, catWords] of Object.entries(categories)) {
+                html += `
+                    <div class="category">
+                        <div class="category-title">
+                            <span class="emoji">${categoryEmojis[cat] || ''}</span>
+                            <h2>${cat}</h2>
+                        </div>
+                        <div class="card-grid">
+                `;
+                catWords.forEach(word => {
+                    html += `
+                        <div class="flashcard theme-${word.theme}" onclick="flipCard(this)" data-index="${word.index}">
+                            <div class="flashcard-inner">
+                                <div class="flashcard-front">
+                                    <div class="card-emoji">${word.emoji}</div>
+                                    <div class="card-japanese">${word.japanese}</div>
+                                    <div class="card-romaji">${word.romaji}</div>
+                                </div>
+                                <div class="flashcard-back">
+                                    <div class="card-emoji">${word.emoji}</div>
+                                    <div class="card-english">${word.english}</div>
+                                    <div class="card-japanese" style="font-size:1.3em;">${word.japanese}</div>
+                                    <span class="card-type">${word.category}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function flipCard(card) {
+            card.classList.toggle('flipped');
+            if (card.classList.contains('flipped')) {
+                createSparkles(card);
+            }
+        }
+
+        function createSparkles(card) {
+            const sparkles = ['&#x2728;', '&#x1F31F;', '&#x2B50;', '&#x1F4AB;'];
+            for (let i = 0; i < 5; i++) {
+                const sparkle = document.createElement('span');
+                sparkle.className = 'sparkle';
+                sparkle.innerHTML = sparkles[Math.floor(Math.random() * sparkles.length)];
+                sparkle.style.left = Math.random() * 100 + '%';
+                sparkle.style.top = Math.random() * 100 + '%';
+                sparkle.style.animationDelay = Math.random() * 0.3 + 's';
+                card.querySelector('.flashcard-inner').appendChild(sparkle);
+                setTimeout(() => sparkle.remove(), 1000);
+            }
+        }
+
+        function revealAll() {
+            document.querySelectorAll('.flashcard').forEach(card => {
+                card.classList.add('flipped');
+            });
+        }
+
+        function resetAll() {
+            document.querySelectorAll('.flashcard').forEach(card => {
+                card.classList.remove('flipped');
+            });
+        }
+
+        function shuffleCards() {
+            const grids = document.querySelectorAll('.card-grid');
+            grids.forEach(grid => {
+                const cards = Array.from(grid.children);
+                for (let i = cards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    grid.appendChild(cards[j]);
+                    cards.splice(j, 1, cards[i]);
+                }
+                // Re-append all for proper order
+                cards.forEach(card => grid.appendChild(card));
+            });
+            resetAll();
+        }
+
+        // Quiz functionality
+        let quizWords = [];
+        let quizIndex = 0;
+        let quizCorrect = 0;
+        let quizWrong = 0;
+
+        function startQuiz() {
+            quizWords = [...words].sort(() => Math.random() - 0.5);
+            quizIndex = 0;
+            quizCorrect = 0;
+            quizWrong = 0;
+
+            document.getElementById('quizOverlay').classList.add('active');
+            document.getElementById('quizQuestion').style.display = 'block';
+            document.getElementById('quizComplete').style.display = 'none';
+
+            updateScoreBar();
+            document.getElementById('scoreBar').classList.add('active');
+            showQuizQuestion();
+        }
+
+        function showQuizQuestion() {
+            if (quizIndex >= quizWords.length) {
+                showQuizComplete();
+                return;
+            }
+
+            const word = quizWords[quizIndex];
+            document.getElementById('quizEmoji').innerHTML = word.emoji;
+            document.getElementById('quizJapanese').textContent = word.japanese;
+            document.getElementById('quizRomaji').textContent = word.romaji;
+            document.getElementById('quizResult').style.display = 'none';
+            document.getElementById('quizNext').style.display = 'none';
+
+            // Generate 4 options (1 correct + 3 random)
+            const options = [word.english];
+            const otherWords = words.filter(w => w.english !== word.english);
+            while (options.length < 4 && otherWords.length > 0) {
+                const randIdx = Math.floor(Math.random() * otherWords.length);
+                const picked = otherWords.splice(randIdx, 1)[0];
+                if (!options.includes(picked.english)) {
+                    options.push(picked.english);
+                }
+            }
+            // Shuffle options
+            options.sort(() => Math.random() - 0.5);
+
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option';
+                btn.textContent = opt;
+                btn.onclick = () => selectAnswer(btn, opt, word.english);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(btn, selected, correct) {
+            const allBtns = document.querySelectorAll('.quiz-option');
+            allBtns.forEach(b => b.onclick = null);
+
+            const resultEl = document.getElementById('quizResult');
+
+            if (selected === correct) {
+                btn.classList.add('correct');
+                quizCorrect++;
+                resultEl.innerHTML = '&#x1F389; Correct! Amazing!';
+                resultEl.style.color = '#43a047';
+            } else {
+                btn.classList.add('wrong');
+                quizWrong++;
+                // Highlight correct answer
+                allBtns.forEach(b => {
+                    if (b.textContent === correct) b.classList.add('correct');
+                });
+                resultEl.innerHTML = `&#x1F914; The answer is: <strong>${correct}</strong>`;
+                resultEl.style.color = '#e53935';
+            }
+
+            resultEl.style.display = 'block';
+            document.getElementById('quizNext').style.display = 'inline-block';
+            updateScoreBar();
+        }
+
+        function nextQuizQuestion() {
+            quizIndex++;
+            showQuizQuestion();
+        }
+
+        function updateScoreBar() {
+            document.getElementById('scoreCorrect').textContent = `Correct: ${quizCorrect}`;
+            document.getElementById('scoreWrong').textContent = `Wrong: ${quizWrong}`;
+            document.getElementById('scoreRemaining').textContent = `Remaining: ${quizWords.length - quizIndex}`;
+        }
+
+        function showQuizComplete() {
+            document.getElementById('quizQuestion').style.display = 'none';
+            const completeEl = document.getElementById('quizComplete');
+            completeEl.style.display = 'block';
+
+            const pct = Math.round((quizCorrect / quizWords.length) * 100);
+            let emoji, title;
+
+            if (pct === 100) { emoji = '&#x1F3C6;'; title = 'Perfect Score!'; }
+            else if (pct >= 80) { emoji = '&#x1F31F;'; title = 'Great Job!'; }
+            else if (pct >= 60) { emoji = '&#x1F44D;'; title = 'Good Effort!'; }
+            else { emoji = '&#x1F4AA;'; title = 'Keep Practicing!'; }
+
+            document.getElementById('completeEmoji').innerHTML = emoji;
+            document.getElementById('completeTitle').textContent = title;
+            document.getElementById('finalScore').innerHTML =
+                `You got <strong>${quizCorrect}</strong> out of <strong>${quizWords.length}</strong> correct (${pct}%)`;
+
+            updateScoreBar();
+        }
+
+        function closeQuiz() {
+            document.getElementById('quizOverlay').classList.remove('active');
+            document.getElementById('scoreBar').classList.remove('active');
+        }
+
+        // Print functionality
+        function renderPrintSection() {
+            const container = document.getElementById('printSection');
+            const categories = {};
+            words.forEach(word => {
+                if (!categories[word.category]) categories[word.category] = [];
+                categories[word.category].push(word);
+            });
+
+            let html = `
+                <div class="print-page-title">Fiona's Japanese Flashcards</div>
+                <div class="print-page-subtitle">Cut along the dashed lines</div>
+            `;
+
+            for (const [cat, catWords] of Object.entries(categories)) {
+                html += `<div class="print-category-header">${cat}</div>`;
+                html += `<div class="print-grid">`;
+                catWords.forEach(word => {
+                    html += `
+                        <div class="print-card">
+                            <span class="scissors">&#9986;</span>
+                            <div class="print-card-emoji">${word.emoji}</div>
+                            <div class="print-card-japanese">${word.japanese}</div>
+                            <div class="print-card-romaji">${word.romaji}</div>
+                            <div class="print-card-english theme-${word.theme}">${word.english}</div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function printCards() {
+            renderPrintSection();
+            window.print();
+        }
+
+        // Initialize
+        renderCards();
+    </script>
+</body>
+</html>
