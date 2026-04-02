@@ -319,6 +319,10 @@
         .theme-pronouns .card-english { color: #d84315; }
         .theme-pronouns .card-type { background: #fbe9e7; color: #ff5722; }
 
+        .theme-hiragana .flashcard-front { border-top: 4px solid #795548; }
+        .theme-hiragana .card-english { color: #4e342e; }
+        .theme-hiragana .card-type { background: #efebe9; color: #795548; }
+
         /* Back side keeps the theme color on top too */
         .theme-days .flashcard-back { border-top: 4px solid #e91e63; }
         .theme-time .flashcard-back { border-top: 4px solid #9c27b0; }
@@ -326,6 +330,7 @@
         .theme-objects .flashcard-back { border-top: 4px solid #2196f3; }
         .theme-people .flashcard-back { border-top: 4px solid #4caf50; }
         .theme-pronouns .flashcard-back { border-top: 4px solid #ff5722; }
+        .theme-hiragana .flashcard-back { border-top: 4px solid #795548; }
 
         /* Sparkle animation on flip */
         @keyframes sparkle {
@@ -477,6 +482,89 @@
 
         .quiz-next:hover { transform: translateY(-2px); }
 
+        /* Quiz filter */
+        .quiz-filter {
+            margin-bottom: 20px;
+        }
+
+        .quiz-filter h3 {
+            font-size: 1.1em;
+            color: #546e7a;
+            margin-bottom: 12px;
+        }
+
+        .quiz-filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            text-align: left;
+        }
+
+        .quiz-filter-grid label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            color: #455a64;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .quiz-filter-grid label:hover {
+            background: #f5f5f5;
+        }
+
+        .quiz-filter-grid input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #7c4dff;
+            cursor: pointer;
+        }
+
+        .quiz-filter-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 14px;
+        }
+
+        .quiz-filter-actions button {
+            padding: 6px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.85em;
+            cursor: pointer;
+            color: #78909c;
+            transition: all 0.2s;
+        }
+
+        .quiz-filter-actions button:hover {
+            border-color: #90caf9;
+            color: #1976d2;
+        }
+
+        .quiz-start-btn {
+            margin-top: 18px;
+            padding: 14px 40px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #7c4dff, #536dfe);
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.15em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .quiz-start-btn:hover { transform: translateY(-2px); }
+
         /* Completion screen */
         .quiz-complete {
             display: none;
@@ -583,6 +671,7 @@
         .print-card-english.theme-objects { color: #1565c0; background: #e3f2fd; }
         .print-card-english.theme-people { color: #2e7d32; background: #e8f5e9; }
         .print-card-english.theme-pronouns { color: #d84315; background: #fbe9e7; }
+        .print-card-english.theme-hiragana { color: #4e342e; background: #efebe9; }
 
         .print-card .scissors {
             position: absolute;
@@ -637,6 +726,7 @@
             .print-card-english.theme-objects { background: #e3f2fd !important; color: #1565c0 !important; }
             .print-card-english.theme-people { background: #e8f5e9 !important; color: #2e7d32 !important; }
             .print-card-english.theme-pronouns { background: #fbe9e7 !important; color: #d84315 !important; }
+            .print-card-english.theme-hiragana { background: #efebe9 !important; color: #4e342e !important; }
 
             .print-category-header {
                 page-break-after: avoid;
@@ -684,7 +774,21 @@
     <div class="quiz-overlay" id="quizOverlay">
         <span class="quiz-close" onclick="closeQuiz()">&times;</span>
         <div class="quiz-card" id="quizCard">
-            <div id="quizQuestion">
+            <div id="quizFilterScreen">
+                <h2 style="margin-bottom:6px;">Quiz Me!</h2>
+                <p style="color:#90a4ae;font-weight:600;margin-bottom:16px;">Choose which categories to include:</p>
+                <div class="quiz-filter">
+                    <div class="quiz-filter-grid" id="quizFilterGrid">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <div class="quiz-filter-actions">
+                        <button onclick="selectAllFilters()">Select All</button>
+                        <button onclick="deselectAllFilters()">Deselect All</button>
+                    </div>
+                </div>
+                <button class="quiz-start-btn" onclick="beginQuiz()">Start Quiz</button>
+            </div>
+            <div id="quizQuestion" style="display:none;">
                 <div class="card-emoji" id="quizEmoji"></div>
                 <div class="card-japanese" id="quizJapanese"></div>
                 <div class="card-romaji" id="quizRomaji"></div>
@@ -755,6 +859,53 @@
             { japanese: 'わたしたち', romaji: 'watashitachi', english: 'We / Us', emoji: '&#x1F46A;', category: 'Pronouns', theme: 'pronouns' },
             { japanese: 'かれら', romaji: 'karera', english: 'They / Them', emoji: '&#x1F465;', category: 'Pronouns', theme: 'pronouns' },
             { japanese: 'みんな', romaji: 'minna', english: 'Everyone', emoji: '&#x1F30D;', category: 'Pronouns', theme: 'pronouns' },
+            // Hiragana
+            { japanese: 'あ', romaji: '', english: 'a', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'い', romaji: '', english: 'i', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'う', romaji: '', english: 'u', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'え', romaji: '', english: 'e', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'お', romaji: '', english: 'o', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'か', romaji: '', english: 'ka', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'き', romaji: '', english: 'ki', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'く', romaji: '', english: 'ku', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'け', romaji: '', english: 'ke', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'こ', romaji: '', english: 'ko', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'さ', romaji: '', english: 'sa', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'し', romaji: '', english: 'shi', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'す', romaji: '', english: 'su', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'せ', romaji: '', english: 'se', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'そ', romaji: '', english: 'so', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'た', romaji: '', english: 'ta', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ち', romaji: '', english: 'chi', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'つ', romaji: '', english: 'tsu', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'て', romaji: '', english: 'te', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'と', romaji: '', english: 'to', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'な', romaji: '', english: 'na', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'に', romaji: '', english: 'ni', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ぬ', romaji: '', english: 'nu', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ね', romaji: '', english: 'ne', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'の', romaji: '', english: 'no', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'は', romaji: '', english: 'ha', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ひ', romaji: '', english: 'hi', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ふ', romaji: '', english: 'fu', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'へ', romaji: '', english: 'he', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ほ', romaji: '', english: 'ho', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ま', romaji: '', english: 'ma', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'み', romaji: '', english: 'mi', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'む', romaji: '', english: 'mu', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'め', romaji: '', english: 'me', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'も', romaji: '', english: 'mo', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'や', romaji: '', english: 'ya', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ゆ', romaji: '', english: 'yu', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'よ', romaji: '', english: 'yo', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ら', romaji: '', english: 'ra', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'り', romaji: '', english: 'ri', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'る', romaji: '', english: 'ru', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'れ', romaji: '', english: 're', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ろ', romaji: '', english: 'ro', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'わ', romaji: '', english: 'wa', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'を', romaji: '', english: 'wo', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+            { japanese: 'ん', romaji: '', english: 'n', emoji: '', category: 'Hiragana', theme: 'hiragana' },
         ];
 
         const categoryEmojis = {
@@ -763,7 +914,8 @@
             'Food & Drinks': '&#x1F354;',
             'Everyday Objects': '&#x1F3D2;',
             'People & Animals': '&#x1F43E;',
-            'Pronouns': '&#x1F4AC;'
+            'Pronouns': '&#x1F4AC;',
+            'Hiragana': '&#x1F170;&#xFE0F;'
         };
 
         function renderCards() {
@@ -788,16 +940,21 @@
                         <div class="card-grid">
                 `;
                 catWords.forEach(word => {
+                    const isHiragana = word.theme === 'hiragana';
+                    const frontEmoji = word.emoji ? `<div class="card-emoji">${word.emoji}</div>` : '';
+                    const backEmoji = word.emoji ? `<div class="card-emoji">${word.emoji}</div>` : '';
+                    const frontJpStyle = isHiragana ? 'font-size:3.5em;' : '';
+                    const romaji = word.romaji ? `<div class="card-romaji">${word.romaji}</div>` : '';
                     html += `
                         <div class="flashcard theme-${word.theme}" onclick="flipCard(this)" data-index="${word.index}">
                             <div class="flashcard-inner">
                                 <div class="flashcard-front">
-                                    <div class="card-emoji">${word.emoji}</div>
-                                    <div class="card-japanese">${word.japanese}</div>
-                                    <div class="card-romaji">${word.romaji}</div>
+                                    ${frontEmoji}
+                                    <div class="card-japanese" style="${frontJpStyle}">${word.japanese}</div>
+                                    ${romaji}
                                 </div>
                                 <div class="flashcard-back">
-                                    <div class="card-emoji">${word.emoji}</div>
+                                    ${backEmoji}
                                     <div class="card-english">${word.english}</div>
                                     <div class="card-japanese" style="font-size:1.3em;">${word.japanese}</div>
                                     <span class="card-type">${word.category}</span>
@@ -862,17 +1019,49 @@
 
         // Quiz functionality
         let quizWords = [];
+        let quizPool = [];
         let quizIndex = 0;
         let quizCorrect = 0;
         let quizWrong = 0;
 
         function startQuiz() {
-            quizWords = [...words].sort(() => Math.random() - 0.5);
+            // Show filter screen
+            const grid = document.getElementById('quizFilterGrid');
+            const cats = [...new Set(words.map(w => w.category))];
+            grid.innerHTML = '';
+            cats.forEach(cat => {
+                const count = words.filter(w => w.category === cat).length;
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${cat}" checked> ${cat} (${count})`;
+                grid.appendChild(label);
+            });
+
+            document.getElementById('quizFilterScreen').style.display = 'block';
+            document.getElementById('quizQuestion').style.display = 'none';
+            document.getElementById('quizComplete').style.display = 'none';
+            document.getElementById('quizOverlay').classList.add('active');
+            document.getElementById('scoreBar').classList.remove('active');
+        }
+
+        function selectAllFilters() {
+            document.querySelectorAll('#quizFilterGrid input').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllFilters() {
+            document.querySelectorAll('#quizFilterGrid input').forEach(cb => cb.checked = false);
+        }
+
+        function beginQuiz() {
+            const selected = [...document.querySelectorAll('#quizFilterGrid input:checked')].map(cb => cb.value);
+            if (selected.length === 0) return;
+
+            quizPool = words.filter(w => selected.includes(w.category));
+            quizWords = [...quizPool].sort(() => Math.random() - 0.5);
             quizIndex = 0;
             quizCorrect = 0;
             quizWrong = 0;
 
-            document.getElementById('quizOverlay').classList.add('active');
+            document.getElementById('quizFilterScreen').style.display = 'none';
             document.getElementById('quizQuestion').style.display = 'block';
             document.getElementById('quizComplete').style.display = 'none';
 
@@ -894,9 +1083,9 @@
             document.getElementById('quizResult').style.display = 'none';
             document.getElementById('quizNext').style.display = 'none';
 
-            // Generate 4 options (1 correct + 3 random)
+            // Generate 4 options from the same pool
             const options = [word.english];
-            const otherWords = words.filter(w => w.english !== word.english);
+            const otherWords = quizPool.filter(w => w.english !== word.english);
             while (options.length < 4 && otherWords.length > 0) {
                 const randIdx = Math.floor(Math.random() * otherWords.length);
                 const picked = otherWords.splice(randIdx, 1)[0];
@@ -958,6 +1147,7 @@
 
         function showQuizComplete() {
             document.getElementById('quizQuestion').style.display = 'none';
+            document.getElementById('quizFilterScreen').style.display = 'none';
             const completeEl = document.getElementById('quizComplete');
             completeEl.style.display = 'block';
 
