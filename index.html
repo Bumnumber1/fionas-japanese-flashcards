@@ -695,6 +695,28 @@
         .conc-stats .conc-pairs { color: #43a047; }
         .conc-stats .conc-timer { color: #ff6f00; }
 
+        .conc-turn {
+            display: none;
+            font-weight: 800;
+            font-size: 1.05em;
+            padding: 4px 14px;
+            border-radius: 12px;
+        }
+
+        .conc-turn.active { display: inline-block; }
+        .conc-turn.p1 { background: #e3f2fd; color: #1565c0; }
+        .conc-turn.p2 { background: #fce4ec; color: #c2185b; }
+
+        .conc-scores {
+            display: none;
+            gap: 16px;
+        }
+
+        .conc-scores.active { display: flex; }
+
+        .conc-p1-score { color: #1565c0; font-weight: 800; }
+        .conc-p2-score { color: #c2185b; font-weight: 800; }
+
         .conc-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -765,8 +787,23 @@
             border: 3px solid #66bb6a;
         }
 
-        .conc-card.matched {
+        .conc-card.matched-p1 .conc-card-back {
+            background: #e3f2fd;
+            border: 3px solid #42a5f5;
+        }
+
+        .conc-card.matched-p2 .conc-card-back {
+            background: #fce4ec;
+            border: 3px solid #ef5350;
+        }
+
+        .conc-card.matched, .conc-card.matched-p1, .conc-card.matched-p2 {
             pointer-events: none;
+        }
+
+        .conc-card.matched-p1 .conc-card-inner,
+        .conc-card.matched-p2 .conc-card-inner {
+            transform: rotateY(180deg);
         }
 
         .conc-card.wrong .conc-card-back {
@@ -1092,13 +1129,25 @@
                         <option value="12">12</option>
                     </select>
                 </div>
+                <div class="conc-pair-select">
+                    <label for="concMode">Mode:</label>
+                    <select id="concMode">
+                        <option value="1p">1 Player</option>
+                        <option value="2p">2 Players</option>
+                    </select>
+                </div>
                 <button class="quiz-start-btn" onclick="beginConcentration()">Start Game</button>
             </div>
             <div id="concGameArea" style="display:none;">
                 <div class="conc-stats">
+                    <span class="conc-turn" id="concTurn"></span>
                     <span class="conc-moves" id="concMoves">Moves: 0</span>
                     <span class="conc-pairs" id="concPairs">Pairs: 0 / 0</span>
                     <span class="conc-timer" id="concTimer">Time: 0:00</span>
+                    <div class="conc-scores" id="concScores">
+                        <span class="conc-p1-score" id="concP1Score">P1: 0</span>
+                        <span class="conc-p2-score" id="concP2Score">P2: 0</span>
+                    </div>
                 </div>
                 <div class="conc-grid" id="concGrid"></div>
                 <div class="conc-complete-msg" id="concComplete">
@@ -1429,11 +1478,13 @@
             if (selected === correct) {
                 btn.classList.add('correct');
                 quizCorrect++;
+                playSfx('correct');
                 resultEl.innerHTML = '&#x1F389; Correct! Amazing!';
                 resultEl.style.color = '#43a047';
             } else {
                 btn.classList.add('wrong');
                 quizWrong++;
+                playSfx('wrong');
                 // Highlight correct answer
                 allBtns.forEach(b => {
                     if (b.textContent === correct) b.classList.add('correct');
@@ -1463,6 +1514,7 @@
             document.getElementById('quizFilterScreen').style.display = 'none';
             const completeEl = document.getElementById('quizComplete');
             completeEl.style.display = 'block';
+            playSfx('complete');
 
             const pct = Math.round((quizCorrect / quizWords.length) * 100);
             let emoji, title;
@@ -1559,6 +1611,78 @@
             }
         }
 
+        // Sound effects using Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSfx(type) {
+            // Ensure context is resumed (needed on iOS after user gesture)
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            if (type === 'correct') {
+                // Happy ascending chime
+                [523, 659, 784].forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.18, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
+                    osc.connect(gain).connect(audioCtx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.4);
+                });
+            } else if (type === 'wrong') {
+                // Low buzz
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = 180;
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc.connect(gain).connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'match') {
+                // Bright match ding
+                [660, 880].forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, now + i * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
+                    osc.connect(gain).connect(audioCtx.destination);
+                    osc.start(now + i * 0.1);
+                    osc.stop(now + i * 0.1 + 0.45);
+                });
+            } else if (type === 'complete') {
+                // Fanfare
+                [523, 659, 784, 1047].forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.5);
+                    osc.connect(gain).connect(audioCtx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.55);
+                });
+            } else if (type === 'flip') {
+                // Soft click
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 600;
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain).connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+        }
+
         // Concentration game
         let concPairCount = 8;
         let concCards = [];
@@ -1569,6 +1693,10 @@
         let concLocked = false;
         let concTimerInterval = null;
         let concSeconds = 0;
+        let concIs2P = false;
+        let concCurrentPlayer = 1;
+        let concP1Score = 0;
+        let concP2Score = 0;
 
         function openConcentration() {
             const grid = document.getElementById('concFilterGrid');
@@ -1591,17 +1719,16 @@
             if (selected.length === 0) return;
 
             concPairCount = parseInt(document.getElementById('concPairCount').value);
+            concIs2P = document.getElementById('concMode').value === '2p';
             const pool = words.filter(w => selected.includes(w.category));
             const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
             const chosen = shuffledPool.slice(0, Math.min(concPairCount, shuffledPool.length));
 
-            // Create pairs: one card with Japanese, one with English
             concCards = [];
             chosen.forEach((w, i) => {
                 concCards.push({ id: i, type: 'jp', text: w.japanese, sub: w.romaji || '', pairId: i, word: w });
                 concCards.push({ id: i, type: 'en', text: w.english, sub: w.emoji ? '' : '', pairId: i, word: w });
             });
-            // Shuffle cards
             concCards.sort(() => Math.random() - 0.5);
 
             concFlipped = [];
@@ -1610,12 +1737,27 @@
             concTotal = chosen.length;
             concLocked = false;
             concSeconds = 0;
+            concCurrentPlayer = 1;
+            concP1Score = 0;
+            concP2Score = 0;
 
             document.getElementById('concFilterScreen').style.display = 'none';
             document.getElementById('concGameArea').style.display = 'block';
             document.getElementById('concComplete').classList.remove('active');
 
+            // Show/hide 2P elements
+            const turnEl = document.getElementById('concTurn');
+            const scoresEl = document.getElementById('concScores');
+            if (concIs2P) {
+                turnEl.classList.add('active');
+                scoresEl.classList.add('active');
+            } else {
+                turnEl.classList.remove('active');
+                scoresEl.classList.remove('active');
+            }
+
             updateConcStats();
+            updateConcTurn();
             renderConcGrid();
 
             clearInterval(concTimerInterval);
@@ -1623,6 +1765,14 @@
                 concSeconds++;
                 document.getElementById('concTimer').textContent = `Time: ${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
             }, 1000);
+        }
+
+        function updateConcTurn() {
+            const el = document.getElementById('concTurn');
+            el.className = 'conc-turn active p' + concCurrentPlayer;
+            el.textContent = concCurrentPlayer === 1 ? 'Player 1\'s Turn' : 'Player 2\'s Turn';
+            document.getElementById('concP1Score').textContent = `P1: ${concP1Score}`;
+            document.getElementById('concP2Score').textContent = `P2: ${concP2Score}`;
         }
 
         function renderConcGrid() {
@@ -1651,11 +1801,11 @@
 
         function flipConcCard(idx, el) {
             if (concLocked) return;
-            if (el.classList.contains('flipped') || el.classList.contains('matched')) return;
+            if (el.classList.contains('flipped') || el.classList.contains('matched') || el.classList.contains('matched-p1') || el.classList.contains('matched-p2')) return;
             if (concFlipped.length >= 2) return;
 
             el.classList.add('flipped');
-            // Speak the Japanese text when card is flipped
+            playSfx('flip');
             speak(concCards[idx].word.japanese);
             concFlipped.push({ idx, el });
 
@@ -1669,19 +1819,32 @@
                 if (cardA.pairId === cardB.pairId && cardA.type !== cardB.type) {
                     // Match!
                     setTimeout(() => {
-                        a.el.classList.add('matched');
-                        b.el.classList.add('matched');
+                        playSfx('match');
+                        if (concIs2P) {
+                            const matchClass = 'matched-p' + concCurrentPlayer;
+                            a.el.classList.add(matchClass);
+                            b.el.classList.add(matchClass);
+                            if (concCurrentPlayer === 1) concP1Score++;
+                            else concP2Score++;
+                            updateConcTurn();
+                            // Player keeps their turn on a match
+                        } else {
+                            a.el.classList.add('matched');
+                            b.el.classList.add('matched');
+                        }
                         concMatched++;
                         updateConcStats();
                         concFlipped = [];
                         if (concMatched === concTotal) {
                             clearInterval(concTimerInterval);
+                            playSfx('complete');
                             showConcComplete();
                         }
                     }, 500);
                 } else {
                     // No match
                     concLocked = true;
+                    playSfx('wrong');
                     setTimeout(() => {
                         a.el.classList.add('wrong');
                         b.el.classList.add('wrong');
@@ -1691,6 +1854,11 @@
                         b.el.classList.remove('flipped', 'wrong');
                         concFlipped = [];
                         concLocked = false;
+                        // Switch player on miss
+                        if (concIs2P) {
+                            concCurrentPlayer = concCurrentPlayer === 1 ? 2 : 1;
+                            updateConcTurn();
+                        }
                     }, 1100);
                 }
             }
@@ -1705,13 +1873,30 @@
             const el = document.getElementById('concComplete');
             el.classList.add('active');
             const timeStr = `${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
-            let emoji, title;
-            if (concMoves <= concTotal * 1.5) { emoji = '&#x1F3C6;'; title = 'Amazing Memory!'; }
-            else if (concMoves <= concTotal * 2.5) { emoji = '&#x1F31F;'; title = 'Great Job!'; }
-            else { emoji = '&#x1F44D;'; title = 'Well Done!'; }
-            document.getElementById('concCompleteEmoji').innerHTML = emoji;
-            document.getElementById('concCompleteTitle').textContent = title;
-            document.getElementById('concCompleteMsg').innerHTML = `You matched all <strong>${concTotal}</strong> pairs in <strong>${concMoves}</strong> moves and <strong>${timeStr}</strong>!`;
+
+            if (concIs2P) {
+                let emoji, title, msg;
+                if (concP1Score > concP2Score) {
+                    emoji = '&#x1F3C6;'; title = 'Player 1 Wins!';
+                } else if (concP2Score > concP1Score) {
+                    emoji = '&#x1F3C6;'; title = 'Player 2 Wins!';
+                } else {
+                    emoji = '&#x1F91D;'; title = "It's a Tie!";
+                }
+                document.getElementById('concCompleteEmoji').innerHTML = emoji;
+                document.getElementById('concCompleteTitle').textContent = title;
+                document.getElementById('concCompleteMsg').innerHTML =
+                    `<strong>P1: ${concP1Score}</strong> &nbsp; vs &nbsp; <strong>P2: ${concP2Score}</strong><br>` +
+                    `${concMoves} moves in ${timeStr}`;
+            } else {
+                let emoji, title;
+                if (concMoves <= concTotal * 1.5) { emoji = '&#x1F3C6;'; title = 'Amazing Memory!'; }
+                else if (concMoves <= concTotal * 2.5) { emoji = '&#x1F31F;'; title = 'Great Job!'; }
+                else { emoji = '&#x1F44D;'; title = 'Well Done!'; }
+                document.getElementById('concCompleteEmoji').innerHTML = emoji;
+                document.getElementById('concCompleteTitle').textContent = title;
+                document.getElementById('concCompleteMsg').innerHTML = `You matched all <strong>${concTotal}</strong> pairs in <strong>${concMoves}</strong> moves and <strong>${timeStr}</strong>!`;
+            }
         }
 
         function closeConcentration() {
