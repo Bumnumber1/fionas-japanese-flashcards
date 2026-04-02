@@ -152,6 +152,11 @@
             color: white;
         }
 
+        .btn-gofish {
+            background: linear-gradient(135deg, #80deea, #26c6da);
+            color: white;
+        }
+
         /* Score display */
         .score-bar {
             display: none;
@@ -1007,6 +1012,91 @@
             .conc-pair-select select { padding: 10px 16px; font-size: 1.05em; }
         }
 
+        /* Go Fish game */
+        .gf-overlay {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0d47a1, #1565c0, #0277bd);
+            z-index: 1000; overflow-y: auto;
+        }
+        .gf-overlay.active { display: block; }
+        .gf-close { position: fixed; top: 12px; right: 16px; font-size: 2em; cursor: pointer; color: rgba(255,255,255,0.8); z-index: 1010; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .gf-close:hover { color: white; transform: scale(1.2); }
+        .gf-inner { max-width: 800px; margin: 0 auto; padding: 50px 16px 20px; }
+
+        .gf-filter-screen { max-width: 500px; margin: 40px auto 0; background: white; border-radius: 28px; padding: 36px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+
+        /* Game layout */
+        .gf-board { display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 80px); }
+
+        .gf-ai-area { background: rgba(255,255,255,0.1); border-radius: 18px; padding: 14px; text-align: center; }
+        .gf-ai-area h3 { color: rgba(255,255,255,0.8); font-size: 0.95em; margin-bottom: 8px; }
+        .gf-ai-hand { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+        .gf-ai-card { width: 44px; height: 62px; background: linear-gradient(135deg, #e53935, #c62828); border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); }
+        .gf-ai-pairs { color: rgba(255,255,255,0.7); font-size: 0.85em; margin-top: 6px; font-weight: 700; }
+
+        .gf-middle { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 10px; flex-wrap: wrap; }
+        .gf-deck { text-align: center; }
+        .gf-deck-cards { width: 60px; height: 84px; background: linear-gradient(135deg, #4527a0, #311b92); border-radius: 10px; border: 3px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.3em; margin: 0 auto; }
+        .gf-deck-label { color: rgba(255,255,255,0.6); font-size: 0.8em; font-weight: 700; margin-top: 4px; }
+
+        .gf-speech { flex: 1; min-width: 200px; background: rgba(255,255,255,0.95); border-radius: 18px; padding: 16px; text-align: center; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .gf-speech::before { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 12px solid rgba(255,255,255,0.95); }
+        .gf-speech .gf-speaker { font-weight: 800; color: #78909c; font-size: 0.8em; margin-bottom: 4px; }
+        .gf-speech .gf-msg { font-size: 1.3em; font-weight: 700; color: #37474f; }
+        .gf-speech .gf-msg-sub { font-size: 0.85em; color: #90a4ae; font-weight: 600; margin-top: 2px; }
+
+        .gf-response-btns { display: flex; gap: 12px; margin-top: 12px; }
+        .gf-response-btns button { padding: 12px 28px; border: none; border-radius: 14px; font-family: 'Nunito','Noto Sans JP',sans-serif; font-size: 1.2em; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+        .gf-btn-hai { background: linear-gradient(135deg, #66bb6a, #43a047); color: white; }
+        .gf-btn-iie { background: linear-gradient(135deg, #ef5350, #e53935); color: white; }
+        .gf-btn-hai:hover, .gf-btn-iie:hover { transform: translateY(-2px); }
+
+        .gf-player-area { background: rgba(255,255,255,0.12); border-radius: 18px; padding: 14px; text-align: center; }
+        .gf-player-area h3 { color: rgba(255,255,255,0.8); font-size: 0.95em; margin-bottom: 8px; }
+        .gf-player-hand { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+        .gf-hand-card { width: 80px; padding: 8px 6px; background: white; border-radius: 12px; border: 3px solid #e0e0e0; cursor: pointer; text-align: center; transition: all 0.2s; user-select: none; -webkit-user-select: none; }
+        .gf-hand-card:hover { transform: translateY(-6px); border-color: #90caf9; }
+        .gf-hand-card.selected { border-color: #ffd600; background: #fffde7; transform: translateY(-10px); box-shadow: 0 8px 24px rgba(255,214,0,0.4); }
+        .gf-hand-card .gf-card-emoji { font-size: 1.4em; }
+        .gf-hand-card .gf-card-jp { font-family: 'Noto Sans JP',sans-serif; font-size: 0.95em; font-weight: 700; color: #37474f; margin-top: 2px; }
+        .gf-hand-card .gf-card-en { font-size: 0.65em; color: #90a4ae; font-weight: 600; }
+        .gf-hand-card.gf-disabled { opacity: 0.5; pointer-events: none; }
+
+        .gf-action-area { display: flex; justify-content: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+
+        .gf-mic-btn { width: 56px; height: 56px; border-radius: 50%; border: none; background: linear-gradient(135deg, #e53935, #c62828); color: white; font-size: 1.5em; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+        .gf-mic-btn:hover { transform: scale(1.1); }
+        .gf-mic-btn.recording { animation: micPulse 1s ease infinite; background: linear-gradient(135deg, #ff1744, #d50000); }
+        @keyframes micPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,0.5); } 50% { box-shadow: 0 0 0 14px rgba(229,57,53,0); } }
+
+        .gf-ask-btn { padding: 14px 28px; border: none; border-radius: 16px; background: linear-gradient(135deg, #ffa726, #ff9800); color: white; font-family: 'Nunito',sans-serif; font-size: 1.05em; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .gf-ask-btn:hover { transform: translateY(-2px); }
+        .gf-ask-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+        .gf-mic-hint { color: rgba(255,255,255,0.5); font-size: 0.8em; font-weight: 600; }
+
+        .gf-scores { display: flex; justify-content: center; gap: 24px; padding: 8px; }
+        .gf-scores span { font-weight: 800; font-size: 1.05em; padding: 6px 16px; border-radius: 12px; }
+        .gf-score-player { background: rgba(255,255,255,0.2); color: white; }
+        .gf-score-ai { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+
+        .gf-pairs-row { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+        .gf-pair-chip { font-size: 0.75em; padding: 3px 8px; background: rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-weight: 600; }
+
+        .gf-gameover { display: none; text-align: center; padding: 30px; background: rgba(255,255,255,0.95); border-radius: 24px; margin-top: 16px; }
+        .gf-gameover.active { display: block; }
+        .gf-gameover .big-emoji { font-size: 3.5em; }
+        .gf-gameover h2 { font-size: 1.8em; margin: 8px 0; color: #37474f; }
+        .gf-gameover p { color: #546e7a; font-weight: 600; }
+
+        @media (pointer: coarse) {
+            .gf-hand-card { width: 85px; padding: 10px 8px; }
+            .gf-response-btns button { padding: 14px 32px; font-size: 1.3em; }
+            .gf-mic-btn { width: 64px; height: 64px; font-size: 1.7em; }
+        }
+
         /* Print section (hidden on screen) */
         .print-section {
             display: none;
@@ -1125,7 +1215,7 @@
 
             body::before { display: none !important; }
 
-            .header, .controls, .score-bar, #cardContainer, .quiz-overlay, .conc-overlay, .audio-btn {
+            .header, .controls, .score-bar, #cardContainer, .quiz-overlay, .conc-overlay, .gf-overlay, .audio-btn {
                 display: none !important;
             }
 
@@ -1175,6 +1265,7 @@
             <button class="btn-quiz" onclick="startQuiz()">Quiz Me!</button>
             <button class="btn-print" onclick="printCards()">Print Cards</button>
             <button class="btn-concentration" onclick="openConcentration()">Concentration</button>
+            <button class="btn-gofish" onclick="openGoFish()">Go Fish</button>
         </div>
 
         <div class="score-bar" id="scoreBar">
@@ -1295,6 +1386,69 @@
                     </div>
                     <div class="conc-leaderboard" id="concLeaderboard"></div>
                     <button class="conc-play-again" onclick="openConcentration()">Play Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Go Fish overlay -->
+    <div class="gf-overlay" id="gfOverlay">
+        <span class="gf-close" onclick="closeGoFish()">&times;</span>
+        <div class="gf-inner">
+            <div class="gf-filter-screen" id="gfFilterScreen">
+                <h2 style="margin-bottom:6px;">Go Fish!</h2>
+                <p style="color:#90a4ae;font-weight:600;margin-bottom:16px;">Play against the AI in Japanese!</p>
+                <div class="quiz-filter">
+                    <div class="quiz-filter-grid" id="gfFilterGrid"></div>
+                    <div class="quiz-filter-actions">
+                        <button onclick="document.querySelectorAll('#gfFilterGrid input').forEach(c=>c.checked=true)">Select All</button>
+                        <button onclick="document.querySelectorAll('#gfFilterGrid input').forEach(c=>c.checked=false)">Deselect All</button>
+                    </div>
+                </div>
+                <button class="quiz-start-btn" onclick="beginGoFish()">Start Game</button>
+            </div>
+            <div id="gfGameArea" style="display:none;">
+                <div class="gf-board">
+                    <div class="gf-scores">
+                        <span class="gf-score-ai" id="gfAiScore">AI: 0 pairs</span>
+                        <span class="gf-score-player" id="gfPlayerScore">You: 0 pairs</span>
+                    </div>
+                    <div class="gf-ai-area">
+                        <h3>AI's Hand</h3>
+                        <div class="gf-ai-hand" id="gfAiHand"></div>
+                        <div class="gf-ai-pairs" id="gfAiPairs"></div>
+                    </div>
+                    <div class="gf-middle">
+                        <div class="gf-deck">
+                            <div class="gf-deck-cards" id="gfDeckCount">0</div>
+                            <div class="gf-deck-label">Draw Pile</div>
+                        </div>
+                        <div class="gf-speech" id="gfSpeech">
+                            <div class="gf-speaker" id="gfSpeaker"></div>
+                            <div class="gf-msg" id="gfMsg">Tap a card to start!</div>
+                            <div class="gf-msg-sub" id="gfMsgSub"></div>
+                            <div class="gf-response-btns" id="gfResponseBtns" style="display:none;">
+                                <button class="gf-btn-hai" onclick="gfPlayerRespond(true)">はい</button>
+                                <button class="gf-btn-iie" onclick="gfPlayerRespond(false)">いいえ</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gf-player-area">
+                        <h3>Your Hand</h3>
+                        <div class="gf-player-hand" id="gfPlayerHand"></div>
+                        <div class="gf-action-area" id="gfActionArea" style="display:none;">
+                            <button class="gf-mic-btn" id="gfMicBtn" onclick="gfStartListening()" title="Speak">&#x1F3A4;</button>
+                            <button class="gf-ask-btn" id="gfAskBtn" onclick="gfPlayerAsk()">Ask!</button>
+                            <div class="gf-mic-hint" id="gfMicHint">Tap mic &amp; say the phrase, or tap Ask!</div>
+                        </div>
+                        <div class="gf-ai-pairs" id="gfPlayerPairs"></div>
+                    </div>
+                    <div class="gf-gameover" id="gfGameover">
+                        <div class="big-emoji" id="gfEndEmoji"></div>
+                        <h2 id="gfEndTitle"></h2>
+                        <p id="gfEndMsg"></p>
+                        <button class="conc-play-again" onclick="openGoFish()" style="margin-top:14px;">Play Again</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2106,6 +2260,344 @@
         function closeConcentration() {
             document.getElementById('concOverlay').classList.remove('active');
             clearInterval(concTimerInterval);
+        }
+
+        // Go Fish game
+        let gfDeck = [], gfPlayerCards = [], gfAiCards = [];
+        let gfPlayerPairCount = 0, gfAiPairCount = 0;
+        let gfPlayerPairsList = [], gfAiPairsList = [];
+        let gfSelectedCard = null, gfTurn = 'player', gfGameActive = false;
+        let gfPool = []; // word objects used in this game
+
+        const GFSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        function openGoFish() {
+            const grid = document.getElementById('gfFilterGrid');
+            const cats = [...new Set(words.map(w => w.category))];
+            grid.innerHTML = '';
+            cats.forEach(cat => {
+                const count = words.filter(w => w.category === cat).length;
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${cat}" checked> ${cat} (${count})`;
+                grid.appendChild(label);
+            });
+            document.getElementById('gfFilterScreen').style.display = 'block';
+            document.getElementById('gfGameArea').style.display = 'none';
+            document.getElementById('gfOverlay').classList.add('active');
+        }
+
+        function beginGoFish() {
+            const selected = [...document.querySelectorAll('#gfFilterGrid input:checked')].map(cb => cb.value);
+            if (selected.length === 0) return;
+
+            gfPool = words.filter(w => selected.includes(w.category));
+            // Use up to 20 words, create 2 copies of each
+            const chosen = [...gfPool].sort(() => Math.random() - 0.5).slice(0, 20);
+            gfDeck = [];
+            chosen.forEach(w => {
+                gfDeck.push({ ...w, uid: Math.random() });
+                gfDeck.push({ ...w, uid: Math.random() });
+            });
+            gfDeck.sort(() => Math.random() - 0.5);
+
+            gfPlayerCards = gfDeck.splice(0, 5);
+            gfAiCards = gfDeck.splice(0, 5);
+            gfPlayerPairCount = 0; gfAiPairCount = 0;
+            gfPlayerPairsList = []; gfAiPairsList = [];
+            gfSelectedCard = null; gfTurn = 'player'; gfGameActive = true;
+
+            document.getElementById('gfFilterScreen').style.display = 'none';
+            document.getElementById('gfGameArea').style.display = 'block';
+            document.getElementById('gfGameover').classList.remove('active');
+
+            gfCheckPairs('player');
+            gfCheckPairs('ai');
+            gfRender();
+            gfSetMsg('', 'Your turn! Tap a card to ask the AI for it.', '');
+        }
+
+        function gfRender() {
+            // AI hand (face down)
+            const aiHand = document.getElementById('gfAiHand');
+            aiHand.innerHTML = gfAiCards.map(() => '<div class="gf-ai-card"></div>').join('');
+
+            // Deck
+            document.getElementById('gfDeckCount').textContent = gfDeck.length;
+
+            // Player hand
+            const pHand = document.getElementById('gfPlayerHand');
+            pHand.innerHTML = '';
+            gfPlayerCards.forEach((card, i) => {
+                const div = document.createElement('div');
+                div.className = 'gf-hand-card' + (gfSelectedCard === i ? ' selected' : '') + (gfTurn !== 'player' ? ' gf-disabled' : '');
+                div.innerHTML = `
+                    ${card.emoji ? `<div class="gf-card-emoji">${card.emoji}</div>` : ''}
+                    <div class="gf-card-jp">${card.japanese}</div>
+                    <div class="gf-card-en">${card.english}</div>
+                `;
+                div.onclick = () => gfSelectCard(i);
+                pHand.appendChild(div);
+            });
+
+            // Scores
+            document.getElementById('gfPlayerScore').textContent = `You: ${gfPlayerPairCount} pairs`;
+            document.getElementById('gfAiScore').textContent = `AI: ${gfAiPairCount} pairs`;
+
+            // Pairs display
+            document.getElementById('gfPlayerPairs').innerHTML = gfPlayerPairsList.map(w => `<span class="gf-pair-chip">${w.emoji || ''} ${w.japanese}</span>`).join('');
+            document.getElementById('gfAiPairs').innerHTML = gfAiPairsList.map(w => `<span class="gf-pair-chip">${w.emoji || ''} ${w.japanese}</span>`).join('');
+
+            // Action area visibility
+            document.getElementById('gfActionArea').style.display = (gfTurn === 'player' && gfSelectedCard !== null) ? 'flex' : 'none';
+        }
+
+        function gfSetMsg(speaker, msg, sub) {
+            document.getElementById('gfSpeaker').textContent = speaker;
+            document.getElementById('gfMsg').innerHTML = msg;
+            document.getElementById('gfMsgSub').textContent = sub;
+        }
+
+        function gfSelectCard(i) {
+            if (gfTurn !== 'player' || !gfGameActive) return;
+            gfSelectedCard = i;
+            const card = gfPlayerCards[i];
+            gfSetMsg('', `Ask for: <strong>${card.japanese}</strong>`, `"${card.japanese} を もっていますか？"`);
+            gfRender();
+        }
+
+        function gfPlayerAsk() {
+            if (gfSelectedCard === null || gfTurn !== 'player') return;
+            const card = gfPlayerCards[gfSelectedCard];
+            speak(card.japanese + ' を もっていますか？');
+            gfProcessPlayerAsk(card);
+        }
+
+        function gfStartListening() {
+            if (!GFSpeechRecognition) {
+                gfSetMsg('', 'Mic not supported - tap Ask!', '');
+                return;
+            }
+            const btn = document.getElementById('gfMicBtn');
+            btn.classList.add('recording');
+            document.getElementById('gfMicHint').textContent = 'Listening... say the phrase!';
+
+            const recognition = new GFSpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 3;
+
+            recognition.onresult = (event) => {
+                btn.classList.remove('recording');
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('gfMicHint').textContent = `Heard: "${transcript}"`;
+
+                if (gfSelectedCard !== null) {
+                    const card = gfPlayerCards[gfSelectedCard];
+                    // Check if the spoken phrase contains the card's Japanese text
+                    if (transcript.includes(card.japanese) || transcript.includes('もってい') || transcript.includes('持って')) {
+                        playSfx('correct');
+                        gfProcessPlayerAsk(card);
+                    } else {
+                        playSfx('wrong');
+                        gfSetMsg('', `Try again! Say: "${card.japanese} を もっていますか？"`, `Heard: "${transcript}"`);
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                btn.classList.remove('recording');
+                if (event.error === 'not-allowed') {
+                    document.getElementById('gfMicHint').textContent = 'Mic permission denied. Tap Ask! instead.';
+                } else {
+                    document.getElementById('gfMicHint').textContent = 'Could not hear. Try again or tap Ask!';
+                }
+            };
+
+            recognition.onend = () => {
+                btn.classList.remove('recording');
+            };
+
+            recognition.start();
+        }
+
+        function gfProcessPlayerAsk(card) {
+            gfTurn = 'waiting';
+            gfRender();
+
+            // Check if AI has a matching card
+            const aiIdx = gfAiCards.findIndex(c => c.japanese === card.japanese && c.uid !== card.uid);
+
+            if (aiIdx !== -1) {
+                // AI has it!
+                gfSetMsg('AI', 'はい、どうぞ！', 'Yes, here you go!');
+                speak('はい、どうぞ');
+                playSfx('match');
+                setTimeout(() => {
+                    gfAiCards.splice(aiIdx, 1);
+                    gfPlayerCards.splice(gfPlayerCards.indexOf(card), 1);
+                    gfPlayerPairCount++;
+                    gfPlayerPairsList.push(card);
+                    gfSelectedCard = null;
+                    gfCheckGameEnd() || gfStartPlayerTurn();
+                }, 1800);
+            } else {
+                // Go Fish!
+                gfSetMsg('AI', 'いいえ、Go Fish！', 'No, go fish!');
+                speak('いいえ、ゴーフィッシュ');
+                playSfx('wrong');
+                setTimeout(() => {
+                    if (gfDeck.length > 0) {
+                        const drawn = gfDeck.pop();
+                        gfPlayerCards.push(drawn);
+                        gfSetMsg('', `You drew: ${drawn.japanese} (${drawn.english})`, '');
+                        speak(drawn.japanese);
+                        gfCheckPairs('player');
+                    }
+                    gfSelectedCard = null;
+                    setTimeout(() => {
+                        gfCheckGameEnd() || gfStartAiTurn();
+                    }, 1200);
+                }, 1800);
+            }
+        }
+
+        function gfStartPlayerTurn() {
+            if (gfPlayerCards.length === 0 && gfDeck.length > 0) {
+                gfPlayerCards.push(gfDeck.pop());
+            }
+            if (gfPlayerCards.length === 0) { gfCheckGameEnd(); return; }
+            gfTurn = 'player';
+            gfSetMsg('', 'Your turn! Tap a card to ask for it.', '');
+            gfRender();
+        }
+
+        function gfStartAiTurn() {
+            if (gfAiCards.length === 0 && gfDeck.length > 0) {
+                gfAiCards.push(gfDeck.pop());
+            }
+            if (gfAiCards.length === 0) { gfCheckGameEnd(); return; }
+            gfTurn = 'ai';
+            gfSelectedCard = null;
+            gfRender();
+
+            // AI picks a card to ask for (prefers cards it has duplicates of, or random)
+            const cardCounts = {};
+            gfAiCards.forEach(c => { cardCounts[c.japanese] = (cardCounts[c.japanese] || 0) + 1; });
+            // Pick a random card (prefer ones AI doesn't have pairs for yet)
+            const singles = gfAiCards.filter(c => cardCounts[c.japanese] === 1);
+            const askCard = singles.length > 0 ? singles[Math.floor(Math.random() * singles.length)] : gfAiCards[Math.floor(Math.random() * gfAiCards.length)];
+
+            const phrase = `${askCard.japanese} を もっていますか？`;
+            gfSetMsg('AI', phrase, `Do you have ${askCard.english}?`);
+            speak(askCard.japanese + ' を もっていますか？');
+
+            // Show response buttons
+            const btns = document.getElementById('gfResponseBtns');
+            btns.style.display = 'flex';
+
+            // Store what AI is asking for
+            gfAiAsking = askCard;
+        }
+
+        let gfAiAsking = null;
+
+        function gfPlayerRespond(saidHai) {
+            document.getElementById('gfResponseBtns').style.display = 'none';
+            const hasCard = gfPlayerCards.some(c => c.japanese === gfAiAsking.japanese);
+
+            if (saidHai && hasCard) {
+                // Correct - player has it and said yes
+                playSfx('correct');
+                speak('はい、どうぞ');
+                const idx = gfPlayerCards.findIndex(c => c.japanese === gfAiAsking.japanese);
+                const given = gfPlayerCards.splice(idx, 1)[0];
+                gfAiCards.splice(gfAiCards.indexOf(gfAiAsking), 1);
+                gfAiPairCount++;
+                gfAiPairsList.push(gfAiAsking);
+                gfSetMsg('', `Correct! You gave ${gfAiAsking.japanese} to the AI.`, 'AI made a pair!');
+                gfRender();
+                setTimeout(() => {
+                    gfCheckGameEnd() || gfStartAiTurn();
+                }, 1800);
+            } else if (!saidHai && !hasCard) {
+                // Correct - player doesn't have it and said no
+                playSfx('correct');
+                speak('いいえ');
+                gfSetMsg('', 'Correct! AI goes fishing...', '');
+                setTimeout(() => {
+                    if (gfDeck.length > 0) gfAiCards.push(gfDeck.pop());
+                    gfCheckPairs('ai');
+                    gfRender();
+                    setTimeout(() => {
+                        gfCheckGameEnd() || gfStartPlayerTurn();
+                    }, 800);
+                }, 1200);
+            } else if (saidHai && !hasCard) {
+                // Wrong - said yes but doesn't have it
+                playSfx('wrong');
+                gfSetMsg('', `Look again! You don't have ${gfAiAsking.japanese}.`, 'Tap いいえ');
+                document.getElementById('gfResponseBtns').style.display = 'flex';
+            } else {
+                // Wrong - said no but has it
+                playSfx('wrong');
+                gfSetMsg('', `Look again! You DO have ${gfAiAsking.japanese}!`, 'Tap はい');
+                document.getElementById('gfResponseBtns').style.display = 'flex';
+            }
+        }
+
+        function gfCheckPairs(who) {
+            const hand = who === 'player' ? gfPlayerCards : gfAiCards;
+            const counts = {};
+            hand.forEach(c => { counts[c.japanese] = (counts[c.japanese] || 0) + 1; });
+            for (const [jp, count] of Object.entries(counts)) {
+                if (count >= 2) {
+                    // Remove 2 cards of this type
+                    let removed = 0;
+                    for (let i = hand.length - 1; i >= 0 && removed < 2; i--) {
+                        if (hand[i].japanese === jp) { hand.splice(i, 1); removed++; }
+                    }
+                    const matchWord = gfPool.find(w => w.japanese === jp);
+                    if (who === 'player') { gfPlayerPairCount++; gfPlayerPairsList.push(matchWord); }
+                    else { gfAiPairCount++; gfAiPairsList.push(matchWord); }
+                    playSfx('match');
+                }
+            }
+        }
+
+        function gfCheckGameEnd() {
+            const allEmpty = gfPlayerCards.length === 0 && gfAiCards.length === 0;
+            const deckEmpty = gfDeck.length === 0 && (gfPlayerCards.length === 0 || gfAiCards.length === 0);
+            if (!allEmpty && !deckEmpty) return false;
+
+            gfGameActive = false;
+            gfTurn = 'done';
+            gfRender();
+
+            const el = document.getElementById('gfGameover');
+            el.classList.add('active');
+            playSfx('complete');
+
+            let emoji, title;
+            if (gfPlayerPairCount > gfAiPairCount) {
+                emoji = '&#x1F3C6;'; title = 'You Win!';
+                speak('おめでとう！');
+            } else if (gfAiPairCount > gfPlayerPairCount) {
+                emoji = '&#x1F916;'; title = 'AI Wins!';
+                speak('ざんねん');
+            } else {
+                emoji = '&#x1F91D;'; title = "It's a Tie!";
+            }
+
+            document.getElementById('gfEndEmoji').innerHTML = emoji;
+            document.getElementById('gfEndTitle').textContent = title;
+            document.getElementById('gfEndMsg').innerHTML = `You: <strong>${gfPlayerPairCount}</strong> pairs &nbsp; AI: <strong>${gfAiPairCount}</strong> pairs`;
+            return true;
+        }
+
+        function closeGoFish() {
+            document.getElementById('gfOverlay').classList.remove('active');
+            gfGameActive = false;
         }
 
         // Initialize
