@@ -263,6 +263,59 @@
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
+        /* Audio button */
+        .audio-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s ease;
+            z-index: 10;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .audio-btn:hover {
+            background: rgba(0, 0, 0, 0.12);
+            transform: scale(1.15);
+        }
+
+        .audio-btn:active {
+            transform: scale(0.95);
+        }
+
+        .audio-btn.playing {
+            background: rgba(124, 77, 255, 0.15);
+            animation: audioPulse 0.6s ease;
+        }
+
+        @keyframes audioPulse {
+            0% { box-shadow: 0 0 0 0 rgba(124, 77, 255, 0.4); }
+            100% { box-shadow: 0 0 0 12px rgba(124, 77, 255, 0); }
+        }
+
+        .quiz-audio-btn {
+            position: static;
+            width: 44px;
+            height: 44px;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            background: rgba(124, 77, 255, 0.1);
+        }
+
+        .quiz-audio-btn:hover {
+            background: rgba(124, 77, 255, 0.2);
+        }
+
         .card-japanese {
             font-family: 'Noto Sans JP', sans-serif;
             font-size: 2em;
@@ -703,7 +756,7 @@
 
             body::before { display: none !important; }
 
-            .header, .controls, .score-bar, #cardContainer, .quiz-overlay {
+            .header, .controls, .score-bar, #cardContainer, .quiz-overlay, .audio-btn {
                 display: none !important;
             }
 
@@ -789,6 +842,7 @@
                 <button class="quiz-start-btn" onclick="beginQuiz()">Start Quiz</button>
             </div>
             <div id="quizQuestion" style="display:none;">
+                <button class="audio-btn quiz-audio-btn" id="quizAudioBtn" onclick="speakQuiz()" title="Listen">&#x1F50A;</button>
                 <div class="card-emoji" id="quizEmoji"></div>
                 <div class="card-japanese" id="quizJapanese"></div>
                 <div class="card-romaji" id="quizRomaji"></div>
@@ -945,15 +999,18 @@
                     const backEmoji = word.emoji ? `<div class="card-emoji">${word.emoji}</div>` : '';
                     const frontJpStyle = isHiragana ? 'font-size:3.5em;' : '';
                     const romaji = word.romaji ? `<div class="card-romaji">${word.romaji}</div>` : '';
+                    const escaped = word.japanese.replace(/'/g, "\\'");
                     html += `
                         <div class="flashcard theme-${word.theme}" onclick="flipCard(this)" data-index="${word.index}">
                             <div class="flashcard-inner">
                                 <div class="flashcard-front">
+                                    <button class="audio-btn" onclick="event.stopPropagation(); speak('${escaped}', this)" title="Listen">&#x1F50A;</button>
                                     ${frontEmoji}
                                     <div class="card-japanese" style="${frontJpStyle}">${word.japanese}</div>
                                     ${romaji}
                                 </div>
                                 <div class="flashcard-back">
+                                    <button class="audio-btn" onclick="event.stopPropagation(); speak('${escaped}', this)" title="Listen">&#x1F50A;</button>
                                     ${backEmoji}
                                     <div class="card-english">${word.english}</div>
                                     <div class="card-japanese" style="font-size:1.3em;">${word.japanese}</div>
@@ -1209,6 +1266,41 @@
         function printCards() {
             renderPrintSection();
             window.print();
+        }
+
+        // Speech synthesis - prefer female Japanese voice
+        let jaVoice = null;
+
+        function loadVoice() {
+            const voices = speechSynthesis.getVoices();
+            // Prefer female Japanese voices
+            jaVoice = voices.find(v => v.lang.startsWith('ja') && /female|woman|kyoko|haruka|o-ren/i.test(v.name))
+                   || voices.find(v => v.lang.startsWith('ja'))
+                   || null;
+        }
+
+        speechSynthesis.onvoiceschanged = loadVoice;
+        loadVoice();
+
+        function speak(text, btnEl) {
+            speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'ja-JP';
+            utter.rate = 0.85;
+            utter.pitch = 1.2;
+            if (jaVoice) utter.voice = jaVoice;
+            if (btnEl) {
+                btnEl.classList.add('playing');
+                utter.onend = () => btnEl.classList.remove('playing');
+                utter.onerror = () => btnEl.classList.remove('playing');
+            }
+            speechSynthesis.speak(utter);
+        }
+
+        function speakQuiz() {
+            if (quizIndex < quizWords.length) {
+                speak(quizWords[quizIndex].japanese, document.getElementById('quizAudioBtn'));
+            }
         }
 
         // Initialize
