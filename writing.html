@@ -275,9 +275,33 @@
         }
 
         .kanji-pic-reading {
-            font-size: 0.9em;
+            font-size: 0.85em;
             font-weight: 600;
             color: #90a4ae;
+            white-space: pre-line;
+            line-height: 1.4;
+        }
+
+        .kanji-pic-speak {
+            margin-top: 12px;
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            font-size: 1.4em;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 12px rgba(171, 71, 188, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .kanji-pic-speak:active {
+            transform: scale(0.9);
         }
 
         /* Reference panel */
@@ -662,6 +686,7 @@
                 <div class="kanji-pic-emoji" id="kanjiPicEmoji"></div>
                 <div class="kanji-pic-english" id="kanjiPicEnglish"></div>
                 <div class="kanji-pic-reading" id="kanjiPicReading"></div>
+                <button class="kanji-pic-speak" id="kanjiPicSpeak" onclick="speakCurrentChar()">&#x1F50A;</button>
             </div>
         </div>
 
@@ -1109,6 +1134,34 @@
         { char: '休', romaji: 'yasumu', english: 'rest', emoji: '😴', strokes: 6, row: 'objects', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) }
     ];
 
+    // Add on'yomi and kun'yomi readings
+    const kanjiReadings = {
+        '一':['イチ','ひと(つ)'],'二':['ニ','ふた(つ)'],'三':['サン','み(つ)'],'四':['シ','よ(つ)/よん'],
+        '五':['ゴ','いつ(つ)'],'六':['ロク','む(つ)'],'七':['シチ','なな'],'八':['ハチ','や(つ)'],
+        '九':['キュウ/ク','ここの(つ)'],'十':['ジュウ','とお'],'百':['ヒャク',''],'千':['セン','ち'],
+        '山':['サン','やま'],'川':['セン','かわ'],'森':['シン','もり'],'林':['リン','はやし'],
+        '花':['カ','はな'],'雨':['ウ','あめ'],'空':['クウ','そら/あ(く)'],'天':['テン','あま/あめ'],
+        '石':['セキ','いし'],'竹':['チク','たけ'],'虫':['チュウ','むし'],'草':['ソウ','くさ'],'田':['デン','た'],
+        '人':['ジン/ニン','ひと'],'子':['シ','こ'],'女':['ジョ','おんな'],'男':['ダン','おとこ'],
+        '王':['オウ',''],'先':['セン','さき'],'生':['セイ/ショウ','い(きる)/う(まれる)'],
+        '学':['ガク','まな(ぶ)'],'校':['コウ',''],'名':['メイ','な'],
+        '目':['モク','め'],'耳':['ジ','みみ'],'口':['コウ/ク','くち'],'手':['シュ','て'],
+        '足':['ソク','あし/た(りる)'],'力':['リョク/リキ','ちから'],
+        '上':['ジョウ','うえ/あ(がる)'],'下':['カ/ゲ','した/さ(がる)'],'左':['サ','ひだり'],'右':['ウ/ユウ','みぎ'],
+        '大':['ダイ/タイ','おお(きい)'],'中':['チュウ','なか'],'小':['ショウ','ちい(さい)/こ'],
+        '入':['ニュウ','い(る)/はい(る)'],'出':['シュツ','で(る)/だ(す)'],'立':['リツ','た(つ)'],
+        '日':['ニチ/ジツ','ひ/か'],'月':['ゲツ/ガツ','つき'],'火':['カ','ひ'],'水':['スイ','みず'],
+        '木':['モク/ボク','き'],'金':['キン/コン','かね/かな'],'土':['ド/ト','つち'],
+        '年':['ネン','とし'],'早':['ソウ','はや(い)'],'気':['キ/ケ',''],
+        '本':['ホン','もと'],'文':['ブン/モン','ふみ'],'字':['ジ','あざ'],'犬':['ケン','いぬ'],
+        '貝':['バイ','かい'],'車':['シャ','くるま'],'円':['エン','まる(い)'],'玉':['ギョク','たま'],
+        '赤':['セキ','あか'],'青':['セイ','あお'],'白':['ハク','しろ'],'見':['ケン','み(る)'],'休':['キュウ','やす(む)']
+    };
+    kanjiData.forEach(k => {
+        const r = kanjiReadings[k.char];
+        if (r) { k.onyomi = r[0]; k.kunyomi = r[1]; }
+    });
+
     const kanjiRowNames = {
         'numbers': 'Numbers',
         'nature': 'Nature',
@@ -1289,7 +1342,10 @@
             picPanel.style.display = 'block';
             document.getElementById('kanjiPicEmoji').textContent = data.emoji;
             document.getElementById('kanjiPicEnglish').textContent = data.english;
-            document.getElementById('kanjiPicReading').textContent = data.romaji;
+            let readingText = '';
+            if (data.onyomi) readingText += 'On: ' + data.onyomi;
+            if (data.kunyomi) readingText += (readingText ? '\n' : '') + 'Kun: ' + data.kunyomi;
+            document.getElementById('kanjiPicReading').textContent = readingText || data.romaji;
         } else {
             picPanel.style.display = 'none';
         }
@@ -2069,6 +2125,36 @@
 
     // =========================================================================
     // SOUND EFFECTS (Web Audio API, matching main site)
+    // =========================================================================
+    // SPEECH - pronounce character readings
+    // =========================================================================
+    function speakJapanese(text) {
+        speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ja-JP';
+        utter.rate = 0.8;
+        utter.pitch = 1.2;
+        const voices = speechSynthesis.getVoices();
+        const jaVoice = voices.find(v => v.lang.startsWith('ja') && /female|woman|kyoko|haruka/i.test(v.name))
+                      || voices.find(v => v.lang.startsWith('ja'));
+        if (jaVoice) utter.voice = jaVoice;
+        speechSynthesis.speak(utter);
+    }
+
+    function speakCurrentChar() {
+        const data = getCurrentChar();
+        if (currentMode === 'kanji' && data.onyomi) {
+            // Speak: character, then on'yomi, then kun'yomi
+            const parts = [];
+            parts.push(data.char);
+            if (data.onyomi) parts.push(data.onyomi);
+            if (data.kunyomi) parts.push(data.kunyomi);
+            speakJapanese(parts.join('、'));
+        } else {
+            speakJapanese(data.char);
+        }
+    }
+
     // =========================================================================
     let audioCtx = null;
     function getAudioCtx() {
