@@ -166,12 +166,12 @@
         }
 
         .char-row-label {
-            font-size: 0.7em;
+            font-size: 0.85em;
             font-weight: 800;
-            color: #b0bec5;
-            margin-top: 6px;
-            margin-bottom: 2px;
-            padding-left: 2px;
+            color: #90a4ae;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            padding-left: 4px;
         }
 
         .char-row-label:first-child {
@@ -179,19 +179,19 @@
         }
 
         .char-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
         }
 
         .char-btn {
-            width: 42px;
-            height: 42px;
+            width: 100%;
+            aspect-ratio: 1;
             border: 2px solid transparent;
-            border-radius: 10px;
+            border-radius: 12px;
             background: rgba(255, 255, 255, 0.8);
             font-family: 'Noto Sans JP', sans-serif;
-            font-size: 1.2em;
+            font-size: 1.6em;
             font-weight: 700;
             color: #546e7a;
             cursor: pointer;
@@ -556,22 +556,7 @@
     </div>
 
     <div class="container">
-        <!-- Progress -->
-        <div class="progress-section">
-            <div class="progress-label">Your Progress</div>
-            <div class="progress-bar-track">
-                <div class="progress-bar-fill" id="progressFill"></div>
-            </div>
-            <div class="progress-count" id="progressCount">0 / 46 practiced</div>
-        </div>
-
-        <!-- Character Grid -->
-        <div class="char-grid-section">
-            <h3>Choose a character to practice:</h3>
-            <div id="charGridContainer"></div>
-        </div>
-
-        <!-- Practice Area -->
+        <!-- Practice Area FIRST -->
         <div class="practice-area">
             <!-- Reference -->
             <div class="reference-panel">
@@ -604,6 +589,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- Progress -->
+        <div class="progress-section">
+            <div class="progress-label">Your Progress</div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-count" id="progressCount">0 / 46 practiced</div>
+        </div>
+
+        <!-- Character Grid BELOW with more space -->
+        <div class="char-grid-section">
+            <h3>Choose a character to practice:</h3>
+            <div id="charGridContainer"></div>
+        </div>
     </div>
 
     <script>
@@ -619,209 +619,313 @@
     const hiraganaData = [
         // --- A row ---
         { char: 'あ', romaji: 'a', strokes: 3, row: 'a', paths: [
-            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
-            { points: [[0.5,0.1],[0.5,0.55],[0.45,0.7]], dir: 'down' },
-            { points: [[0.2,0.5],[0.55,0.45],[0.75,0.55],[0.7,0.75],[0.35,0.85],[0.25,0.7]], dir: 'loop' }
+            // Stroke 1: horizontal stroke across upper area, slight curve
+            { points: [[0.15,0.33],[0.22,0.31],[0.32,0.29],[0.42,0.28],[0.52,0.27],[0.62,0.27],[0.72,0.28],[0.82,0.30]], dir: 'right' },
+            // Stroke 2: vertical from top-center, curving slightly left at bottom
+            { points: [[0.52,0.12],[0.51,0.20],[0.50,0.28],[0.49,0.36],[0.48,0.44],[0.46,0.52],[0.44,0.60],[0.41,0.68],[0.38,0.74]], dir: 'down' },
+            // Stroke 3: starts left of center, sweeps right, loops counterclockwise
+            { points: [[0.20,0.52],[0.28,0.48],[0.38,0.45],[0.48,0.44],[0.58,0.45],[0.67,0.48],[0.73,0.54],[0.76,0.62],[0.74,0.70],[0.68,0.77],[0.58,0.82],[0.48,0.84],[0.38,0.82],[0.30,0.76],[0.26,0.68]], dir: 'loop' }
         ]},
         { char: 'い', romaji: 'i', strokes: 2, row: 'a', paths: [
-            { points: [[0.3,0.2],[0.25,0.7]], dir: 'down' },
-            { points: [[0.6,0.25],[0.65,0.55],[0.7,0.7]], dir: 'down' }
+            // Stroke 1: left stroke, slightly curving leftward as it descends
+            { points: [[0.33,0.18],[0.32,0.26],[0.31,0.34],[0.30,0.42],[0.28,0.50],[0.26,0.58],[0.24,0.66],[0.22,0.72]], dir: 'down' },
+            // Stroke 2: right stroke, slightly curving rightward as it descends
+            { points: [[0.58,0.20],[0.59,0.28],[0.60,0.36],[0.61,0.44],[0.63,0.52],[0.65,0.60],[0.68,0.66],[0.72,0.72]], dir: 'down' }
         ]},
         { char: 'う', romaji: 'u', strokes: 2, row: 'a', paths: [
-            { points: [[0.45,0.18],[0.55,0.18]], dir: 'right' },
-            { points: [[0.3,0.35],[0.6,0.35],[0.65,0.55],[0.5,0.8],[0.3,0.75]], dir: 'curve-left' }
+            // Stroke 1: short horizontal tick at top
+            { points: [[0.40,0.18],[0.44,0.16],[0.48,0.15],[0.52,0.15],[0.56,0.16],[0.60,0.18]], dir: 'right' },
+            // Stroke 2: open curve from upper-left, arcs right, then curves down and left
+            { points: [[0.26,0.34],[0.34,0.32],[0.44,0.31],[0.54,0.31],[0.62,0.33],[0.68,0.38],[0.70,0.44],[0.70,0.52],[0.67,0.60],[0.62,0.67],[0.55,0.73],[0.46,0.77],[0.38,0.78],[0.30,0.74]], dir: 'curve-left' }
         ]},
         { char: 'え', romaji: 'e', strokes: 2, row: 'a', paths: [
-            { points: [[0.35,0.2],[0.6,0.2]], dir: 'right' },
-            { points: [[0.5,0.2],[0.3,0.5],[0.5,0.55],[0.7,0.65],[0.45,0.85],[0.25,0.75]], dir: 'curve-left' }
+            // Stroke 1: short horizontal stroke at top
+            { points: [[0.30,0.22],[0.36,0.20],[0.42,0.19],[0.48,0.19],[0.54,0.20],[0.62,0.22]], dir: 'right' },
+            // Stroke 2: descends left, then zigzags right, curving down-left at bottom
+            { points: [[0.52,0.22],[0.48,0.28],[0.44,0.34],[0.38,0.40],[0.34,0.46],[0.38,0.50],[0.46,0.53],[0.54,0.56],[0.62,0.60],[0.67,0.66],[0.66,0.72],[0.60,0.78],[0.52,0.82],[0.42,0.84],[0.33,0.80]], dir: 'curve-left' }
         ]},
         { char: 'お', romaji: 'o', strokes: 3, row: 'a', paths: [
-            { points: [[0.2,0.3],[0.75,0.3]], dir: 'right' },
-            { points: [[0.45,0.1],[0.45,0.5],[0.4,0.7],[0.3,0.8]], dir: 'down' },
-            { points: [[0.5,0.45],[0.7,0.5],[0.75,0.65],[0.6,0.8],[0.45,0.75]], dir: 'loop' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.15,0.33],[0.24,0.30],[0.34,0.28],[0.44,0.27],[0.54,0.27],[0.64,0.28],[0.72,0.30],[0.80,0.33]], dir: 'right' },
+            // Stroke 2: vertical from top, curving left at bottom
+            { points: [[0.42,0.12],[0.42,0.20],[0.42,0.28],[0.42,0.36],[0.41,0.44],[0.40,0.52],[0.38,0.60],[0.35,0.68],[0.31,0.75],[0.27,0.82]], dir: 'down' },
+            // Stroke 3: loop on right side
+            { points: [[0.48,0.46],[0.55,0.47],[0.62,0.49],[0.69,0.53],[0.73,0.58],[0.75,0.65],[0.73,0.72],[0.68,0.78],[0.60,0.82],[0.52,0.83],[0.46,0.80],[0.43,0.74]], dir: 'loop' }
         ]},
         // --- KA row ---
         { char: 'か', romaji: 'ka', strokes: 3, row: 'ka', paths: [
-            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
-            { points: [[0.55,0.1],[0.5,0.55],[0.35,0.85]], dir: 'down-left' },
-            { points: [[0.6,0.5],[0.75,0.65],[0.7,0.85]], dir: 'down' }
+            // Stroke 1: horizontal stroke across upper area
+            { points: [[0.15,0.33],[0.24,0.30],[0.34,0.28],[0.44,0.27],[0.54,0.27],[0.64,0.28],[0.74,0.30],[0.83,0.33]], dir: 'right' },
+            // Stroke 2: vertical from top through center, curving left at bottom
+            { points: [[0.56,0.10],[0.55,0.18],[0.54,0.26],[0.52,0.34],[0.50,0.42],[0.47,0.50],[0.44,0.58],[0.40,0.66],[0.36,0.74],[0.32,0.82],[0.28,0.88]], dir: 'down-left' },
+            // Stroke 3: short stroke on right, sweeping down
+            { points: [[0.58,0.50],[0.61,0.54],[0.64,0.58],[0.67,0.63],[0.69,0.68],[0.71,0.74],[0.72,0.80],[0.71,0.86]], dir: 'down' }
         ]},
         { char: 'き', romaji: 'ki', strokes: 4, row: 'ka', paths: [
-            { points: [[0.25,0.2],[0.75,0.2]], dir: 'right' },
-            { points: [[0.2,0.4],[0.8,0.4]], dir: 'right' },
-            { points: [[0.6,0.1],[0.4,0.6]], dir: 'down-left' },
-            { points: [[0.3,0.6],[0.65,0.6],[0.65,0.75],[0.35,0.85]], dir: 'curve-left' }
+            // Stroke 1: upper horizontal
+            { points: [[0.20,0.22],[0.28,0.20],[0.38,0.18],[0.48,0.18],[0.58,0.18],[0.68,0.20],[0.78,0.23]], dir: 'right' },
+            // Stroke 2: lower horizontal
+            { points: [[0.16,0.42],[0.26,0.40],[0.36,0.38],[0.46,0.38],[0.56,0.38],[0.66,0.39],[0.76,0.41],[0.84,0.44]], dir: 'right' },
+            // Stroke 3: diagonal slanting down-left through both horizontals
+            { points: [[0.64,0.10],[0.61,0.17],[0.58,0.24],[0.54,0.31],[0.50,0.38],[0.46,0.45],[0.42,0.52],[0.38,0.58]], dir: 'down-left' },
+            // Stroke 4: bottom curved stroke
+            { points: [[0.26,0.62],[0.34,0.60],[0.42,0.59],[0.52,0.60],[0.60,0.62],[0.65,0.66],[0.66,0.72],[0.63,0.78],[0.56,0.82],[0.46,0.84],[0.36,0.82],[0.28,0.78]], dir: 'curve-left' }
         ]},
         { char: 'く', romaji: 'ku', strokes: 1, row: 'ka', paths: [
-            { points: [[0.65,0.15],[0.35,0.5],[0.65,0.85]], dir: 'curve-right' }
+            // Single stroke: V-shape, starts upper-right, angles down-left to center, then down-right
+            { points: [[0.66,0.14],[0.62,0.20],[0.56,0.27],[0.50,0.34],[0.44,0.40],[0.38,0.46],[0.35,0.50],[0.38,0.55],[0.44,0.62],[0.50,0.68],[0.56,0.74],[0.62,0.80],[0.66,0.86]], dir: 'curve-right' }
         ]},
         { char: 'け', romaji: 'ke', strokes: 3, row: 'ka', paths: [
-            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
-            { points: [[0.2,0.35],[0.8,0.35]], dir: 'right' },
-            { points: [[0.65,0.2],[0.6,0.65],[0.55,0.85]], dir: 'down' }
+            // Stroke 1: left vertical
+            { points: [[0.20,0.18],[0.20,0.26],[0.20,0.34],[0.20,0.42],[0.20,0.50],[0.20,0.58],[0.20,0.66],[0.20,0.74],[0.20,0.82]], dir: 'down' },
+            // Stroke 2: horizontal from left vertical across to right
+            { points: [[0.20,0.36],[0.28,0.35],[0.36,0.34],[0.44,0.34],[0.52,0.34],[0.60,0.34],[0.68,0.35],[0.78,0.36]], dir: 'right' },
+            // Stroke 3: right vertical, slightly curving
+            { points: [[0.66,0.18],[0.65,0.26],[0.64,0.34],[0.63,0.42],[0.62,0.50],[0.60,0.58],[0.58,0.66],[0.56,0.74],[0.54,0.82]], dir: 'down' }
         ]},
         { char: 'こ', romaji: 'ko', strokes: 2, row: 'ka', paths: [
-            { points: [[0.25,0.3],[0.75,0.3]], dir: 'right' },
-            { points: [[0.25,0.7],[0.75,0.7]], dir: 'right' }
+            // Stroke 1: upper horizontal
+            { points: [[0.22,0.30],[0.30,0.29],[0.38,0.28],[0.48,0.28],[0.58,0.28],[0.66,0.29],[0.74,0.30]], dir: 'right' },
+            // Stroke 2: lower horizontal, slightly curved upward at ends
+            { points: [[0.22,0.72],[0.30,0.70],[0.40,0.69],[0.50,0.68],[0.60,0.69],[0.68,0.70],[0.76,0.72]], dir: 'right' }
         ]},
         // --- SA row ---
         { char: 'さ', romaji: 'sa', strokes: 3, row: 'sa', paths: [
-            { points: [[0.25,0.25],[0.75,0.25]], dir: 'right' },
-            { points: [[0.6,0.1],[0.45,0.55]], dir: 'down-left' },
-            { points: [[0.25,0.5],[0.65,0.5],[0.7,0.65],[0.5,0.8],[0.3,0.75]], dir: 'curve-left' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.22,0.26],[0.30,0.24],[0.38,0.23],[0.48,0.23],[0.58,0.24],[0.66,0.25],[0.76,0.27]], dir: 'right' },
+            // Stroke 2: diagonal from upper-right to lower-left
+            { points: [[0.62,0.10],[0.60,0.18],[0.57,0.26],[0.54,0.34],[0.51,0.42],[0.48,0.50],[0.45,0.56]], dir: 'down-left' },
+            // Stroke 3: curved stroke at bottom
+            { points: [[0.22,0.52],[0.32,0.50],[0.42,0.49],[0.52,0.50],[0.60,0.52],[0.66,0.56],[0.68,0.62],[0.66,0.68],[0.60,0.74],[0.52,0.78],[0.42,0.79],[0.34,0.76],[0.28,0.72]], dir: 'curve-left' }
         ]},
         { char: 'し', romaji: 'shi', strokes: 1, row: 'sa', paths: [
-            { points: [[0.35,0.15],[0.35,0.55],[0.4,0.7],[0.6,0.75],[0.75,0.6]], dir: 'hook-right' }
+            // Single stroke: vertical down, then J-hook curving right and up
+            { points: [[0.36,0.14],[0.36,0.22],[0.35,0.30],[0.35,0.38],[0.35,0.46],[0.35,0.54],[0.36,0.61],[0.38,0.67],[0.42,0.72],[0.48,0.75],[0.55,0.76],[0.62,0.74],[0.68,0.70],[0.73,0.64]], dir: 'hook-right' }
         ]},
         { char: 'す', romaji: 'su', strokes: 2, row: 'sa', paths: [
-            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
-            { points: [[0.55,0.1],[0.5,0.5],[0.6,0.6],[0.65,0.5],[0.45,0.85]], dir: 'loop' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.18,0.30],[0.28,0.28],[0.38,0.27],[0.48,0.27],[0.58,0.27],[0.68,0.28],[0.78,0.30]], dir: 'right' },
+            // Stroke 2: vertical from top, small loop in middle, then trails down
+            { points: [[0.56,0.12],[0.54,0.20],[0.52,0.28],[0.50,0.36],[0.48,0.44],[0.50,0.50],[0.56,0.54],[0.62,0.56],[0.64,0.52],[0.62,0.48],[0.56,0.58],[0.52,0.66],[0.48,0.74],[0.44,0.82]], dir: 'loop' }
         ]},
         { char: 'せ', romaji: 'se', strokes: 3, row: 'sa', paths: [
-            { points: [[0.25,0.2],[0.25,0.75]], dir: 'down' },
-            { points: [[0.15,0.45],[0.8,0.45]], dir: 'right' },
-            { points: [[0.55,0.2],[0.55,0.55],[0.6,0.7],[0.75,0.75]], dir: 'hook-right' }
+            // Stroke 1: left vertical
+            { points: [[0.24,0.18],[0.24,0.26],[0.24,0.34],[0.24,0.42],[0.24,0.50],[0.24,0.58],[0.24,0.66],[0.24,0.74]], dir: 'down' },
+            // Stroke 2: horizontal across middle
+            { points: [[0.14,0.46],[0.22,0.45],[0.32,0.44],[0.42,0.44],[0.52,0.44],[0.62,0.44],[0.72,0.45],[0.82,0.46]], dir: 'right' },
+            // Stroke 3: right vertical curving right at bottom (hook)
+            { points: [[0.56,0.18],[0.56,0.26],[0.55,0.34],[0.55,0.42],[0.55,0.50],[0.56,0.58],[0.58,0.64],[0.62,0.70],[0.68,0.74],[0.75,0.76]], dir: 'hook-right' }
         ]},
         { char: 'そ', romaji: 'so', strokes: 1, row: 'sa', paths: [
-            { points: [[0.4,0.15],[0.6,0.15],[0.35,0.45],[0.65,0.5],[0.55,0.7],[0.3,0.85]], dir: 'curve-left' }
+            // Single stroke: starts upper area, goes right, then zigzags down-left, curves right, then trails down-left
+            { points: [[0.36,0.14],[0.44,0.13],[0.52,0.14],[0.60,0.16],[0.56,0.22],[0.48,0.28],[0.40,0.34],[0.34,0.40],[0.36,0.46],[0.44,0.50],[0.56,0.54],[0.64,0.58],[0.62,0.64],[0.54,0.70],[0.44,0.76],[0.34,0.82],[0.26,0.86]], dir: 'curve-left' }
         ]},
         // --- TA row ---
         { char: 'た', romaji: 'ta', strokes: 4, row: 'ta', paths: [
-            { points: [[0.2,0.3],[0.7,0.3]], dir: 'right' },
-            { points: [[0.5,0.1],[0.45,0.55],[0.35,0.75]], dir: 'down-left' },
-            { points: [[0.25,0.6],[0.55,0.6]], dir: 'right' },
-            { points: [[0.65,0.55],[0.75,0.75]], dir: 'down-right' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.18,0.30],[0.26,0.28],[0.34,0.27],[0.44,0.27],[0.54,0.28],[0.62,0.30],[0.70,0.32]], dir: 'right' },
+            // Stroke 2: vertical from top, curving left at bottom
+            { points: [[0.50,0.10],[0.49,0.18],[0.48,0.26],[0.47,0.34],[0.46,0.42],[0.44,0.50],[0.42,0.58],[0.38,0.66],[0.34,0.74]], dir: 'down-left' },
+            // Stroke 3: short horizontal at lower left
+            { points: [[0.22,0.60],[0.28,0.59],[0.34,0.58],[0.40,0.58],[0.48,0.58],[0.54,0.59]], dir: 'right' },
+            // Stroke 4: short diagonal at lower right
+            { points: [[0.62,0.54],[0.64,0.58],[0.66,0.62],[0.69,0.67],[0.72,0.72],[0.76,0.78]], dir: 'down-right' }
         ]},
         { char: 'ち', romaji: 'chi', strokes: 2, row: 'ta', paths: [
-            { points: [[0.2,0.3],[0.75,0.3]], dir: 'right' },
-            { points: [[0.55,0.1],[0.5,0.45],[0.45,0.6],[0.55,0.7],[0.7,0.6]], dir: 'hook-right' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.18,0.30],[0.26,0.28],[0.36,0.27],[0.46,0.27],[0.56,0.28],[0.66,0.30],[0.76,0.32]], dir: 'right' },
+            // Stroke 2: vertical from top, then curves right (like a J-hook)
+            { points: [[0.56,0.10],[0.55,0.18],[0.53,0.26],[0.51,0.34],[0.49,0.42],[0.48,0.50],[0.48,0.58],[0.50,0.64],[0.54,0.69],[0.60,0.72],[0.67,0.70],[0.72,0.64]], dir: 'hook-right' }
         ]},
         { char: 'つ', romaji: 'tsu', strokes: 1, row: 'ta', paths: [
-            { points: [[0.2,0.35],[0.55,0.3],[0.7,0.4],[0.65,0.6],[0.45,0.8]], dir: 'curve-left' }
+            // Single stroke: open arc from upper-left, curving right, then down and left
+            { points: [[0.18,0.36],[0.26,0.33],[0.36,0.30],[0.46,0.29],[0.56,0.30],[0.64,0.34],[0.70,0.40],[0.72,0.48],[0.70,0.56],[0.66,0.64],[0.60,0.70],[0.52,0.76],[0.44,0.80]], dir: 'curve-left' }
         ]},
         { char: 'て', romaji: 'te', strokes: 1, row: 'ta', paths: [
-            { points: [[0.2,0.3],[0.75,0.3],[0.5,0.5],[0.3,0.75]], dir: 'curve-left' }
+            // Single stroke: horizontal right across upper area, then curves sharply down-left
+            { points: [[0.18,0.30],[0.28,0.28],[0.38,0.27],[0.48,0.27],[0.58,0.28],[0.68,0.30],[0.76,0.33],[0.72,0.38],[0.64,0.44],[0.56,0.50],[0.48,0.56],[0.40,0.64],[0.34,0.72],[0.30,0.78]], dir: 'curve-left' }
         ]},
         { char: 'と', romaji: 'to', strokes: 2, row: 'ta', paths: [
-            { points: [[0.4,0.15],[0.35,0.55],[0.3,0.75]], dir: 'down' },
-            { points: [[0.35,0.45],[0.6,0.55],[0.65,0.7]], dir: 'curve-right' }
+            // Stroke 1: vertical from upper area down, slight curve
+            { points: [[0.40,0.14],[0.40,0.22],[0.39,0.30],[0.38,0.38],[0.37,0.46],[0.36,0.54],[0.35,0.62],[0.33,0.70],[0.31,0.76]], dir: 'down' },
+            // Stroke 2: branches from middle of stroke 1, curves right and down
+            { points: [[0.36,0.44],[0.40,0.48],[0.46,0.52],[0.52,0.56],[0.58,0.60],[0.63,0.65],[0.66,0.70],[0.67,0.76]], dir: 'curve-right' }
         ]},
         // --- NA row ---
         { char: 'な', romaji: 'na', strokes: 4, row: 'na', paths: [
-            { points: [[0.2,0.3],[0.55,0.3]], dir: 'right' },
-            { points: [[0.4,0.1],[0.35,0.55],[0.25,0.75]], dir: 'down-left' },
-            { points: [[0.55,0.55],[0.65,0.65]], dir: 'down-right' },
-            { points: [[0.55,0.45],[0.75,0.5],[0.75,0.65],[0.55,0.8],[0.4,0.7]], dir: 'loop' }
+            // Stroke 1: horizontal across upper-left area
+            { points: [[0.16,0.32],[0.22,0.30],[0.28,0.29],[0.34,0.28],[0.40,0.28],[0.46,0.29],[0.52,0.30],[0.56,0.32]], dir: 'right' },
+            // Stroke 2: vertical from top, curving left at bottom
+            { points: [[0.40,0.10],[0.39,0.18],[0.38,0.26],[0.37,0.34],[0.36,0.42],[0.34,0.50],[0.32,0.58],[0.28,0.66],[0.24,0.74]], dir: 'down-left' },
+            // Stroke 3: short diagonal tick at center-right
+            { points: [[0.54,0.52],[0.56,0.55],[0.58,0.58],[0.61,0.62],[0.64,0.66]], dir: 'down-right' },
+            // Stroke 4: loop on right side
+            { points: [[0.52,0.44],[0.60,0.45],[0.68,0.48],[0.74,0.53],[0.76,0.60],[0.74,0.67],[0.70,0.73],[0.63,0.78],[0.55,0.80],[0.48,0.78],[0.42,0.72]], dir: 'loop' }
         ]},
         { char: 'に', romaji: 'ni', strokes: 3, row: 'na', paths: [
-            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
-            { points: [[0.45,0.35],[0.75,0.35]], dir: 'right' },
-            { points: [[0.45,0.65],[0.75,0.65]], dir: 'right' }
+            // Stroke 1: left vertical
+            { points: [[0.20,0.18],[0.20,0.26],[0.20,0.34],[0.20,0.42],[0.20,0.50],[0.20,0.58],[0.20,0.66],[0.20,0.74],[0.20,0.82]], dir: 'down' },
+            // Stroke 2: upper-right horizontal
+            { points: [[0.42,0.36],[0.48,0.35],[0.54,0.34],[0.60,0.34],[0.66,0.35],[0.74,0.36]], dir: 'right' },
+            // Stroke 3: lower-right horizontal
+            { points: [[0.42,0.66],[0.48,0.65],[0.54,0.64],[0.60,0.64],[0.66,0.65],[0.74,0.66]], dir: 'right' }
         ]},
         { char: 'ぬ', romaji: 'nu', strokes: 2, row: 'na', paths: [
-            { points: [[0.2,0.35],[0.8,0.35],[0.55,0.15]], dir: 'right' },
-            { points: [[0.55,0.35],[0.3,0.7],[0.5,0.8],[0.75,0.65],[0.6,0.5],[0.35,0.85]], dir: 'loop' }
+            // Stroke 1: horizontal sweeping right, with uptick
+            { points: [[0.16,0.36],[0.24,0.34],[0.32,0.33],[0.42,0.33],[0.52,0.33],[0.62,0.34],[0.72,0.36],[0.78,0.34],[0.76,0.28],[0.70,0.22],[0.64,0.18]], dir: 'right' },
+            // Stroke 2: from center, curves down-left, loops around clockwise, ends lower-right
+            { points: [[0.54,0.36],[0.50,0.42],[0.44,0.48],[0.38,0.54],[0.32,0.62],[0.30,0.70],[0.34,0.76],[0.42,0.80],[0.52,0.80],[0.62,0.76],[0.70,0.68],[0.72,0.60],[0.68,0.52],[0.60,0.56],[0.50,0.66],[0.42,0.78],[0.36,0.86]], dir: 'loop' }
         ]},
         { char: 'ね', romaji: 'ne', strokes: 2, row: 'na', paths: [
-            { points: [[0.2,0.2],[0.2,0.65],[0.25,0.75]], dir: 'down' },
-            { points: [[0.2,0.4],[0.7,0.35],[0.4,0.6],[0.65,0.7],[0.75,0.55],[0.55,0.85]], dir: 'loop' }
+            // Stroke 1: left vertical with slight hook at bottom
+            { points: [[0.20,0.18],[0.20,0.26],[0.20,0.34],[0.20,0.42],[0.20,0.50],[0.20,0.58],[0.21,0.64],[0.23,0.70],[0.26,0.76]], dir: 'down' },
+            // Stroke 2: from left-center, goes right, then loops around
+            { points: [[0.20,0.40],[0.30,0.38],[0.40,0.36],[0.50,0.35],[0.60,0.34],[0.68,0.36],[0.64,0.42],[0.56,0.48],[0.46,0.54],[0.40,0.60],[0.44,0.66],[0.52,0.70],[0.62,0.72],[0.70,0.68],[0.74,0.60],[0.72,0.52],[0.66,0.58],[0.58,0.68],[0.50,0.78],[0.44,0.86]], dir: 'loop' }
         ]},
         { char: 'の', romaji: 'no', strokes: 1, row: 'na', paths: [
-            { points: [[0.5,0.15],[0.3,0.5],[0.4,0.8],[0.65,0.7],[0.7,0.4],[0.55,0.2]], dir: 'loop' }
+            // Single stroke: clockwise loop starting from upper area
+            { points: [[0.55,0.16],[0.48,0.22],[0.40,0.30],[0.34,0.40],[0.30,0.50],[0.30,0.60],[0.34,0.70],[0.40,0.77],[0.48,0.80],[0.56,0.78],[0.64,0.72],[0.70,0.62],[0.72,0.50],[0.70,0.40],[0.64,0.30],[0.58,0.22]], dir: 'loop' }
         ]},
         // --- HA row ---
         { char: 'は', romaji: 'ha', strokes: 3, row: 'ha', paths: [
-            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
-            { points: [[0.4,0.3],[0.8,0.3]], dir: 'right' },
-            { points: [[0.55,0.35],[0.45,0.55],[0.55,0.7],[0.7,0.65],[0.65,0.5],[0.45,0.85]], dir: 'loop' }
+            // Stroke 1: left vertical
+            { points: [[0.18,0.18],[0.18,0.26],[0.18,0.34],[0.18,0.42],[0.18,0.50],[0.18,0.58],[0.18,0.66],[0.18,0.74],[0.18,0.82]], dir: 'down' },
+            // Stroke 2: horizontal on right side
+            { points: [[0.36,0.32],[0.44,0.30],[0.52,0.29],[0.60,0.29],[0.68,0.30],[0.76,0.32]], dir: 'right' },
+            // Stroke 3: curved loop on right side
+            { points: [[0.56,0.34],[0.54,0.40],[0.50,0.46],[0.48,0.52],[0.48,0.58],[0.50,0.64],[0.54,0.69],[0.60,0.72],[0.66,0.72],[0.70,0.68],[0.72,0.62],[0.70,0.56],[0.66,0.50],[0.60,0.56],[0.54,0.66],[0.48,0.76],[0.44,0.84]], dir: 'loop' }
         ]},
         { char: 'ひ', romaji: 'hi', strokes: 1, row: 'ha', paths: [
-            { points: [[0.6,0.15],[0.3,0.3],[0.25,0.55],[0.4,0.75],[0.7,0.7],[0.75,0.5],[0.65,0.35]], dir: 'loop' }
+            // Single stroke: starts upper-right, curves left-down, then loops around to right
+            { points: [[0.62,0.14],[0.54,0.18],[0.44,0.24],[0.36,0.30],[0.30,0.38],[0.26,0.46],[0.26,0.54],[0.28,0.62],[0.34,0.70],[0.42,0.75],[0.52,0.76],[0.62,0.74],[0.70,0.68],[0.74,0.60],[0.74,0.50],[0.70,0.42],[0.64,0.36]], dir: 'loop' }
         ]},
         { char: 'ふ', romaji: 'fu', strokes: 4, row: 'ha', paths: [
-            { points: [[0.45,0.15],[0.55,0.15]], dir: 'right' },
-            { points: [[0.25,0.4],[0.35,0.35]], dir: 'right' },
-            { points: [[0.65,0.35],[0.75,0.4]], dir: 'right' },
-            { points: [[0.35,0.5],[0.55,0.6],[0.65,0.75],[0.5,0.85],[0.3,0.75]], dir: 'curve-left' }
+            // Stroke 1: top center dot/tick
+            { points: [[0.44,0.16],[0.46,0.14],[0.48,0.13],[0.50,0.13],[0.52,0.14],[0.54,0.16],[0.55,0.18]], dir: 'right' },
+            // Stroke 2: left dot/tick
+            { points: [[0.24,0.38],[0.26,0.36],[0.28,0.34],[0.32,0.33],[0.35,0.34],[0.37,0.36]], dir: 'right' },
+            // Stroke 3: right dot/tick
+            { points: [[0.63,0.34],[0.65,0.33],[0.68,0.32],[0.71,0.33],[0.74,0.35],[0.76,0.38]], dir: 'right' },
+            // Stroke 4: bottom curve sweeping down and left
+            { points: [[0.32,0.50],[0.38,0.52],[0.44,0.55],[0.50,0.58],[0.56,0.62],[0.62,0.67],[0.64,0.73],[0.62,0.78],[0.56,0.82],[0.48,0.84],[0.40,0.82],[0.32,0.78],[0.28,0.72]], dir: 'curve-left' }
         ]},
         { char: 'へ', romaji: 'he', strokes: 1, row: 'ha', paths: [
-            { points: [[0.15,0.55],[0.5,0.25],[0.85,0.55]], dir: 'curve-right' }
+            // Single stroke: mountain shape, rising to peak then descending
+            { points: [[0.12,0.58],[0.18,0.54],[0.24,0.48],[0.30,0.42],[0.36,0.36],[0.42,0.32],[0.48,0.28],[0.52,0.30],[0.58,0.34],[0.64,0.38],[0.70,0.44],[0.76,0.50],[0.82,0.56],[0.88,0.60]], dir: 'curve-right' }
         ]},
         { char: 'ほ', romaji: 'ho', strokes: 4, row: 'ha', paths: [
-            { points: [[0.2,0.15],[0.2,0.85]], dir: 'down' },
-            { points: [[0.35,0.3],[0.8,0.3]], dir: 'right' },
-            { points: [[0.35,0.55],[0.8,0.55]], dir: 'right' },
-            { points: [[0.55,0.3],[0.55,0.55],[0.6,0.7],[0.7,0.75],[0.75,0.65]], dir: 'hook-right' }
+            // Stroke 1: left vertical
+            { points: [[0.18,0.14],[0.18,0.22],[0.18,0.30],[0.18,0.38],[0.18,0.46],[0.18,0.54],[0.18,0.62],[0.18,0.70],[0.18,0.78],[0.18,0.86]], dir: 'down' },
+            // Stroke 2: upper horizontal on right
+            { points: [[0.34,0.32],[0.42,0.30],[0.50,0.29],[0.58,0.29],[0.66,0.30],[0.74,0.31],[0.82,0.33]], dir: 'right' },
+            // Stroke 3: lower horizontal on right
+            { points: [[0.34,0.56],[0.42,0.54],[0.50,0.53],[0.58,0.53],[0.66,0.54],[0.74,0.55],[0.82,0.57]], dir: 'right' },
+            // Stroke 4: vertical between horizontals, with hook at bottom
+            { points: [[0.56,0.30],[0.56,0.36],[0.56,0.42],[0.56,0.48],[0.56,0.54],[0.57,0.60],[0.59,0.66],[0.62,0.71],[0.66,0.75],[0.72,0.76],[0.76,0.72]], dir: 'hook-right' }
         ]},
         // --- MA row ---
         { char: 'ま', romaji: 'ma', strokes: 3, row: 'ma', paths: [
-            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
-            { points: [[0.2,0.55],[0.8,0.55]], dir: 'right' },
-            { points: [[0.55,0.1],[0.5,0.55],[0.55,0.7],[0.65,0.75],[0.6,0.65],[0.45,0.85]], dir: 'down' }
+            // Stroke 1: upper horizontal
+            { points: [[0.18,0.30],[0.28,0.28],[0.38,0.27],[0.48,0.27],[0.58,0.28],[0.68,0.29],[0.78,0.31]], dir: 'right' },
+            // Stroke 2: lower horizontal
+            { points: [[0.18,0.54],[0.28,0.52],[0.38,0.51],[0.48,0.51],[0.58,0.52],[0.68,0.53],[0.78,0.55]], dir: 'right' },
+            // Stroke 3: vertical from top through both horizontals, with loop at bottom
+            { points: [[0.56,0.10],[0.55,0.18],[0.54,0.26],[0.53,0.34],[0.52,0.42],[0.51,0.50],[0.50,0.58],[0.52,0.64],[0.56,0.69],[0.62,0.72],[0.64,0.68],[0.62,0.62],[0.56,0.66],[0.50,0.74],[0.46,0.82]], dir: 'down' }
         ]},
         { char: 'み', romaji: 'mi', strokes: 2, row: 'ma', paths: [
-            { points: [[0.35,0.2],[0.55,0.2],[0.5,0.4],[0.3,0.45]], dir: 'curve-left' },
-            { points: [[0.35,0.5],[0.6,0.5],[0.65,0.65],[0.5,0.8],[0.3,0.75]], dir: 'curve-left' }
+            // Stroke 1: upper curve going right then hooking back left
+            { points: [[0.30,0.20],[0.36,0.18],[0.42,0.17],[0.48,0.18],[0.54,0.20],[0.56,0.24],[0.54,0.30],[0.50,0.35],[0.44,0.39],[0.38,0.42],[0.30,0.44]], dir: 'curve-left' },
+            // Stroke 2: lower curve going right then hooking back left
+            { points: [[0.32,0.50],[0.38,0.48],[0.46,0.47],[0.54,0.48],[0.60,0.52],[0.64,0.58],[0.64,0.64],[0.60,0.70],[0.54,0.76],[0.46,0.80],[0.38,0.80],[0.30,0.76]], dir: 'curve-left' }
         ]},
         { char: 'む', romaji: 'mu', strokes: 3, row: 'ma', paths: [
-            { points: [[0.2,0.35],[0.75,0.35]], dir: 'right' },
-            { points: [[0.5,0.1],[0.45,0.5],[0.35,0.7],[0.5,0.8],[0.65,0.7],[0.6,0.55]], dir: 'loop' },
-            { points: [[0.7,0.6],[0.8,0.55]], dir: 'right' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.16,0.36],[0.24,0.34],[0.34,0.33],[0.44,0.33],[0.54,0.33],[0.64,0.34],[0.74,0.36]], dir: 'right' },
+            // Stroke 2: vertical from top, curves into loop at bottom
+            { points: [[0.50,0.10],[0.49,0.18],[0.48,0.26],[0.47,0.34],[0.46,0.42],[0.44,0.50],[0.42,0.58],[0.38,0.66],[0.36,0.72],[0.38,0.78],[0.44,0.82],[0.52,0.82],[0.60,0.78],[0.66,0.72],[0.68,0.64],[0.64,0.58]], dir: 'loop' },
+            // Stroke 3: small tick mark to the right
+            { points: [[0.70,0.62],[0.73,0.59],[0.76,0.56],[0.79,0.54],[0.82,0.53]], dir: 'right' }
         ]},
         { char: 'め', romaji: 'me', strokes: 2, row: 'ma', paths: [
-            { points: [[0.25,0.2],[0.25,0.7],[0.3,0.8]], dir: 'down' },
-            { points: [[0.25,0.4],[0.7,0.35],[0.45,0.65],[0.6,0.75],[0.75,0.6],[0.6,0.45]], dir: 'loop' }
+            // Stroke 1: left vertical with slight hook at bottom
+            { points: [[0.24,0.18],[0.24,0.26],[0.24,0.34],[0.24,0.42],[0.24,0.50],[0.24,0.58],[0.24,0.66],[0.26,0.72],[0.30,0.78]], dir: 'down' },
+            // Stroke 2: from left vertical, goes right, then loops back
+            { points: [[0.24,0.40],[0.32,0.38],[0.42,0.36],[0.52,0.35],[0.62,0.36],[0.68,0.38],[0.64,0.44],[0.56,0.50],[0.48,0.56],[0.44,0.62],[0.46,0.68],[0.52,0.72],[0.60,0.74],[0.68,0.70],[0.72,0.64],[0.72,0.56],[0.68,0.50]], dir: 'loop' }
         ]},
         { char: 'も', romaji: 'mo', strokes: 3, row: 'ma', paths: [
-            { points: [[0.25,0.3],[0.75,0.3]], dir: 'right' },
-            { points: [[0.25,0.55],[0.75,0.55]], dir: 'right' },
-            { points: [[0.45,0.15],[0.45,0.6],[0.5,0.75],[0.65,0.8]], dir: 'down' }
+            // Stroke 1: upper horizontal
+            { points: [[0.22,0.30],[0.30,0.28],[0.38,0.27],[0.48,0.27],[0.58,0.28],[0.66,0.30],[0.74,0.32]], dir: 'right' },
+            // Stroke 2: lower horizontal
+            { points: [[0.22,0.56],[0.30,0.54],[0.38,0.53],[0.48,0.53],[0.58,0.54],[0.66,0.56],[0.74,0.58]], dir: 'right' },
+            // Stroke 3: vertical from top through both horizontals, curving right at bottom
+            { points: [[0.46,0.14],[0.46,0.22],[0.46,0.30],[0.46,0.38],[0.46,0.46],[0.46,0.54],[0.47,0.62],[0.49,0.70],[0.54,0.76],[0.60,0.80],[0.66,0.82]], dir: 'down' }
         ]},
         // --- YA row ---
         { char: 'や', romaji: 'ya', strokes: 3, row: 'ya', paths: [
-            { points: [[0.15,0.35],[0.55,0.35]], dir: 'right' },
-            { points: [[0.4,0.15],[0.35,0.55],[0.25,0.8]], dir: 'down-left' },
-            { points: [[0.55,0.25],[0.7,0.5],[0.6,0.8]], dir: 'curve-left' }
+            // Stroke 1: horizontal across left side
+            { points: [[0.12,0.36],[0.18,0.34],[0.24,0.33],[0.30,0.33],[0.36,0.33],[0.42,0.34],[0.50,0.36],[0.56,0.38]], dir: 'right' },
+            // Stroke 2: vertical from top, curving left at bottom
+            { points: [[0.40,0.14],[0.39,0.22],[0.38,0.30],[0.37,0.38],[0.36,0.46],[0.34,0.54],[0.32,0.62],[0.28,0.70],[0.24,0.78]], dir: 'down-left' },
+            // Stroke 3: right side stroke, curving inward
+            { points: [[0.56,0.22],[0.58,0.28],[0.62,0.34],[0.66,0.42],[0.68,0.50],[0.68,0.58],[0.66,0.66],[0.62,0.74],[0.58,0.80]], dir: 'curve-left' }
         ]},
         { char: 'ゆ', romaji: 'yu', strokes: 2, row: 'ya', paths: [
-            { points: [[0.25,0.25],[0.25,0.6],[0.35,0.7],[0.5,0.65]], dir: 'hook-right' },
-            { points: [[0.5,0.2],[0.7,0.35],[0.7,0.55],[0.55,0.75],[0.35,0.85]], dir: 'curve-left' }
+            // Stroke 1: left vertical with hook right at bottom
+            { points: [[0.24,0.24],[0.24,0.30],[0.24,0.36],[0.24,0.42],[0.24,0.48],[0.24,0.54],[0.26,0.60],[0.30,0.66],[0.36,0.70],[0.44,0.72],[0.50,0.68]], dir: 'hook-right' },
+            // Stroke 2: right side, open curve going down and left
+            { points: [[0.50,0.20],[0.56,0.24],[0.62,0.30],[0.66,0.36],[0.68,0.44],[0.68,0.52],[0.66,0.60],[0.62,0.66],[0.56,0.72],[0.48,0.78],[0.40,0.82],[0.34,0.84]], dir: 'curve-left' }
         ]},
         { char: 'よ', romaji: 'yo', strokes: 2, row: 'ya', paths: [
-            { points: [[0.35,0.25],[0.65,0.25],[0.6,0.45],[0.35,0.5]], dir: 'curve-left' },
-            { points: [[0.5,0.2],[0.5,0.85]], dir: 'down' }
+            // Stroke 1: horizontal going right then curving back left (like a crossbar with hook)
+            { points: [[0.34,0.28],[0.40,0.26],[0.46,0.25],[0.54,0.25],[0.60,0.26],[0.64,0.28],[0.66,0.32],[0.64,0.38],[0.60,0.42],[0.54,0.46],[0.46,0.48],[0.38,0.50]], dir: 'curve-left' },
+            // Stroke 2: vertical from top through bottom
+            { points: [[0.50,0.16],[0.50,0.24],[0.50,0.32],[0.50,0.40],[0.50,0.48],[0.50,0.56],[0.50,0.64],[0.50,0.72],[0.50,0.80],[0.50,0.86]], dir: 'down' }
         ]},
         // --- RA row ---
         { char: 'ら', romaji: 'ra', strokes: 2, row: 'ra', paths: [
-            { points: [[0.35,0.2],[0.65,0.2]], dir: 'right' },
-            { points: [[0.55,0.2],[0.45,0.45],[0.5,0.6],[0.65,0.65],[0.6,0.5],[0.35,0.85]], dir: 'curve-left' }
+            // Stroke 1: short horizontal tick at top
+            { points: [[0.34,0.20],[0.40,0.18],[0.46,0.17],[0.52,0.17],[0.58,0.18],[0.64,0.20]], dir: 'right' },
+            // Stroke 2: vertical from top, then curves into loop at bottom
+            { points: [[0.56,0.20],[0.54,0.28],[0.52,0.34],[0.50,0.40],[0.48,0.46],[0.48,0.52],[0.50,0.58],[0.54,0.62],[0.60,0.64],[0.64,0.62],[0.66,0.56],[0.64,0.50],[0.58,0.54],[0.52,0.62],[0.46,0.72],[0.40,0.80],[0.34,0.86]], dir: 'curve-left' }
         ]},
         { char: 'り', romaji: 'ri', strokes: 2, row: 'ra', paths: [
-            { points: [[0.3,0.2],[0.3,0.55],[0.35,0.65]], dir: 'down' },
-            { points: [[0.65,0.2],[0.6,0.55],[0.5,0.75],[0.55,0.8]], dir: 'hook-right' }
+            // Stroke 1: left short vertical with slight curve
+            { points: [[0.32,0.18],[0.32,0.24],[0.31,0.30],[0.31,0.36],[0.30,0.42],[0.30,0.48],[0.31,0.54],[0.33,0.60],[0.36,0.64]], dir: 'down' },
+            // Stroke 2: right vertical curving left at bottom (J-hook)
+            { points: [[0.64,0.18],[0.64,0.24],[0.63,0.30],[0.63,0.36],[0.62,0.42],[0.61,0.48],[0.59,0.54],[0.56,0.60],[0.52,0.66],[0.48,0.72],[0.46,0.78],[0.48,0.82]], dir: 'hook-right' }
         ]},
         { char: 'る', romaji: 'ru', strokes: 1, row: 'ra', paths: [
-            { points: [[0.35,0.15],[0.65,0.15],[0.35,0.45],[0.55,0.6],[0.65,0.75],[0.5,0.85],[0.35,0.75]], dir: 'loop' }
+            // Single stroke: horizontal at top, drops down-left, then curves into loop at bottom
+            { points: [[0.30,0.16],[0.38,0.14],[0.46,0.14],[0.54,0.14],[0.62,0.16],[0.68,0.18],[0.62,0.24],[0.54,0.30],[0.46,0.36],[0.38,0.42],[0.34,0.48],[0.36,0.54],[0.42,0.58],[0.50,0.62],[0.58,0.68],[0.62,0.74],[0.60,0.80],[0.54,0.84],[0.46,0.84],[0.40,0.80],[0.36,0.74]], dir: 'loop' }
         ]},
         { char: 'れ', romaji: 're', strokes: 2, row: 'ra', paths: [
-            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
-            { points: [[0.2,0.4],[0.65,0.35],[0.45,0.6],[0.65,0.75],[0.75,0.6]], dir: 'curve-right' }
+            // Stroke 1: left vertical
+            { points: [[0.18,0.18],[0.18,0.26],[0.18,0.34],[0.18,0.42],[0.18,0.50],[0.18,0.58],[0.18,0.66],[0.18,0.74],[0.18,0.82]], dir: 'down' },
+            // Stroke 2: from left vertical, goes right, then swoops down and curves right
+            { points: [[0.18,0.40],[0.28,0.38],[0.38,0.36],[0.48,0.35],[0.58,0.34],[0.66,0.36],[0.62,0.42],[0.54,0.48],[0.46,0.54],[0.42,0.60],[0.44,0.66],[0.50,0.72],[0.58,0.76],[0.66,0.74],[0.72,0.68],[0.76,0.60]], dir: 'curve-right' }
         ]},
         { char: 'ろ', romaji: 'ro', strokes: 1, row: 'ra', paths: [
-            { points: [[0.35,0.15],[0.65,0.15],[0.35,0.5],[0.55,0.7],[0.7,0.75]], dir: 'curve-right' }
+            // Single stroke: horizontal at top, drops down-left, then curves right at bottom
+            { points: [[0.30,0.16],[0.38,0.14],[0.46,0.14],[0.54,0.14],[0.62,0.16],[0.68,0.18],[0.62,0.24],[0.54,0.30],[0.46,0.36],[0.38,0.42],[0.34,0.48],[0.34,0.56],[0.38,0.64],[0.46,0.70],[0.56,0.74],[0.64,0.76],[0.72,0.76]], dir: 'curve-right' }
         ]},
         // --- WA row ---
         { char: 'わ', romaji: 'wa', strokes: 2, row: 'wa', paths: [
-            { points: [[0.25,0.2],[0.25,0.8]], dir: 'down' },
-            { points: [[0.25,0.4],[0.65,0.35],[0.7,0.55],[0.55,0.75],[0.35,0.85]], dir: 'curve-left' }
+            // Stroke 1: left vertical
+            { points: [[0.24,0.18],[0.24,0.26],[0.24,0.34],[0.24,0.42],[0.24,0.50],[0.24,0.58],[0.24,0.66],[0.24,0.74],[0.24,0.82]], dir: 'down' },
+            // Stroke 2: from left vertical, sweeps right, then curves down and left
+            { points: [[0.24,0.40],[0.32,0.38],[0.42,0.36],[0.52,0.35],[0.60,0.36],[0.66,0.40],[0.70,0.46],[0.72,0.54],[0.70,0.62],[0.66,0.70],[0.60,0.76],[0.52,0.80],[0.44,0.82],[0.36,0.84]], dir: 'curve-left' }
         ]},
         { char: 'を', romaji: 'wo', strokes: 3, row: 'wa', paths: [
-            { points: [[0.2,0.25],[0.75,0.25]], dir: 'right' },
-            { points: [[0.55,0.1],[0.45,0.45]], dir: 'down-left' },
-            { points: [[0.2,0.5],[0.55,0.5],[0.65,0.6],[0.6,0.75],[0.35,0.85]], dir: 'curve-left' }
+            // Stroke 1: horizontal across upper area
+            { points: [[0.18,0.26],[0.26,0.24],[0.36,0.23],[0.46,0.23],[0.56,0.24],[0.66,0.25],[0.76,0.27]], dir: 'right' },
+            // Stroke 2: diagonal from upper-right to center-left
+            { points: [[0.58,0.10],[0.56,0.16],[0.53,0.22],[0.50,0.28],[0.47,0.34],[0.44,0.40],[0.40,0.46]], dir: 'down-left' },
+            // Stroke 3: curved stroke at bottom, sweeping right then down and left
+            { points: [[0.18,0.52],[0.26,0.50],[0.36,0.49],[0.46,0.49],[0.54,0.50],[0.60,0.53],[0.64,0.58],[0.66,0.64],[0.64,0.70],[0.60,0.76],[0.54,0.80],[0.46,0.82],[0.38,0.82],[0.30,0.84]], dir: 'curve-left' }
         ]},
         { char: 'ん', romaji: 'n', strokes: 1, row: 'wa', paths: [
-            { points: [[0.35,0.2],[0.3,0.55],[0.45,0.75],[0.65,0.6],[0.7,0.3]], dir: 'hook-right' }
+            // Single stroke: starts upper-center, curves down-left, then hooks right and up
+            { points: [[0.42,0.18],[0.40,0.24],[0.38,0.32],[0.35,0.40],[0.32,0.48],[0.28,0.56],[0.26,0.64],[0.28,0.70],[0.34,0.74],[0.42,0.76],[0.52,0.74],[0.60,0.68],[0.66,0.60],[0.70,0.50],[0.72,0.40]], dir: 'hook-right' }
         ]}
     ];
 
@@ -972,10 +1076,12 @@
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
+            // Use smooth Catmull-Rom curve
+            const smooth = catmullRomInterpolate(pts, 30);
             ctx.beginPath();
-            pts.forEach((p, j) => {
-                const x = pad + p[0] * area;
-                const y = pad + p[1] * area;
+            smooth.forEach((p, j) => {
+                const x = pad + p.x * area;
+                const y = pad + p.y * area;
                 if (j === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
@@ -1053,24 +1159,15 @@
             drawCtx.lineJoin = 'round';
             drawCtx.setLineDash([8, 6]);
 
+            // Use smooth Catmull-Rom curve for guide
+            const smooth = catmullRomInterpolate(pts, 30);
             drawCtx.beginPath();
-            if (pts.length >= 3) {
-                // Smooth curve through points
-                drawCtx.moveTo(pad + pts[0][0]*area, pad + pts[0][1]*area);
-                for (let j = 1; j < pts.length - 1; j++) {
-                    const xc = (pad + pts[j][0]*area + pad + pts[j+1][0]*area) / 2;
-                    const yc = (pad + pts[j][1]*area + pad + pts[j+1][1]*area) / 2;
-                    drawCtx.quadraticCurveTo(pad + pts[j][0]*area, pad + pts[j][1]*area, xc, yc);
-                }
-                const last = pts[pts.length - 1];
-                const prev = pts[pts.length - 2];
-                drawCtx.quadraticCurveTo(pad + prev[0]*area, pad + prev[1]*area, pad + last[0]*area, pad + last[1]*area);
-            } else {
-                pts.forEach((p, j) => {
-                    if (j === 0) drawCtx.moveTo(pad + p[0]*area, pad + p[1]*area);
-                    else drawCtx.lineTo(pad + p[0]*area, pad + p[1]*area);
-                });
-            }
+            smooth.forEach((p, j) => {
+                const x = pad + p.x * area;
+                const y = pad + p.y * area;
+                if (j === 0) drawCtx.moveTo(x, y);
+                else drawCtx.lineTo(x, y);
+            });
             drawCtx.stroke();
             drawCtx.setLineDash([]);
 
@@ -1241,10 +1338,42 @@
         return map[dir] || ['right', 'down', 'left', 'up'];
     }
 
+    // Compute average distance from user stroke points to the nearest point on the guide path
+    function strokeProximityScore(userPts, guidePath, canvasW) {
+        const pad = canvasW * 0.08;
+        const area = canvasW - pad * 2;
+        // Build dense guide points in canvas coords
+        const guidePts = catmullRomInterpolate(guidePath.points, 60).map(p => ({
+            x: pad + p.x * area,
+            y: pad + p.y * area
+        }));
+
+        if (guidePts.length === 0 || userPts.length === 0) return 1;
+
+        // For each user point, find min distance to any guide point
+        let totalDist = 0;
+        const sampleStep = Math.max(1, Math.floor(userPts.length / 30)); // sample up to 30 user points
+        let samples = 0;
+        for (let i = 0; i < userPts.length; i += sampleStep) {
+            let minD = Infinity;
+            for (let j = 0; j < guidePts.length; j++) {
+                const dx = userPts[i].x - guidePts[j].x;
+                const dy = userPts[i].y - guidePts[j].y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                if (d < minD) minD = d;
+            }
+            totalDist += minD;
+            samples++;
+        }
+        // Normalize by canvas size - score 0 (perfect) to 1 (far off)
+        return (totalDist / samples) / canvasW;
+    }
+
     function checkDrawing() {
         const data = hiraganaData[currentIndex];
         const expectedCount = data.strokes;
         const userCount = userStrokes.length;
+        const w = drawCanvas.width;
 
         if (userCount === 0) {
             showFeedback('Draw the character first!', 'tryagain');
@@ -1263,19 +1392,28 @@
             return;
         }
 
-        // Check stroke directions
-        let correctDirections = 0;
-        for (let i = 0; i < Math.min(userCount, data.paths.length); i++) {
+        // Check proximity of each user stroke to its corresponding guide stroke
+        let totalProximity = 0;
+        let directionScore = 0;
+        for (let i = 0; i < expectedCount; i++) {
+            // Proximity check
+            const prox = strokeProximityScore(userStrokes[i], data.paths[i], w);
+            totalProximity += prox;
+
+            // Direction check
             const userDir = analyzeStrokeDirection(userStrokes[i]);
             const expected = getExpectedDirection(data.paths[i].dir);
             if (expected.includes(userDir) || userDir === 'dot') {
-                correctDirections++;
+                directionScore++;
             }
         }
 
-        const directionScore = correctDirections / expectedCount;
+        const avgProximity = totalProximity / expectedCount;
+        const dirPct = directionScore / expectedCount;
 
-        if (directionScore >= 0.7) {
+        // Proximity thresholds (fraction of canvas width):
+        // < 0.08 = close, < 0.15 = okay, > 0.15 = far off
+        if (avgProximity < 0.1 && dirPct >= 0.5) {
             showFeedback('Great job!', 'great');
             playSfx('correct');
             practiced.add(data.char);
@@ -1283,11 +1421,14 @@
             buildCharGrid();
             updateProgress();
             spawnStars();
-        } else if (directionScore >= 0.4) {
-            showFeedback('Almost! Check the stroke order.', 'tryagain');
+        } else if (avgProximity < 0.15 && dirPct >= 0.3) {
+            showFeedback('Almost! Try to follow the guide lines more closely.', 'tryagain');
+            playSfx('wrong');
+        } else if (dirPct < 0.5) {
+            showFeedback('Check the stroke order and direction!', 'tryagain');
             playSfx('wrong');
         } else {
-            showFeedback('Try again - check stroke order!', 'tryagain');
+            showFeedback('Try to stay closer to the guide lines!', 'tryagain');
             playSfx('wrong');
         }
     }
@@ -1335,6 +1476,31 @@
     // =========================================================================
     // SHOW ME ANIMATION
     // =========================================================================
+    // Interpolate smoothly along a set of control points using Catmull-Rom spline
+    function catmullRomInterpolate(pts, totalSteps) {
+        if (pts.length < 2) return pts.map(p => ({x: p[0], y: p[1]}));
+        const result = [];
+        // Pad with duplicate endpoints for Catmull-Rom
+        const padded = [pts[0], ...pts, pts[pts.length - 1]];
+        const segments = padded.length - 3;
+        const stepsPerSeg = Math.max(4, Math.ceil(totalSteps / segments));
+
+        for (let i = 0; i < segments; i++) {
+            const p0 = padded[i], p1 = padded[i+1], p2 = padded[i+2], p3 = padded[i+3];
+            for (let s = 0; s < stepsPerSeg; s++) {
+                const t = s / stepsPerSeg;
+                const t2 = t * t, t3 = t2 * t;
+                const x = 0.5 * ((2*p1[0]) + (-p0[0]+p2[0])*t + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+                const y = 0.5 * ((2*p1[1]) + (-p0[1]+p2[1])*t + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+                result.push({x, y});
+            }
+        }
+        // Add final point
+        const last = pts[pts.length-1];
+        result.push({x: last[0], y: last[1]});
+        return result;
+    }
+
     function showMe() {
         if (showingAnimation) return;
         showingAnimation = true;
@@ -1360,25 +1526,12 @@
             const stroke = data.paths[strokeIdx];
             const pts = stroke.points;
 
-            // Build interpolated points along the path
-            const animPts = [];
-            if (pts.length >= 2) {
-                for (let i = 0; i < pts.length - 1; i++) {
-                    const steps = 20;
-                    for (let s = 0; s <= steps; s++) {
-                        const t = s / steps;
-                        animPts.push({
-                            x: pad + (pts[i][0] + (pts[i+1][0] - pts[i][0]) * t) * area,
-                            y: pad + (pts[i][1] + (pts[i+1][1] - pts[i][1]) * t) * area
-                        });
-                    }
-                }
-            } else {
-                animPts.push({
-                    x: pad + pts[0][0] * area,
-                    y: pad + pts[0][1] * area
-                });
-            }
+            // Use Catmull-Rom spline for smooth curved interpolation
+            const smoothPts = catmullRomInterpolate(pts, 40);
+            const animPts = smoothPts.map(p => ({
+                x: pad + p.x * area,
+                y: pad + p.y * area
+            }));
 
             let ptIdx = 0;
             const drawnPts = [];
