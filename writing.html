@@ -1267,6 +1267,7 @@
         isDrawing = false;
         showingAnimation = false;
         guidePixelCache = { char: null, mask: null, w: 0 };
+        skeletonCache = { char: null, paths: null, w: 0 };
         redrawCanvas();
         hideFeedback();
     }
@@ -1489,31 +1490,165 @@
     }
 
     // =========================================================================
-    // SHOW ME ANIMATION
+    // SHOW ME ANIMATION - Font pixel skeleton extraction
     // =========================================================================
-    // Interpolate smoothly along a set of control points using Catmull-Rom spline
-    function catmullRomInterpolate(pts, totalSteps) {
-        if (pts.length < 2) return pts.map(p => ({x: p[0], y: p[1]}));
-        const result = [];
-        // Pad with duplicate endpoints for Catmull-Rom
-        const padded = [pts[0], ...pts, pts[pts.length - 1]];
-        const segments = padded.length - 3;
-        const stepsPerSeg = Math.max(4, Math.ceil(totalSteps / segments));
+    // Zhang-Suen thinning: reduces thick strokes to 1px centerlines
+    let skeletonCache = { char: null, paths: null, w: 0 };
 
-        for (let i = 0; i < segments; i++) {
-            const p0 = padded[i], p1 = padded[i+1], p2 = padded[i+2], p3 = padded[i+3];
-            for (let s = 0; s < stepsPerSeg; s++) {
-                const t = s / stepsPerSeg;
-                const t2 = t * t, t3 = t2 * t;
-                const x = 0.5 * ((2*p1[0]) + (-p0[0]+p2[0])*t + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
-                const y = 0.5 * ((2*p1[1]) + (-p0[1]+p2[1])*t + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
-                result.push({x, y});
+    function zhangSuenThin(binary, w, h) {
+        // binary: Uint8Array, 1 = foreground, 0 = background
+        const img = new Uint8Array(binary);
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (let sub = 0; sub < 2; sub++) {
+                const toRemove = [];
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        if (!img[y * w + x]) continue;
+                        const p2 = img[(y-1)*w+x], p3 = img[(y-1)*w+x+1], p4 = img[y*w+x+1];
+                        const p5 = img[(y+1)*w+x+1], p6 = img[(y+1)*w+x], p7 = img[(y+1)*w+x-1];
+                        const p8 = img[y*w+x-1], p9 = img[(y-1)*w+x-1];
+                        const neighbors = [p2,p3,p4,p5,p6,p7,p8,p9];
+                        const B = neighbors.reduce((a,b) => a+b, 0);
+                        if (B < 2 || B > 6) continue;
+                        // Count 0->1 transitions in the ordered sequence
+                        let A = 0;
+                        const seq = [p2,p3,p4,p5,p6,p7,p8,p9,p2];
+                        for (let i = 0; i < 8; i++) { if (!seq[i] && seq[i+1]) A++; }
+                        if (A !== 1) continue;
+                        if (sub === 0) { if (p2*p4*p6 !== 0 || p4*p6*p8 !== 0) continue; }
+                        else { if (p2*p4*p8 !== 0 || p2*p6*p8 !== 0) continue; }
+                        toRemove.push(y * w + x);
+                    }
+                }
+                for (const idx of toRemove) { img[idx] = 0; changed = true; }
             }
         }
-        // Add final point
-        const last = pts[pts.length-1];
-        result.push({x: last[0], y: last[1]});
-        return result;
+        return img;
+    }
+
+    function extractSkeletonPaths(charData, canvasW) {
+        if (skeletonCache.char === charData.char && skeletonCache.w === canvasW) {
+            return skeletonCache.paths;
+        }
+
+        const sz = 150; // work at smaller size for speed
+        const off = document.createElement('canvas');
+        off.width = sz; off.height = sz;
+        const ctx = off.getContext('2d');
+        const pad = sz * 0.08;
+        const area = sz - pad * 2;
+
+        // Render character
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(charData.char, sz / 2, sz / 2 + area * 0.03);
+
+        // Extract binary image from alpha channel
+        const imgData = ctx.getImageData(0, 0, sz, sz);
+        const binary = new Uint8Array(sz * sz);
+        for (let i = 0; i < sz * sz; i++) {
+            binary[i] = imgData.data[i * 4 + 3] > 80 ? 1 : 0;
+        }
+
+        // Apply Zhang-Suen thinning
+        const skeleton = zhangSuenThin(binary, sz, sz);
+
+        // Trace paths from each stroke's start point
+        const scale = canvasW / sz;
+        const paths = [];
+        const visited = new Uint8Array(sz * sz);
+
+        for (const stroke of charData.paths) {
+            const startNorm = stroke.points[0];
+            const sx = Math.round(pad + startNorm[0] * area);
+            const sy = Math.round(pad + startNorm[1] * area);
+
+            // Find nearest skeleton pixel to the start point
+            let bestDist = Infinity, bestX = sx, bestY = sy;
+            const searchR = 20;
+            for (let dy = -searchR; dy <= searchR; dy++) {
+                for (let dx = -searchR; dx <= searchR; dx++) {
+                    const nx = sx + dx, ny = sy + dy;
+                    if (nx >= 0 && nx < sz && ny >= 0 && ny < sz && skeleton[ny * sz + nx] && !visited[ny * sz + nx]) {
+                        const d = dx*dx + dy*dy;
+                        if (d < bestDist) { bestDist = d; bestX = nx; bestY = ny; }
+                    }
+                }
+            }
+
+            // Trace along skeleton from this point
+            const path = [];
+            const queue = [{x: bestX, y: bestY}];
+            const traceVisited = new Uint8Array(sz * sz);
+            traceVisited[bestY * sz + bestX] = 1;
+
+            // BFS/DFS trace along connected skeleton pixels
+            while (queue.length > 0) {
+                const pt = queue.shift();
+                path.push({x: pt.x * scale, y: pt.y * scale});
+                visited[pt.y * sz + pt.x] = 1;
+
+                // Find unvisited skeleton neighbors (8-connected)
+                const neighbors = [];
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = pt.x + dx, ny = pt.y + dy;
+                        if (nx >= 0 && nx < sz && ny >= 0 && ny < sz &&
+                            skeleton[ny * sz + nx] && !traceVisited[ny * sz + nx] && !visited[ny * sz + nx]) {
+                            traceVisited[ny * sz + nx] = 1;
+                            neighbors.push({x: nx, y: ny});
+                        }
+                    }
+                }
+                // Add neighbors - prefer continuing in same direction
+                if (neighbors.length > 0) {
+                    if (path.length > 1) {
+                        const prev = {x: path[path.length-2].x/scale, y: path[path.length-2].y/scale};
+                        const dirX = pt.x - prev.x, dirY = pt.y - prev.y;
+                        neighbors.sort((a,b) => {
+                            const da = (a.x-pt.x)*dirX + (a.y-pt.y)*dirY;
+                            const db = (b.x-pt.x)*dirX + (b.y-pt.y)*dirY;
+                            return db - da; // prefer same direction
+                        });
+                    }
+                    // Take the best continuation, push others back for branching
+                    queue.unshift(neighbors[0]);
+                }
+            }
+
+            if (path.length > 2) {
+                // Smooth the path by averaging neighbors
+                const smoothed = [path[0]];
+                for (let i = 1; i < path.length - 1; i++) {
+                    smoothed.push({
+                        x: (path[i-1].x + path[i].x + path[i+1].x) / 3,
+                        y: (path[i-1].y + path[i].y + path[i+1].y) / 3
+                    });
+                }
+                smoothed.push(path[path.length - 1]);
+
+                // Subsample to ~60 points for smooth animation
+                const step = Math.max(1, Math.floor(smoothed.length / 60));
+                const sampled = [];
+                for (let i = 0; i < smoothed.length; i += step) sampled.push(smoothed[i]);
+                if (sampled[sampled.length-1] !== smoothed[smoothed.length-1]) sampled.push(smoothed[smoothed.length-1]);
+                paths.push(sampled);
+            } else {
+                // Fallback: use the hand-coded path
+                paths.push(stroke.points.map(p => ({
+                    x: (pad + p[0] * area) * scale,
+                    y: (pad + p[1] * area) * scale
+                })));
+            }
+        }
+
+        skeletonCache = { char: charData.char, paths, w: canvasW };
+        return paths;
     }
 
     function showMe() {
@@ -1524,27 +1659,22 @@
 
         const data = hiraganaData[currentIndex];
         const w = drawCanvas.width;
-        const pad = w * 0.08;
-        const area = w - pad * 2;
         const lineW = Math.max(3, w * 0.012);
+
+        // Extract skeleton paths from the actual font pixels
+        const skelPaths = extractSkeletonPaths(data, w);
 
         redrawCanvas();
 
         let strokeIdx = 0;
 
         function animateNextStroke() {
-            if (strokeIdx >= data.paths.length) {
+            if (strokeIdx >= skelPaths.length) {
                 showingAnimation = false;
                 return;
             }
 
-            const stroke = data.paths[strokeIdx];
-            const smoothPts = catmullRomInterpolate(stroke.points, 50);
-            const animPts = smoothPts.map(p => ({
-                x: pad + p.x * area,
-                y: pad + p.y * area
-            }));
-
+            const animPts = skelPaths[strokeIdx];
             let ptIdx = 0;
             const drawnPts = [];
 
@@ -1559,7 +1689,6 @@
                 drawnPts.push(animPts[ptIdx]);
                 ptIdx++;
 
-                // Redraw everything
                 drawCtx.clearRect(0, 0, w, w);
                 drawGuideOnMain();
 
@@ -1568,7 +1697,7 @@
                     if (s.length >= 2) drawStrokePath(s, '#e91e63', lineW);
                 });
 
-                // Draw current animated stroke
+                // Draw current stroke
                 if (drawnPts.length >= 2) {
                     drawStrokePath(drawnPts, '#e91e63', lineW);
                 }
