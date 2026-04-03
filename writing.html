@@ -1527,64 +1527,110 @@
         const pad = w * 0.08;
         const area = w - pad * 2;
 
+        // Pre-render the character in pink on an offscreen canvas
+        const charCanvas = document.createElement('canvas');
+        charCanvas.width = w; charCanvas.height = w;
+        const charCtx = charCanvas.getContext('2d');
+        charCtx.fillStyle = '#e91e63';
+        charCtx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
+        charCtx.textAlign = 'center';
+        charCtx.textBaseline = 'middle';
+        charCtx.fillText(data.char, w / 2, w / 2 + area * 0.03);
+
+        // Mask canvas - accumulates the "brush" that reveals the character
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = w; maskCanvas.height = w;
+        const maskCtx = maskCanvas.getContext('2d');
+
+        // Temp canvas for compositing
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = w; tempCanvas.height = w;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        const brushSize = Math.max(18, w * 0.06);
+
         // Clear and show guides
         redrawCanvas();
 
         let strokeIdx = 0;
 
+        function renderFrame(tipPos) {
+            drawCtx.clearRect(0, 0, w, w);
+            drawGuideOnMain();
+
+            // Composite: show character only where mask brush has been
+            tempCtx.clearRect(0, 0, w, w);
+            tempCtx.drawImage(maskCanvas, 0, 0);
+            tempCtx.globalCompositeOperation = 'source-in';
+            tempCtx.drawImage(charCanvas, 0, 0);
+            tempCtx.globalCompositeOperation = 'source-over';
+
+            // Draw the revealed character onto main canvas
+            drawCtx.drawImage(tempCanvas, 0, 0);
+
+            // Draw pen tip
+            if (tipPos) {
+                drawCtx.fillStyle = '#e91e63';
+                drawCtx.beginPath();
+                drawCtx.arc(tipPos.x, tipPos.y, 7, 0, Math.PI * 2);
+                drawCtx.fill();
+                drawCtx.fillStyle = 'white';
+                drawCtx.beginPath();
+                drawCtx.arc(tipPos.x, tipPos.y, 3, 0, Math.PI * 2);
+                drawCtx.fill();
+            }
+
+            updateStrokeCounter();
+        }
+
         function animateNextStroke() {
             if (strokeIdx >= data.paths.length) {
+                // Final render without pen tip
+                renderFrame(null);
                 showingAnimation = false;
                 return;
             }
 
             const stroke = data.paths[strokeIdx];
             const pts = stroke.points;
-
-            // Use Catmull-Rom spline for smooth curved interpolation
-            const smoothPts = catmullRomInterpolate(pts, 40);
+            const smoothPts = catmullRomInterpolate(pts, 50);
             const animPts = smoothPts.map(p => ({
                 x: pad + p.x * area,
                 y: pad + p.y * area
             }));
 
             let ptIdx = 0;
-            const drawnPts = [];
 
             function drawNext() {
                 if (ptIdx >= animPts.length) {
-                    // Stroke complete, add to user strokes for visual
-                    userStrokes.push(drawnPts.slice());
                     strokeIdx++;
-                    setTimeout(animateNextStroke, 300);
+                    userStrokes.push([]); // track stroke count for counter
+                    setTimeout(animateNextStroke, 350);
                     return;
                 }
 
-                drawnPts.push(animPts[ptIdx]);
+                const pt = animPts[ptIdx];
+
+                // Paint on mask canvas to reveal more of the character
+                maskCtx.fillStyle = 'white';
+                maskCtx.beginPath();
+                maskCtx.arc(pt.x, pt.y, brushSize, 0, Math.PI * 2);
+                maskCtx.fill();
+
+                // Connect to previous point for continuous reveal
+                if (ptIdx > 0) {
+                    const prev = animPts[ptIdx - 1];
+                    maskCtx.strokeStyle = 'white';
+                    maskCtx.lineWidth = brushSize * 2;
+                    maskCtx.lineCap = 'round';
+                    maskCtx.beginPath();
+                    maskCtx.moveTo(prev.x, prev.y);
+                    maskCtx.lineTo(pt.x, pt.y);
+                    maskCtx.stroke();
+                }
+
                 ptIdx++;
-
-                // Redraw everything
-                drawCtx.clearRect(0, 0, w, w);
-                drawGuideOnMain();
-
-                // Draw completed animated strokes
-                userStrokes.forEach(s => drawStrokePath(s, '#e91e63', 5));
-
-                // Draw current animated stroke
-                if (drawnPts.length >= 2) {
-                    drawStrokePath(drawnPts, '#e91e63', 5);
-                }
-
-                // Draw the animated pen tip
-                if (drawnPts.length > 0) {
-                    const tip = drawnPts[drawnPts.length - 1];
-                    drawCtx.fillStyle = '#e91e63';
-                    drawCtx.beginPath();
-                    drawCtx.arc(tip.x, tip.y, 6, 0, Math.PI * 2);
-                    drawCtx.fill();
-                }
-
-                updateStrokeCounter();
+                renderFrame(pt);
                 requestAnimationFrame(drawNext);
             }
 
