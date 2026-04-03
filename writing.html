@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fiona's Writing">
+    <title>Fiona's Hiragana Writing Practice</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 30%, #e0f7fa 60%, #fff3e0 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+            overflow-x: hidden;
+            padding: 0 0 40px 0;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(255, 183, 197, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(179, 229, 252, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 245, 157, 0.2) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 18px 20px 14px;
+            background: rgba(255, 255, 255, 0.7);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.6em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .header-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .header-links a {
+            display: inline-block;
+            padding: 5px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .header-links a:active {
+            transform: scale(0.95);
+        }
+
+        .back-link {
+            background: linear-gradient(135deg, #fff9c4, #ffe0b2);
+            color: #f57f17;
+        }
+
+        .workbook-link {
+            background: linear-gradient(135deg, #f8bbd0, #f48fb1);
+            color: #880e4f;
+        }
+
+        /* Main layout */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Progress bar */
+        .progress-section {
+            background: rgba(255, 255, 255, 0.7);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .progress-label {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #78909c;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.06);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ce93d8, #64b5f6, #4db6ac);
+            border-radius: 5px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .progress-count {
+            font-size: 0.8em;
+            font-weight: 700;
+            color: #b0bec5;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        /* Character grid */
+        .char-grid-section {
+            background: rgba(255, 255, 255, 0.7);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .char-grid-section h3 {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #78909c;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .char-row-label {
+            font-size: 0.7em;
+            font-weight: 800;
+            color: #b0bec5;
+            margin-top: 6px;
+            margin-bottom: 2px;
+            padding-left: 2px;
+        }
+
+        .char-row-label:first-child {
+            margin-top: 0;
+        }
+
+        .char-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .char-btn {
+            width: 42px;
+            height: 42px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #546e7a;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .char-btn:active {
+            transform: scale(0.92);
+        }
+
+        .char-btn.active {
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            color: white;
+            border-color: #ab47bc;
+            box-shadow: 0 3px 12px rgba(171, 71, 188, 0.3);
+        }
+
+        .char-btn.practiced {
+            background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+            color: #2e7d32;
+        }
+
+        .char-btn.practiced.active {
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            color: white;
+        }
+
+        .char-btn .check-mark {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            width: 14px;
+            height: 14px;
+            background: #43a047;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.45em;
+            color: white;
+            font-weight: 800;
+        }
+
+        /* Practice area */
+        .practice-area {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        /* Reference panel */
+        .reference-panel {
+            background: rgba(255, 255, 255, 0.85);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            flex: 0 0 160px;
+            min-width: 140px;
+        }
+
+        .ref-char {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 120px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: #37474f;
+            position: relative;
+            display: inline-block;
+        }
+
+        .ref-romaji {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #78909c;
+            margin-top: 2px;
+        }
+
+        .ref-strokes {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #b0bec5;
+            margin-top: 4px;
+        }
+
+        .ref-stroke-order {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px dashed rgba(0,0,0,0.08);
+        }
+
+        .ref-stroke-order canvas {
+            border-radius: 12px;
+            background: #fafafa;
+        }
+
+        /* Canvas area */
+        .canvas-wrapper {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .drawing-canvas-container {
+            position: relative;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 3px solid rgba(206, 147, 216, 0.3);
+            aspect-ratio: 1 / 1;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .drawing-canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* Grid lines on canvas */
+        .canvas-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .canvas-grid::before,
+        .canvas-grid::after {
+            content: '';
+            position: absolute;
+            background: rgba(206, 147, 216, 0.15);
+        }
+
+        .canvas-grid::before {
+            left: 50%;
+            top: 10%;
+            width: 1px;
+            height: 80%;
+            border-left: 1px dashed rgba(206, 147, 216, 0.3);
+        }
+
+        .canvas-grid::after {
+            top: 50%;
+            left: 10%;
+            height: 1px;
+            width: 80%;
+            border-top: 1px dashed rgba(206, 147, 216, 0.3);
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+            color: white;
+            min-width: 80px;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #ffab91, #ff8a65);
+        }
+
+        .btn-show {
+            background: linear-gradient(135deg, #90caf9, #64b5f6);
+        }
+
+        .btn-check {
+            background: linear-gradient(135deg, #a5d6a7, #66bb6a);
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+        }
+
+        .btn-prev {
+            background: linear-gradient(135deg, #b0bec5, #90a4ae);
+        }
+
+        /* Feedback message */
+        .feedback {
+            text-align: center;
+            margin-top: 12px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feedback-msg {
+            display: inline-block;
+            padding: 8px 24px;
+            border-radius: 22px;
+            font-weight: 800;
+            font-size: 1.05em;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .feedback-msg.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .feedback-msg.great {
+            background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+            color: #2e7d32;
+        }
+
+        .feedback-msg.tryagain {
+            background: linear-gradient(135deg, #fff9c4, #fff176);
+            color: #f57f17;
+        }
+
+        .feedback-msg.wrong {
+            background: linear-gradient(135deg, #ffcdd2, #ef9a9a);
+            color: #c62828;
+        }
+
+        /* Stroke counter overlay */
+        .stroke-counter {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 12px;
+            padding: 4px 12px;
+            font-size: 0.8em;
+            font-weight: 700;
+            color: #78909c;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.3em;
+            }
+
+            .practice-area {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .reference-panel {
+                flex: none;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                text-align: left;
+                padding: 12px 16px;
+            }
+
+            .ref-char {
+                font-size: 80px;
+                flex-shrink: 0;
+            }
+
+            .ref-info {
+                flex: 1;
+            }
+
+            .ref-stroke-order {
+                border-top: none;
+                margin-top: 0;
+                padding-top: 0;
+            }
+
+            .canvas-wrapper {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .drawing-canvas-container {
+                max-width: 360px;
+            }
+
+            .char-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1.05em;
+            }
+
+            .container {
+                padding: 10px;
+            }
+        }
+
+        @media (min-width: 641px) {
+            .reference-panel {
+                position: sticky;
+                top: 100px;
+            }
+        }
+
+        /* Animation for feedback */
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .feedback-msg.show {
+            animation: bounceIn 0.4s ease forwards;
+        }
+
+        /* Stars animation for correct answer */
+        @keyframes starFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-60px) scale(0.5); opacity: 0; }
+        }
+
+        .star-particle {
+            position: absolute;
+            font-size: 1.4em;
+            pointer-events: none;
+            animation: starFloat 1s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Fiona's Hiragana Writing Practice</h1>
+        <div class="header-links">
+            <a href="index.html" class="back-link">Back to Flashcards</a>
+            <a href="ebook.html" class="workbook-link">Workbook</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Progress -->
+        <div class="progress-section">
+            <div class="progress-label">Your Progress</div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-count" id="progressCount">0 / 46 practiced</div>
+        </div>
+
+        <!-- Character Grid -->
+        <div class="char-grid-section">
+            <h3>Choose a character to practice:</h3>
+            <div id="charGridContainer"></div>
+        </div>
+
+        <!-- Practice Area -->
+        <div class="practice-area">
+            <!-- Reference -->
+            <div class="reference-panel">
+                <div class="ref-char" id="refChar">あ</div>
+                <div class="ref-info">
+                    <div class="ref-romaji" id="refRomaji">a</div>
+                    <div class="ref-strokes" id="refStrokes">3 strokes</div>
+                    <div class="ref-stroke-order">
+                        <canvas id="guideCanvas" width="120" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawing -->
+            <div class="canvas-wrapper">
+                <div class="drawing-canvas-container" id="canvasContainer">
+                    <canvas id="drawCanvas"></canvas>
+                    <div class="canvas-grid"></div>
+                    <div class="stroke-counter" id="strokeCounter">Strokes: 0</div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn btn-clear" onclick="clearCanvas()">Clear</button>
+                    <button class="action-btn btn-show" onclick="showMe()">Show Me</button>
+                    <button class="action-btn btn-check" onclick="checkDrawing()">Check</button>
+                    <button class="action-btn btn-prev" onclick="prevChar()">Prev</button>
+                    <button class="action-btn btn-next" onclick="nextChar()">Next</button>
+                </div>
+                <div class="feedback">
+                    <div class="feedback-msg" id="feedbackMsg"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // =========================================================================
+    // HIRAGANA DATA - All 46 basic characters with stroke data
+    // =========================================================================
+    // Each character: { char, romaji, strokes: count, row, paths: array of stroke path data }
+    // Each path: { points: [[x,y],...], dir: direction }
+    // Coordinates are normalized 0-1 within the character cell
+    // dir values: 'right','left','down','up','curve-right','curve-left','down-right',
+    //             'down-left','up-curve','loop','hook-left','hook-right'
+
+    const hiraganaData = [
+        // --- A row ---
+        { char: 'あ', romaji: 'a', strokes: 3, row: 'a', paths: [
+            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
+            { points: [[0.5,0.1],[0.5,0.55],[0.45,0.7]], dir: 'down' },
+            { points: [[0.2,0.5],[0.55,0.45],[0.75,0.55],[0.7,0.75],[0.35,0.85],[0.25,0.7]], dir: 'loop' }
+        ]},
+        { char: 'い', romaji: 'i', strokes: 2, row: 'a', paths: [
+            { points: [[0.3,0.2],[0.25,0.7]], dir: 'down' },
+            { points: [[0.6,0.25],[0.65,0.55],[0.7,0.7]], dir: 'down' }
+        ]},
+        { char: 'う', romaji: 'u', strokes: 2, row: 'a', paths: [
+            { points: [[0.45,0.18],[0.55,0.18]], dir: 'right' },
+            { points: [[0.3,0.35],[0.6,0.35],[0.65,0.55],[0.5,0.8],[0.3,0.75]], dir: 'curve-left' }
+        ]},
+        { char: 'え', romaji: 'e', strokes: 2, row: 'a', paths: [
+            { points: [[0.35,0.2],[0.6,0.2]], dir: 'right' },
+            { points: [[0.5,0.2],[0.3,0.5],[0.5,0.55],[0.7,0.65],[0.45,0.85],[0.25,0.75]], dir: 'curve-left' }
+        ]},
+        { char: 'お', romaji: 'o', strokes: 3, row: 'a', paths: [
+            { points: [[0.2,0.3],[0.75,0.3]], dir: 'right' },
+            { points: [[0.45,0.1],[0.45,0.5],[0.4,0.7],[0.3,0.8]], dir: 'down' },
+            { points: [[0.5,0.45],[0.7,0.5],[0.75,0.65],[0.6,0.8],[0.45,0.75]], dir: 'loop' }
+        ]},
+        // --- KA row ---
+        { char: 'か', romaji: 'ka', strokes: 3, row: 'ka', paths: [
+            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
+            { points: [[0.55,0.1],[0.5,0.55],[0.35,0.85]], dir: 'down-left' },
+            { points: [[0.6,0.5],[0.75,0.65],[0.7,0.85]], dir: 'down' }
+        ]},
+        { char: 'き', romaji: 'ki', strokes: 4, row: 'ka', paths: [
+            { points: [[0.25,0.2],[0.75,0.2]], dir: 'right' },
+            { points: [[0.2,0.4],[0.8,0.4]], dir: 'right' },
+            { points: [[0.6,0.1],[0.4,0.6]], dir: 'down-left' },
+            { points: [[0.3,0.6],[0.65,0.6],[0.65,0.75],[0.35,0.85]], dir: 'curve-left' }
+        ]},
+        { char: 'く', romaji: 'ku', strokes: 1, row: 'ka', paths: [
+            { points: [[0.65,0.15],[0.35,0.5],[0.65,0.85]], dir: 'curve-right' }
+        ]},
+        { char: 'け', romaji: 'ke', strokes: 3, row: 'ka', paths: [
+            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
+            { points: [[0.2,0.35],[0.8,0.35]], dir: 'right' },
+            { points: [[0.65,0.2],[0.6,0.65],[0.55,0.85]], dir: 'down' }
+        ]},
+        { char: 'こ', romaji: 'ko', strokes: 2, row: 'ka', paths: [
+            { points: [[0.25,0.3],[0.75,0.3]], dir: 'right' },
+            { points: [[0.25,0.7],[0.75,0.7]], dir: 'right' }
+        ]},
+        // --- SA row ---
+        { char: 'さ', romaji: 'sa', strokes: 3, row: 'sa', paths: [
+            { points: [[0.25,0.25],[0.75,0.25]], dir: 'right' },
+            { points: [[0.6,0.1],[0.45,0.55]], dir: 'down-left' },
+            { points: [[0.25,0.5],[0.65,0.5],[0.7,0.65],[0.5,0.8],[0.3,0.75]], dir: 'curve-left' }
+        ]},
+        { char: 'し', romaji: 'shi', strokes: 1, row: 'sa', paths: [
+            { points: [[0.35,0.15],[0.35,0.55],[0.4,0.7],[0.6,0.75],[0.75,0.6]], dir: 'hook-right' }
+        ]},
+        { char: 'す', romaji: 'su', strokes: 2, row: 'sa', paths: [
+            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
+            { points: [[0.55,0.1],[0.5,0.5],[0.6,0.6],[0.65,0.5],[0.45,0.85]], dir: 'loop' }
+        ]},
+        { char: 'せ', romaji: 'se', strokes: 3, row: 'sa', paths: [
+            { points: [[0.25,0.2],[0.25,0.75]], dir: 'down' },
+            { points: [[0.15,0.45],[0.8,0.45]], dir: 'right' },
+            { points: [[0.55,0.2],[0.55,0.55],[0.6,0.7],[0.75,0.75]], dir: 'hook-right' }
+        ]},
+        { char: 'そ', romaji: 'so', strokes: 1, row: 'sa', paths: [
+            { points: [[0.4,0.15],[0.6,0.15],[0.35,0.45],[0.65,0.5],[0.55,0.7],[0.3,0.85]], dir: 'curve-left' }
+        ]},
+        // --- TA row ---
+        { char: 'た', romaji: 'ta', strokes: 4, row: 'ta', paths: [
+            { points: [[0.2,0.3],[0.7,0.3]], dir: 'right' },
+            { points: [[0.5,0.1],[0.45,0.55],[0.35,0.75]], dir: 'down-left' },
+            { points: [[0.25,0.6],[0.55,0.6]], dir: 'right' },
+            { points: [[0.65,0.55],[0.75,0.75]], dir: 'down-right' }
+        ]},
+        { char: 'ち', romaji: 'chi', strokes: 2, row: 'ta', paths: [
+            { points: [[0.2,0.3],[0.75,0.3]], dir: 'right' },
+            { points: [[0.55,0.1],[0.5,0.45],[0.45,0.6],[0.55,0.7],[0.7,0.6]], dir: 'hook-right' }
+        ]},
+        { char: 'つ', romaji: 'tsu', strokes: 1, row: 'ta', paths: [
+            { points: [[0.2,0.35],[0.55,0.3],[0.7,0.4],[0.65,0.6],[0.45,0.8]], dir: 'curve-left' }
+        ]},
+        { char: 'て', romaji: 'te', strokes: 1, row: 'ta', paths: [
+            { points: [[0.2,0.3],[0.75,0.3],[0.5,0.5],[0.3,0.75]], dir: 'curve-left' }
+        ]},
+        { char: 'と', romaji: 'to', strokes: 2, row: 'ta', paths: [
+            { points: [[0.4,0.15],[0.35,0.55],[0.3,0.75]], dir: 'down' },
+            { points: [[0.35,0.45],[0.6,0.55],[0.65,0.7]], dir: 'curve-right' }
+        ]},
+        // --- NA row ---
+        { char: 'な', romaji: 'na', strokes: 4, row: 'na', paths: [
+            { points: [[0.2,0.3],[0.55,0.3]], dir: 'right' },
+            { points: [[0.4,0.1],[0.35,0.55],[0.25,0.75]], dir: 'down-left' },
+            { points: [[0.55,0.55],[0.65,0.65]], dir: 'down-right' },
+            { points: [[0.55,0.45],[0.75,0.5],[0.75,0.65],[0.55,0.8],[0.4,0.7]], dir: 'loop' }
+        ]},
+        { char: 'に', romaji: 'ni', strokes: 3, row: 'na', paths: [
+            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
+            { points: [[0.45,0.35],[0.75,0.35]], dir: 'right' },
+            { points: [[0.45,0.65],[0.75,0.65]], dir: 'right' }
+        ]},
+        { char: 'ぬ', romaji: 'nu', strokes: 2, row: 'na', paths: [
+            { points: [[0.2,0.35],[0.8,0.35],[0.55,0.15]], dir: 'right' },
+            { points: [[0.55,0.35],[0.3,0.7],[0.5,0.8],[0.75,0.65],[0.6,0.5],[0.35,0.85]], dir: 'loop' }
+        ]},
+        { char: 'ね', romaji: 'ne', strokes: 2, row: 'na', paths: [
+            { points: [[0.2,0.2],[0.2,0.65],[0.25,0.75]], dir: 'down' },
+            { points: [[0.2,0.4],[0.7,0.35],[0.4,0.6],[0.65,0.7],[0.75,0.55],[0.55,0.85]], dir: 'loop' }
+        ]},
+        { char: 'の', romaji: 'no', strokes: 1, row: 'na', paths: [
+            { points: [[0.5,0.15],[0.3,0.5],[0.4,0.8],[0.65,0.7],[0.7,0.4],[0.55,0.2]], dir: 'loop' }
+        ]},
+        // --- HA row ---
+        { char: 'は', romaji: 'ha', strokes: 3, row: 'ha', paths: [
+            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
+            { points: [[0.4,0.3],[0.8,0.3]], dir: 'right' },
+            { points: [[0.55,0.35],[0.45,0.55],[0.55,0.7],[0.7,0.65],[0.65,0.5],[0.45,0.85]], dir: 'loop' }
+        ]},
+        { char: 'ひ', romaji: 'hi', strokes: 1, row: 'ha', paths: [
+            { points: [[0.6,0.15],[0.3,0.3],[0.25,0.55],[0.4,0.75],[0.7,0.7],[0.75,0.5],[0.65,0.35]], dir: 'loop' }
+        ]},
+        { char: 'ふ', romaji: 'fu', strokes: 4, row: 'ha', paths: [
+            { points: [[0.45,0.15],[0.55,0.15]], dir: 'right' },
+            { points: [[0.25,0.4],[0.35,0.35]], dir: 'right' },
+            { points: [[0.65,0.35],[0.75,0.4]], dir: 'right' },
+            { points: [[0.35,0.5],[0.55,0.6],[0.65,0.75],[0.5,0.85],[0.3,0.75]], dir: 'curve-left' }
+        ]},
+        { char: 'へ', romaji: 'he', strokes: 1, row: 'ha', paths: [
+            { points: [[0.15,0.55],[0.5,0.25],[0.85,0.55]], dir: 'curve-right' }
+        ]},
+        { char: 'ほ', romaji: 'ho', strokes: 4, row: 'ha', paths: [
+            { points: [[0.2,0.15],[0.2,0.85]], dir: 'down' },
+            { points: [[0.35,0.3],[0.8,0.3]], dir: 'right' },
+            { points: [[0.35,0.55],[0.8,0.55]], dir: 'right' },
+            { points: [[0.55,0.3],[0.55,0.55],[0.6,0.7],[0.7,0.75],[0.75,0.65]], dir: 'hook-right' }
+        ]},
+        // --- MA row ---
+        { char: 'ま', romaji: 'ma', strokes: 3, row: 'ma', paths: [
+            { points: [[0.2,0.3],[0.8,0.3]], dir: 'right' },
+            { points: [[0.2,0.55],[0.8,0.55]], dir: 'right' },
+            { points: [[0.55,0.1],[0.5,0.55],[0.55,0.7],[0.65,0.75],[0.6,0.65],[0.45,0.85]], dir: 'down' }
+        ]},
+        { char: 'み', romaji: 'mi', strokes: 2, row: 'ma', paths: [
+            { points: [[0.35,0.2],[0.55,0.2],[0.5,0.4],[0.3,0.45]], dir: 'curve-left' },
+            { points: [[0.35,0.5],[0.6,0.5],[0.65,0.65],[0.5,0.8],[0.3,0.75]], dir: 'curve-left' }
+        ]},
+        { char: 'む', romaji: 'mu', strokes: 3, row: 'ma', paths: [
+            { points: [[0.2,0.35],[0.75,0.35]], dir: 'right' },
+            { points: [[0.5,0.1],[0.45,0.5],[0.35,0.7],[0.5,0.8],[0.65,0.7],[0.6,0.55]], dir: 'loop' },
+            { points: [[0.7,0.6],[0.8,0.55]], dir: 'right' }
+        ]},
+        { char: 'め', romaji: 'me', strokes: 2, row: 'ma', paths: [
+            { points: [[0.25,0.2],[0.25,0.7],[0.3,0.8]], dir: 'down' },
+            { points: [[0.25,0.4],[0.7,0.35],[0.45,0.65],[0.6,0.75],[0.75,0.6],[0.6,0.45]], dir: 'loop' }
+        ]},
+        { char: 'も', romaji: 'mo', strokes: 3, row: 'ma', paths: [
+            { points: [[0.25,0.3],[0.75,0.3]], dir: 'right' },
+            { points: [[0.25,0.55],[0.75,0.55]], dir: 'right' },
+            { points: [[0.45,0.15],[0.45,0.6],[0.5,0.75],[0.65,0.8]], dir: 'down' }
+        ]},
+        // --- YA row ---
+        { char: 'や', romaji: 'ya', strokes: 3, row: 'ya', paths: [
+            { points: [[0.15,0.35],[0.55,0.35]], dir: 'right' },
+            { points: [[0.4,0.15],[0.35,0.55],[0.25,0.8]], dir: 'down-left' },
+            { points: [[0.55,0.25],[0.7,0.5],[0.6,0.8]], dir: 'curve-left' }
+        ]},
+        { char: 'ゆ', romaji: 'yu', strokes: 2, row: 'ya', paths: [
+            { points: [[0.25,0.25],[0.25,0.6],[0.35,0.7],[0.5,0.65]], dir: 'hook-right' },
+            { points: [[0.5,0.2],[0.7,0.35],[0.7,0.55],[0.55,0.75],[0.35,0.85]], dir: 'curve-left' }
+        ]},
+        { char: 'よ', romaji: 'yo', strokes: 2, row: 'ya', paths: [
+            { points: [[0.35,0.25],[0.65,0.25],[0.6,0.45],[0.35,0.5]], dir: 'curve-left' },
+            { points: [[0.5,0.2],[0.5,0.85]], dir: 'down' }
+        ]},
+        // --- RA row ---
+        { char: 'ら', romaji: 'ra', strokes: 2, row: 'ra', paths: [
+            { points: [[0.35,0.2],[0.65,0.2]], dir: 'right' },
+            { points: [[0.55,0.2],[0.45,0.45],[0.5,0.6],[0.65,0.65],[0.6,0.5],[0.35,0.85]], dir: 'curve-left' }
+        ]},
+        { char: 'り', romaji: 'ri', strokes: 2, row: 'ra', paths: [
+            { points: [[0.3,0.2],[0.3,0.55],[0.35,0.65]], dir: 'down' },
+            { points: [[0.65,0.2],[0.6,0.55],[0.5,0.75],[0.55,0.8]], dir: 'hook-right' }
+        ]},
+        { char: 'る', romaji: 'ru', strokes: 1, row: 'ra', paths: [
+            { points: [[0.35,0.15],[0.65,0.15],[0.35,0.45],[0.55,0.6],[0.65,0.75],[0.5,0.85],[0.35,0.75]], dir: 'loop' }
+        ]},
+        { char: 'れ', romaji: 're', strokes: 2, row: 'ra', paths: [
+            { points: [[0.2,0.2],[0.2,0.8]], dir: 'down' },
+            { points: [[0.2,0.4],[0.65,0.35],[0.45,0.6],[0.65,0.75],[0.75,0.6]], dir: 'curve-right' }
+        ]},
+        { char: 'ろ', romaji: 'ro', strokes: 1, row: 'ra', paths: [
+            { points: [[0.35,0.15],[0.65,0.15],[0.35,0.5],[0.55,0.7],[0.7,0.75]], dir: 'curve-right' }
+        ]},
+        // --- WA row ---
+        { char: 'わ', romaji: 'wa', strokes: 2, row: 'wa', paths: [
+            { points: [[0.25,0.2],[0.25,0.8]], dir: 'down' },
+            { points: [[0.25,0.4],[0.65,0.35],[0.7,0.55],[0.55,0.75],[0.35,0.85]], dir: 'curve-left' }
+        ]},
+        { char: 'を', romaji: 'wo', strokes: 3, row: 'wa', paths: [
+            { points: [[0.2,0.25],[0.75,0.25]], dir: 'right' },
+            { points: [[0.55,0.1],[0.45,0.45]], dir: 'down-left' },
+            { points: [[0.2,0.5],[0.55,0.5],[0.65,0.6],[0.6,0.75],[0.35,0.85]], dir: 'curve-left' }
+        ]},
+        { char: 'ん', romaji: 'n', strokes: 1, row: 'wa', paths: [
+            { points: [[0.35,0.2],[0.3,0.55],[0.45,0.75],[0.65,0.6],[0.7,0.3]], dir: 'hook-right' }
+        ]}
+    ];
+
+    // Row names for the grid
+    const rowNames = {
+        'a': 'A row (あ)',
+        'ka': 'KA row (か)',
+        'sa': 'SA row (さ)',
+        'ta': 'TA row (た)',
+        'na': 'NA row (な)',
+        'ha': 'HA row (は)',
+        'ma': 'MA row (ま)',
+        'ya': 'YA row (や)',
+        'ra': 'RA row (ら)',
+        'wa': 'WA row (わ)'
+    };
+
+    // State
+    let currentIndex = 0;
+    let practiced = new Set();
+    let userStrokes = []; // Array of strokes, each stroke = array of {x,y} points
+    let currentStroke = null;
+    let isDrawing = false;
+    let showingAnimation = false;
+
+    // Load progress from localStorage
+    try {
+        const saved = localStorage.getItem('fiona-writing-progress');
+        if (saved) practiced = new Set(JSON.parse(saved));
+    } catch(e) {}
+
+    // =========================================================================
+    // BUILD CHARACTER GRID
+    // =========================================================================
+    function buildCharGrid() {
+        const container = document.getElementById('charGridContainer');
+        container.innerHTML = '';
+        const rowOrder = ['a','ka','sa','ta','na','ha','ma','ya','ra','wa'];
+
+        rowOrder.forEach(row => {
+            const label = document.createElement('div');
+            label.className = 'char-row-label';
+            label.textContent = rowNames[row];
+            container.appendChild(label);
+
+            const grid = document.createElement('div');
+            grid.className = 'char-grid';
+
+            hiraganaData.forEach((h, idx) => {
+                if (h.row !== row) return;
+                const btn = document.createElement('button');
+                btn.className = 'char-btn';
+                btn.textContent = h.char;
+                btn.dataset.index = idx;
+
+                if (practiced.has(h.char)) {
+                    btn.classList.add('practiced');
+                    const check = document.createElement('span');
+                    check.className = 'check-mark';
+                    check.textContent = '\u2713';
+                    btn.appendChild(check);
+                }
+
+                if (idx === currentIndex) btn.classList.add('active');
+
+                btn.addEventListener('click', () => {
+                    selectChar(idx);
+                });
+
+                grid.appendChild(btn);
+            });
+
+            container.appendChild(grid);
+        });
+    }
+
+    function selectChar(idx) {
+        currentIndex = idx;
+        clearCanvas();
+        updateUI();
+        hideFeedback();
+    }
+
+    function updateUI() {
+        const h = hiraganaData[currentIndex];
+
+        // Update reference
+        document.getElementById('refChar').textContent = h.char;
+        document.getElementById('refRomaji').textContent = h.romaji;
+        document.getElementById('refStrokes').textContent = h.strokes + (h.strokes === 1 ? ' stroke' : ' strokes');
+
+        // Update grid highlights
+        document.querySelectorAll('.char-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (parseInt(btn.dataset.index) === currentIndex) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Draw guide
+        drawGuide();
+
+        // Update progress
+        updateProgress();
+
+        // Draw guide strokes on main canvas
+        drawGuideOnMain();
+    }
+
+    function updateProgress() {
+        const total = hiraganaData.length;
+        const done = practiced.size;
+        const pct = (done / total) * 100;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
+    }
+
+    // =========================================================================
+    // GUIDE CANVAS (small reference)
+    // =========================================================================
+    function drawGuide() {
+        const canvas = document.getElementById('guideCanvas');
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h_c = canvas.height;
+        ctx.clearRect(0, 0, w, h_c);
+
+        const data = hiraganaData[currentIndex];
+
+        // Draw cross guides
+        ctx.strokeStyle = 'rgba(206, 147, 216, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(w/2, 8); ctx.lineTo(w/2, h_c-8);
+        ctx.moveTo(8, h_c/2); ctx.lineTo(w-8, h_c/2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw each stroke path
+        const pad = 10;
+        const area = w - pad * 2;
+
+        data.paths.forEach((stroke, i) => {
+            const pts = stroke.points;
+            ctx.strokeStyle = 'rgba(120, 144, 156, 0.5)';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            pts.forEach((p, j) => {
+                const x = pad + p[0] * area;
+                const y = pad + p[1] * area;
+                if (j === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Stroke number
+            const sx = pad + pts[0][0] * area;
+            const sy = pad + pts[0][1] * area;
+            ctx.fillStyle = '#e91e63';
+            ctx.beginPath();
+            ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 9px Nunito, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('' + (i + 1), sx, sy);
+        });
+    }
+
+    // =========================================================================
+    // MAIN DRAWING CANVAS
+    // =========================================================================
+    const drawCanvas = document.getElementById('drawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+    let canvasRect = null;
+
+    function resizeCanvas() {
+        const container = document.getElementById('canvasContainer');
+        const rect = container.getBoundingClientRect();
+        const size = Math.floor(rect.width);
+        drawCanvas.width = size;
+        drawCanvas.height = size;
+        drawCanvas.style.width = size + 'px';
+        drawCanvas.style.height = size + 'px';
+        canvasRect = drawCanvas.getBoundingClientRect();
+        redrawCanvas();
+    }
+
+    function redrawCanvas() {
+        const w = drawCanvas.width;
+        const h = drawCanvas.height;
+        drawCtx.clearRect(0, 0, w, h);
+
+        // Draw guide strokes
+        drawGuideOnMain();
+
+        // Redraw user strokes
+        userStrokes.forEach(stroke => {
+            drawStrokePath(stroke, '#37474f', 4);
+        });
+
+        // Draw current stroke
+        if (currentStroke && currentStroke.length > 0) {
+            drawStrokePath(currentStroke, '#37474f', 4);
+        }
+
+        updateStrokeCounter();
+    }
+
+    function drawGuideOnMain() {
+        const w = drawCanvas.width;
+        const h = drawCanvas.height;
+        const data = hiraganaData[currentIndex];
+        const pad = w * 0.08;
+        const area = w - pad * 2;
+
+        data.paths.forEach((stroke, i) => {
+            const pts = stroke.points;
+
+            // Dashed guide line
+            drawCtx.strokeStyle = 'rgba(206, 147, 216, 0.3)';
+            drawCtx.lineWidth = 3;
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+            drawCtx.setLineDash([8, 6]);
+
+            drawCtx.beginPath();
+            if (pts.length >= 3) {
+                // Smooth curve through points
+                drawCtx.moveTo(pad + pts[0][0]*area, pad + pts[0][1]*area);
+                for (let j = 1; j < pts.length - 1; j++) {
+                    const xc = (pad + pts[j][0]*area + pad + pts[j+1][0]*area) / 2;
+                    const yc = (pad + pts[j][1]*area + pad + pts[j+1][1]*area) / 2;
+                    drawCtx.quadraticCurveTo(pad + pts[j][0]*area, pad + pts[j][1]*area, xc, yc);
+                }
+                const last = pts[pts.length - 1];
+                const prev = pts[pts.length - 2];
+                drawCtx.quadraticCurveTo(pad + prev[0]*area, pad + prev[1]*area, pad + last[0]*area, pad + last[1]*area);
+            } else {
+                pts.forEach((p, j) => {
+                    if (j === 0) drawCtx.moveTo(pad + p[0]*area, pad + p[1]*area);
+                    else drawCtx.lineTo(pad + p[0]*area, pad + p[1]*area);
+                });
+            }
+            drawCtx.stroke();
+            drawCtx.setLineDash([]);
+
+            // Stroke number circle
+            const sx = pad + pts[0][0] * area;
+            const sy = pad + pts[0][1] * area;
+            const r = Math.max(12, w * 0.035);
+            drawCtx.fillStyle = 'rgba(233, 30, 99, 0.6)';
+            drawCtx.beginPath();
+            drawCtx.arc(sx, sy, r, 0, Math.PI * 2);
+            drawCtx.fill();
+            drawCtx.fillStyle = 'white';
+            drawCtx.font = 'bold ' + Math.max(10, w * 0.03) + 'px Nunito, sans-serif';
+            drawCtx.textAlign = 'center';
+            drawCtx.textBaseline = 'middle';
+            drawCtx.fillText('' + (i + 1), sx, sy);
+        });
+    }
+
+    function drawStrokePath(points, color, width) {
+        if (points.length < 2) return;
+        drawCtx.strokeStyle = color;
+        drawCtx.lineWidth = width;
+        drawCtx.lineCap = 'round';
+        drawCtx.lineJoin = 'round';
+        drawCtx.setLineDash([]);
+        drawCtx.beginPath();
+        drawCtx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            drawCtx.lineTo(points[i].x, points[i].y);
+        }
+        drawCtx.stroke();
+    }
+
+    function updateStrokeCounter() {
+        const count = userStrokes.length + (currentStroke ? 1 : 0);
+        const expected = hiraganaData[currentIndex].strokes;
+        document.getElementById('strokeCounter').textContent = 'Strokes: ' + count + ' / ' + expected;
+    }
+
+    // =========================================================================
+    // TOUCH / MOUSE INPUT
+    // =========================================================================
+    function getPos(e) {
+        canvasRect = drawCanvas.getBoundingClientRect();
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        // Scale to canvas internal coordinates
+        const scaleX = drawCanvas.width / canvasRect.width;
+        const scaleY = drawCanvas.height / canvasRect.height;
+        return {
+            x: (clientX - canvasRect.left) * scaleX,
+            y: (clientY - canvasRect.top) * scaleY
+        };
+    }
+
+    function startStroke(e) {
+        if (showingAnimation) return;
+        e.preventDefault();
+        isDrawing = true;
+        const pos = getPos(e);
+        currentStroke = [pos];
+    }
+
+    function moveStroke(e) {
+        if (!isDrawing || !currentStroke || showingAnimation) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        currentStroke.push(pos);
+        redrawCanvas();
+    }
+
+    function endStroke(e) {
+        if (!isDrawing || !currentStroke || showingAnimation) return;
+        e.preventDefault();
+        isDrawing = false;
+        if (currentStroke.length > 2) {
+            userStrokes.push(currentStroke);
+        }
+        currentStroke = null;
+        redrawCanvas();
+    }
+
+    // Touch events
+    drawCanvas.addEventListener('touchstart', startStroke, { passive: false });
+    drawCanvas.addEventListener('touchmove', moveStroke, { passive: false });
+    drawCanvas.addEventListener('touchend', endStroke, { passive: false });
+    drawCanvas.addEventListener('touchcancel', endStroke, { passive: false });
+
+    // Mouse events
+    drawCanvas.addEventListener('mousedown', startStroke);
+    drawCanvas.addEventListener('mousemove', moveStroke);
+    drawCanvas.addEventListener('mouseup', endStroke);
+    drawCanvas.addEventListener('mouseleave', endStroke);
+
+    // Prevent scrolling while drawing on canvas
+    document.getElementById('canvasContainer').addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+
+    // =========================================================================
+    // ACTIONS
+    // =========================================================================
+    function clearCanvas() {
+        userStrokes = [];
+        currentStroke = null;
+        isDrawing = false;
+        showingAnimation = false;
+        redrawCanvas();
+        hideFeedback();
+    }
+
+    function nextChar() {
+        currentIndex = (currentIndex + 1) % hiraganaData.length;
+        clearCanvas();
+        updateUI();
+    }
+
+    function prevChar() {
+        currentIndex = (currentIndex - 1 + hiraganaData.length) % hiraganaData.length;
+        clearCanvas();
+        updateUI();
+    }
+
+    // =========================================================================
+    // STROKE ANALYSIS & FEEDBACK
+    // =========================================================================
+    function analyzeStrokeDirection(points) {
+        if (points.length < 2) return 'dot';
+        const first = points[0];
+        const last = points[points.length - 1];
+        const dx = last.x - first.x;
+        const dy = last.y - first.y;
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        // Determine primary direction
+        if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return 'dot';
+
+        if (angle >= -45 && angle < 45) return 'right';
+        if (angle >= 45 && angle < 135) return 'down';
+        if (angle >= 135 || angle < -135) return 'left';
+        if (angle >= -135 && angle < -45) return 'up';
+        return 'unknown';
+    }
+
+    function getExpectedDirection(dir) {
+        // Map our path directions to expected primary directions
+        const map = {
+            'right': ['right', 'down'],
+            'left': ['left'],
+            'down': ['down', 'down-left', 'down-right'],
+            'down-left': ['down', 'down-left', 'left'],
+            'down-right': ['down', 'down-right', 'right'],
+            'up': ['up'],
+            'curve-right': ['right', 'down', 'down-right'],
+            'curve-left': ['right', 'down', 'left', 'down-left'],
+            'hook-right': ['down', 'right'],
+            'hook-left': ['down', 'left'],
+            'loop': ['right', 'down', 'left', 'down-left', 'down-right'],
+            'up-curve': ['up', 'right']
+        };
+        return map[dir] || ['right', 'down', 'left', 'up'];
+    }
+
+    function checkDrawing() {
+        const data = hiraganaData[currentIndex];
+        const expectedCount = data.strokes;
+        const userCount = userStrokes.length;
+
+        if (userCount === 0) {
+            showFeedback('Draw the character first!', 'tryagain');
+            playSfx('wrong');
+            return;
+        }
+
+        // Check stroke count
+        if (userCount !== expectedCount) {
+            if (userCount < expectedCount) {
+                showFeedback('Need ' + expectedCount + ' strokes - you drew ' + userCount + '!', 'wrong');
+            } else {
+                showFeedback('Too many strokes! ' + data.char + ' has ' + expectedCount + '.', 'wrong');
+            }
+            playSfx('wrong');
+            return;
+        }
+
+        // Check stroke directions
+        let correctDirections = 0;
+        for (let i = 0; i < Math.min(userCount, data.paths.length); i++) {
+            const userDir = analyzeStrokeDirection(userStrokes[i]);
+            const expected = getExpectedDirection(data.paths[i].dir);
+            if (expected.includes(userDir) || userDir === 'dot') {
+                correctDirections++;
+            }
+        }
+
+        const directionScore = correctDirections / expectedCount;
+
+        if (directionScore >= 0.7) {
+            showFeedback('Great job!', 'great');
+            playSfx('correct');
+            practiced.add(data.char);
+            savePracticed();
+            buildCharGrid();
+            updateProgress();
+            spawnStars();
+        } else if (directionScore >= 0.4) {
+            showFeedback('Almost! Check the stroke order.', 'tryagain');
+            playSfx('wrong');
+        } else {
+            showFeedback('Try again - check stroke order!', 'tryagain');
+            playSfx('wrong');
+        }
+    }
+
+    function showFeedback(msg, type) {
+        const el = document.getElementById('feedbackMsg');
+        el.textContent = msg;
+        el.className = 'feedback-msg ' + type;
+        // Force reflow to restart animation
+        void el.offsetWidth;
+        el.classList.add('show');
+    }
+
+    function hideFeedback() {
+        const el = document.getElementById('feedbackMsg');
+        el.classList.remove('show');
+    }
+
+    function savePracticed() {
+        try {
+            localStorage.setItem('fiona-writing-progress', JSON.stringify([...practiced]));
+        } catch(e) {}
+    }
+
+    // =========================================================================
+    // STAR PARTICLES (celebration)
+    // =========================================================================
+    function spawnStars() {
+        const container = document.getElementById('canvasContainer');
+        const rect = container.getBoundingClientRect();
+        const symbols = ['\u2b50', '\u2728', '\ud83c\udf1f', '\ud83c\udf08'];
+
+        for (let i = 0; i < 8; i++) {
+            const star = document.createElement('div');
+            star.className = 'star-particle';
+            star.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+            star.style.left = (20 + Math.random() * 60) + '%';
+            star.style.top = (20 + Math.random() * 60) + '%';
+            star.style.animationDelay = (Math.random() * 0.3) + 's';
+            container.appendChild(star);
+            setTimeout(() => star.remove(), 1500);
+        }
+    }
+
+    // =========================================================================
+    // SHOW ME ANIMATION
+    // =========================================================================
+    function showMe() {
+        if (showingAnimation) return;
+        showingAnimation = true;
+        userStrokes = [];
+        currentStroke = null;
+
+        const data = hiraganaData[currentIndex];
+        const w = drawCanvas.width;
+        const pad = w * 0.08;
+        const area = w - pad * 2;
+
+        // Clear and show guides
+        redrawCanvas();
+
+        let strokeIdx = 0;
+
+        function animateNextStroke() {
+            if (strokeIdx >= data.paths.length) {
+                showingAnimation = false;
+                return;
+            }
+
+            const stroke = data.paths[strokeIdx];
+            const pts = stroke.points;
+
+            // Build interpolated points along the path
+            const animPts = [];
+            if (pts.length >= 2) {
+                for (let i = 0; i < pts.length - 1; i++) {
+                    const steps = 20;
+                    for (let s = 0; s <= steps; s++) {
+                        const t = s / steps;
+                        animPts.push({
+                            x: pad + (pts[i][0] + (pts[i+1][0] - pts[i][0]) * t) * area,
+                            y: pad + (pts[i][1] + (pts[i+1][1] - pts[i][1]) * t) * area
+                        });
+                    }
+                }
+            } else {
+                animPts.push({
+                    x: pad + pts[0][0] * area,
+                    y: pad + pts[0][1] * area
+                });
+            }
+
+            let ptIdx = 0;
+            const drawnPts = [];
+
+            function drawNext() {
+                if (ptIdx >= animPts.length) {
+                    // Stroke complete, add to user strokes for visual
+                    userStrokes.push(drawnPts.slice());
+                    strokeIdx++;
+                    setTimeout(animateNextStroke, 300);
+                    return;
+                }
+
+                drawnPts.push(animPts[ptIdx]);
+                ptIdx++;
+
+                // Redraw everything
+                drawCtx.clearRect(0, 0, w, w);
+                drawGuideOnMain();
+
+                // Draw completed animated strokes
+                userStrokes.forEach(s => drawStrokePath(s, '#e91e63', 5));
+
+                // Draw current animated stroke
+                if (drawnPts.length >= 2) {
+                    drawStrokePath(drawnPts, '#e91e63', 5);
+                }
+
+                // Draw the animated pen tip
+                if (drawnPts.length > 0) {
+                    const tip = drawnPts[drawnPts.length - 1];
+                    drawCtx.fillStyle = '#e91e63';
+                    drawCtx.beginPath();
+                    drawCtx.arc(tip.x, tip.y, 6, 0, Math.PI * 2);
+                    drawCtx.fill();
+                }
+
+                updateStrokeCounter();
+                requestAnimationFrame(drawNext);
+            }
+
+            drawNext();
+        }
+
+        animateNextStroke();
+    }
+
+    // =========================================================================
+    // SOUND EFFECTS (Web Audio API, matching main site)
+    // =========================================================================
+    let audioCtx = null;
+    function getAudioCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+
+    function playSfx(type) {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+
+        if (type === 'correct') {
+            // Happy ascending chime
+            [523, 659, 784].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.18, now + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.12);
+                osc.stop(now + i * 0.12 + 0.4);
+            });
+        } else if (type === 'wrong') {
+            // Low buzz
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 180;
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        }
+    }
+
+    // =========================================================================
+    // KEYBOARD SHORTCUTS
+    // =========================================================================
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight') nextChar();
+        else if (e.key === 'ArrowLeft') prevChar();
+        else if (e.key === 'Escape' || e.key === 'Delete') clearCanvas();
+        else if (e.key === 'Enter') checkDrawing();
+    });
+
+    // =========================================================================
+    // INIT
+    // =========================================================================
+    function init() {
+        buildCharGrid();
+        resizeCanvas();
+        updateUI();
+    }
+
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        updateUI();
+    });
+
+    // Ensure audio context is created on first user interaction (iOS requirement)
+    document.addEventListener('touchstart', function initAudio() {
+        getAudioCtx();
+        document.removeEventListener('touchstart', initAudio);
+    }, { once: true });
+
+    document.addEventListener('click', function initAudio() {
+        getAudioCtx();
+        document.removeEventListener('click', initAudio);
+    }, { once: true });
+
+    init();
+    </script>
+</body>
+</html>
