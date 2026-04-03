@@ -1065,29 +1065,22 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Draw each stroke path
         const pad = 10;
         const area = w - pad * 2;
 
+        // Draw actual font character as guide
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#546e7a';
+        ctx.font = 'bold ' + Math.floor(area * 0.85) + 'px "Noto Sans JP", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(data.char, w / 2, h_c / 2 + 2);
+        ctx.restore();
+
+        // Stroke order numbers
         data.paths.forEach((stroke, i) => {
             const pts = stroke.points;
-            ctx.strokeStyle = 'rgba(120, 144, 156, 0.5)';
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            // Use smooth Catmull-Rom curve
-            const smooth = catmullRomInterpolate(pts, 30);
-            ctx.beginPath();
-            smooth.forEach((p, j) => {
-                const x = pad + p.x * area;
-                const y = pad + p.y * area;
-                if (j === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-
-            // Stroke number
             const sx = pad + pts[0][0] * area;
             const sy = pad + pts[0][1] * area;
             ctx.fillStyle = '#e91e63';
@@ -1149,33 +1142,24 @@
         const pad = w * 0.08;
         const area = w - pad * 2;
 
+        // Draw the ACTUAL font character as a light tracing guide
+        drawCtx.save();
+        drawCtx.globalAlpha = 0.12;
+        drawCtx.fillStyle = '#7c4dff';
+        drawCtx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
+        drawCtx.textAlign = 'center';
+        drawCtx.textBaseline = 'middle';
+        drawCtx.fillText(data.char, w / 2, h / 2 + area * 0.03);
+        drawCtx.restore();
+
+        // Draw stroke order numbers at approximate starting positions
         data.paths.forEach((stroke, i) => {
             const pts = stroke.points;
-
-            // Dashed guide line
-            drawCtx.strokeStyle = 'rgba(206, 147, 216, 0.3)';
-            drawCtx.lineWidth = 3;
-            drawCtx.lineCap = 'round';
-            drawCtx.lineJoin = 'round';
-            drawCtx.setLineDash([8, 6]);
-
-            // Use smooth Catmull-Rom curve for guide
-            const smooth = catmullRomInterpolate(pts, 30);
-            drawCtx.beginPath();
-            smooth.forEach((p, j) => {
-                const x = pad + p.x * area;
-                const y = pad + p.y * area;
-                if (j === 0) drawCtx.moveTo(x, y);
-                else drawCtx.lineTo(x, y);
-            });
-            drawCtx.stroke();
-            drawCtx.setLineDash([]);
-
-            // Stroke number circle
             const sx = pad + pts[0][0] * area;
             const sy = pad + pts[0][1] * area;
             const r = Math.max(12, w * 0.035);
-            drawCtx.fillStyle = 'rgba(233, 30, 99, 0.6)';
+
+            drawCtx.fillStyle = 'rgba(233, 30, 99, 0.7)';
             drawCtx.beginPath();
             drawCtx.arc(sx, sy, r, 0, Math.PI * 2);
             drawCtx.fill();
@@ -1282,6 +1266,7 @@
         currentStroke = null;
         isDrawing = false;
         showingAnimation = false;
+        guidePixelCache = { char: null, mask: null, w: 0 };
         redrawCanvas();
         hideFeedback();
     }
@@ -1338,35 +1323,71 @@
         return map[dir] || ['right', 'down', 'left', 'up'];
     }
 
-    // Compute average distance from user stroke points to the nearest point on the guide path
-    function strokeProximityScore(userPts, guidePath, canvasW) {
+    // Render the character onto a hidden canvas and get its pixel mask
+    let guidePixelCache = { char: null, mask: null, w: 0 };
+
+    function getGuidePixelMask(canvasW) {
+        const data = hiraganaData[currentIndex];
+        if (guidePixelCache.char === data.char && guidePixelCache.w === canvasW) {
+            return guidePixelCache.mask;
+        }
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = canvasW;
+        offscreen.height = canvasW;
+        const ctx = offscreen.getContext('2d');
         const pad = canvasW * 0.08;
         const area = canvasW - pad * 2;
-        // Build dense guide points in canvas coords
-        const guidePts = catmullRomInterpolate(guidePath.points, 60).map(p => ({
-            x: pad + p.x * area,
-            y: pad + p.y * area
-        }));
 
-        if (guidePts.length === 0 || userPts.length === 0) return 1;
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(data.char, canvasW / 2, canvasW / 2 + area * 0.03);
 
-        // For each user point, find min distance to any guide point
-        let totalDist = 0;
-        const sampleStep = Math.max(1, Math.floor(userPts.length / 30)); // sample up to 30 user points
-        let samples = 0;
-        for (let i = 0; i < userPts.length; i += sampleStep) {
-            let minD = Infinity;
-            for (let j = 0; j < guidePts.length; j++) {
-                const dx = userPts[i].x - guidePts[j].x;
-                const dy = userPts[i].y - guidePts[j].y;
-                const d = Math.sqrt(dx*dx + dy*dy);
-                if (d < minD) minD = d;
+        const imageData = ctx.getImageData(0, 0, canvasW, canvasW);
+        const mask = imageData.data; // RGBA array
+        guidePixelCache = { char: data.char, mask, w: canvasW };
+        return mask;
+    }
+
+    // Check if a pixel coordinate is on or near the font-rendered character
+    function isNearCharacter(x, y, mask, w, tolerance) {
+        // Check a square area around (x,y) within tolerance
+        const ix = Math.round(x);
+        const iy = Math.round(y);
+        for (let dy = -tolerance; dy <= tolerance; dy++) {
+            for (let dx = -tolerance; dx <= tolerance; dx++) {
+                const px = ix + dx;
+                const py = iy + dy;
+                if (px >= 0 && px < w && py >= 0 && py < w) {
+                    const idx = (py * w + px) * 4;
+                    if (mask[idx + 3] > 30) return true; // alpha > 30 means part of the character
+                }
             }
-            totalDist += minD;
-            samples++;
         }
-        // Normalize by canvas size - score 0 (perfect) to 1 (far off)
-        return (totalDist / samples) / canvasW;
+        return false;
+    }
+
+    // Score how well user strokes overlap with the actual font character pixels
+    function fontProximityScore(canvasW) {
+        const mask = getGuidePixelMask(canvasW);
+        const tolerance = Math.max(8, Math.floor(canvasW * 0.04)); // ~4% tolerance
+        let onChar = 0;
+        let totalSampled = 0;
+
+        userStrokes.forEach(stroke => {
+            const step = Math.max(1, Math.floor(stroke.length / 25));
+            for (let i = 0; i < stroke.length; i += step) {
+                totalSampled++;
+                if (isNearCharacter(stroke[i].x, stroke[i].y, mask, canvasW, tolerance)) {
+                    onChar++;
+                }
+            }
+        });
+
+        if (totalSampled === 0) return 0;
+        return onChar / totalSampled; // 1.0 = perfect, 0 = all off
     }
 
     function checkDrawing() {
@@ -1392,43 +1413,37 @@
             return;
         }
 
-        // Check proximity of each user stroke to its corresponding guide stroke
-        let totalProximity = 0;
-        let directionScore = 0;
-        for (let i = 0; i < expectedCount; i++) {
-            // Proximity check
-            const prox = strokeProximityScore(userStrokes[i], data.paths[i], w);
-            totalProximity += prox;
+        // Check how well user strokes match the actual font-rendered character
+        const pixelScore = fontProximityScore(w);
 
-            // Direction check
+        // Also check stroke directions
+        let directionScore = 0;
+        for (let i = 0; i < Math.min(userCount, data.paths.length); i++) {
             const userDir = analyzeStrokeDirection(userStrokes[i]);
             const expected = getExpectedDirection(data.paths[i].dir);
             if (expected.includes(userDir) || userDir === 'dot') {
                 directionScore++;
             }
         }
-
-        const avgProximity = totalProximity / expectedCount;
         const dirPct = directionScore / expectedCount;
 
-        // Proximity thresholds (fraction of canvas width):
-        // < 0.08 = close, < 0.15 = okay, > 0.15 = far off
-        if (avgProximity < 0.1 && dirPct >= 0.5) {
-            showFeedback('Great job!', 'great');
+        // pixelScore: 1.0 = all points on character, 0 = none on character
+        if (pixelScore >= 0.6 && dirPct >= 0.5) {
+            showFeedback('Great job! (' + Math.round(pixelScore * 100) + '% accuracy)', 'great');
             playSfx('correct');
             practiced.add(data.char);
             savePracticed();
             buildCharGrid();
             updateProgress();
             spawnStars();
-        } else if (avgProximity < 0.15 && dirPct >= 0.3) {
-            showFeedback('Almost! Try to follow the guide lines more closely.', 'tryagain');
+        } else if (pixelScore >= 0.4) {
+            showFeedback('Almost! ' + Math.round(pixelScore * 100) + '% - trace closer to the guide!', 'tryagain');
             playSfx('wrong');
         } else if (dirPct < 0.5) {
-            showFeedback('Check the stroke order and direction!', 'tryagain');
+            showFeedback('Check the stroke order! (' + Math.round(pixelScore * 100) + '%)', 'tryagain');
             playSfx('wrong');
         } else {
-            showFeedback('Try to stay closer to the guide lines!', 'tryagain');
+            showFeedback('Try to trace over the character! (' + Math.round(pixelScore * 100) + '%)', 'tryagain');
             playSfx('wrong');
         }
     }
