@@ -703,7 +703,8 @@
         <div class="char-grid-section">
             <div class="char-tabs">
                 <button class="char-tab active" id="tabHiragana" onclick="switchMode('hiragana')">Hiragana</button>
-                <button class="char-tab" id="tabKanji" onclick="switchMode('kanji')">Yuna's Kanji</button>
+                <button class="char-tab" id="tabKanji1" onclick="switchMode('kanji1')">1st Grade</button>
+                <button class="char-tab" id="tabKanji2" onclick="switchMode('kanji2')">2nd Grade</button>
             </div>
             <h3>Choose a character to practice:</h3>
             <div id="charGridContainer"></div>
@@ -1321,7 +1322,10 @@
     };
 
     // State
-    let currentMode = 'hiragana'; // 'hiragana' or 'kanji'
+    const kanji1stGrade = kanjiData.filter(k => ['numbers','nature','people','body','direction','time','objects'].includes(k.row));
+    const kanji2ndGrade = kanjiData.filter(k => ['actions2','nature2','family2','time2','places2','descriptive2','school2'].includes(k.row));
+
+    let currentMode = 'hiragana'; // 'hiragana', 'kanji1', or 'kanji2'
     let currentIndex = 0;
     let practiced = new Set();
     let practicedKanji = new Set();
@@ -1342,7 +1346,9 @@
 
     // Helper to get current data array
     function getCurrentData() {
-        return currentMode === 'kanji' ? kanjiData : hiraganaData;
+        if (currentMode === 'kanji1') return kanji1stGrade;
+        if (currentMode === 'kanji2') return kanji2ndGrade;
+        return hiraganaData;
     }
 
     function getCurrentChar() {
@@ -1359,7 +1365,8 @@
 
         // Update tab buttons
         document.getElementById('tabHiragana').classList.toggle('active', mode === 'hiragana');
-        document.getElementById('tabKanji').classList.toggle('active', mode === 'kanji');
+        document.getElementById('tabKanji1').classList.toggle('active', mode === 'kanji1');
+        document.getElementById('tabKanji2').classList.toggle('active', mode === 'kanji2');
 
         clearCanvas();
         buildCharGrid();
@@ -1373,7 +1380,7 @@
         const container = document.getElementById('charGridContainer');
         container.innerHTML = '';
 
-        if (currentMode === 'kanji') {
+        if (currentMode === 'kanji1' || currentMode === 'kanji2') {
             buildKanjiGrid(container);
         } else {
             buildHiraganaGrid(container);
@@ -1421,7 +1428,10 @@
     }
 
     function buildKanjiGrid(container) {
-        const rowOrder = ['numbers','nature','people','body','direction','time','objects'];
+        const data = getCurrentData();
+        const rowOrder = currentMode === 'kanji2'
+            ? ['actions2','nature2','family2','time2','places2','descriptive2','school2']
+            : ['numbers','nature','people','body','direction','time','objects'];
 
         rowOrder.forEach(row => {
             const label = document.createElement('div');
@@ -1432,7 +1442,7 @@
             const grid = document.createElement('div');
             grid.className = 'char-grid';
 
-            kanjiData.forEach((k, idx) => {
+            data.forEach((k, idx) => {
                 if (k.row !== row) return;
                 const btn = document.createElement('button');
                 btn.className = 'char-btn char-btn-kanji';
@@ -1477,7 +1487,7 @@
 
         // Update reference
         document.getElementById('refChar').textContent = data.char;
-        if (currentMode === 'kanji') {
+        if (currentMode.startsWith('kanji')) {
             document.getElementById('refRomaji').textContent = data.romaji + ' — ' + data.english;
         } else {
             document.getElementById('refRomaji').textContent = data.romaji;
@@ -1486,7 +1496,7 @@
 
         // Show/hide kanji picture panel
         const picPanel = document.getElementById('kanjiPicturePanel');
-        if (currentMode === 'kanji' && data.emoji) {
+        if (currentMode.startsWith('kanji') && data.emoji) {
             picPanel.style.display = 'block';
             document.getElementById('kanjiPicEmoji').textContent = data.emoji;
             document.getElementById('kanjiPicEnglish').textContent = data.english;
@@ -1517,7 +1527,7 @@
     }
 
     function updateProgress() {
-        if (currentMode === 'kanji') {
+        if (currentMode.startsWith('kanji')) {
             const total = kanjiData.length;
             const done = practicedKanji.size;
             const pct = (done / total) * 100;
@@ -2015,7 +2025,7 @@
             playSfx('correct');
             // Speak the character on success
             setTimeout(() => speakCurrentChar(), 400);
-            if (currentMode === 'kanji') {
+            if (currentMode.startsWith('kanji')) {
                 practicedKanji.add(data.char);
             } else {
                 practiced.add(data.char);
@@ -2297,7 +2307,7 @@
 
     function speakCurrentChar() {
         const data = getCurrentChar();
-        if (currentMode === 'kanji' && data.onyomi) {
+        if (currentMode.startsWith('kanji') && data.onyomi) {
             // Speak: character, then on'yomi, then kun'yomi
             const parts = [];
             parts.push(data.char);
