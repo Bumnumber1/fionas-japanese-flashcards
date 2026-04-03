@@ -247,6 +247,39 @@
             flex-wrap: wrap;
         }
 
+        /* Kanji picture panel */
+        .kanji-picture-panel {
+            background: rgba(255, 255, 255, 0.85);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            flex: 0 0 130px;
+            min-width: 110px;
+        }
+
+        .kanji-pic-emoji {
+            font-size: 4em;
+            line-height: 1.1;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));
+        }
+
+        .kanji-pic-english {
+            font-size: 1.2em;
+            font-weight: 800;
+            color: #37474f;
+            margin-bottom: 4px;
+        }
+
+        .kanji-pic-reading {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #90a4ae;
+        }
+
         /* Reference panel */
         .reference-panel {
             background: rgba(255, 255, 255, 0.85);
@@ -622,6 +655,13 @@
                 <div class="feedback">
                     <div class="feedback-msg" id="feedbackMsg"></div>
                 </div>
+            </div>
+
+            <!-- Kanji picture panel (only visible in kanji mode) -->
+            <div class="kanji-picture-panel" id="kanjiPicturePanel" style="display:none;">
+                <div class="kanji-pic-emoji" id="kanjiPicEmoji"></div>
+                <div class="kanji-pic-english" id="kanjiPicEnglish"></div>
+                <div class="kanji-pic-reading" id="kanjiPicReading"></div>
             </div>
         </div>
 
@@ -1237,11 +1277,22 @@
         // Update reference
         document.getElementById('refChar').textContent = data.char;
         if (currentMode === 'kanji') {
-            document.getElementById('refRomaji').textContent = data.emoji + ' ' + data.romaji + ' — ' + data.english;
+            document.getElementById('refRomaji').textContent = data.romaji + ' — ' + data.english;
         } else {
             document.getElementById('refRomaji').textContent = data.romaji;
         }
         document.getElementById('refStrokes').textContent = data.strokes + (data.strokes === 1 ? ' stroke' : ' strokes');
+
+        // Show/hide kanji picture panel
+        const picPanel = document.getElementById('kanjiPicturePanel');
+        if (currentMode === 'kanji' && data.emoji) {
+            picPanel.style.display = 'block';
+            document.getElementById('kanjiPicEmoji').textContent = data.emoji;
+            document.getElementById('kanjiPicEnglish').textContent = data.english;
+            document.getElementById('kanjiPicReading').textContent = data.romaji;
+        } else {
+            picPanel.style.display = 'none';
+        }
 
         // Update grid highlights
         document.querySelectorAll('.char-btn').forEach(btn => {
@@ -1305,25 +1356,16 @@
         const pad = w * 0.08;
         const area = w - pad * 2;
 
-        // Draw font character as very light backup
-        ctx.save();
-        ctx.globalAlpha = 0.08;
-        ctx.fillStyle = '#546e7a';
-        ctx.font = 'bold ' + Math.floor(area * 0.85) + 'px "Noto Sans JP", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(data.char, w / 2, h_c / 2 + 2);
-        ctx.restore();
-
-        // Draw KanjiVG paths if cached
+        // Draw KanjiVG paths as dashed guide if cached
         if (guideKvgSmallCache[data.char]) {
             const kvgStrokes = guideKvgSmallCache[data.char];
             ctx.save();
-            ctx.globalAlpha = 0.2;
-            ctx.strokeStyle = '#546e7a';
-            ctx.lineWidth = 3;
+            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = '#90a4ae';
+            ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+            ctx.setLineDash([4, 3]);
             kvgStrokes.forEach(stroke => {
                 if (stroke.length < 2) return;
                 ctx.beginPath();
@@ -1333,6 +1375,7 @@
                 }
                 ctx.stroke();
             });
+            ctx.setLineDash([]);
             ctx.restore();
 
             // Stroke order numbers at start of each KanjiVG stroke
@@ -1430,25 +1473,16 @@
         const pad = w * 0.08;
         const area = w - pad * 2;
 
-        // Draw font character as very light backup behind SVG paths
-        drawCtx.save();
-        drawCtx.globalAlpha = 0.08;
-        drawCtx.fillStyle = '#90a4ae';
-        drawCtx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
-        drawCtx.textAlign = 'center';
-        drawCtx.textBaseline = 'middle';
-        drawCtx.fillText(data.char, w / 2, h / 2 + area * 0.03);
-        drawCtx.restore();
-
-        // Draw KanjiVG paths as thick gray guide lines if cached
+        // Draw KanjiVG paths as dashed guide lines if cached
         if (guideKvgMainCache[data.char]) {
             const kvgStrokes = guideKvgMainCache[data.char];
             drawCtx.save();
-            drawCtx.globalAlpha = 0.2;
-            drawCtx.strokeStyle = '#546e7a';
-            drawCtx.lineWidth = 9;
+            drawCtx.globalAlpha = 0.35;
+            drawCtx.strokeStyle = '#90a4ae';
+            drawCtx.lineWidth = Math.max(4, w * 0.014);
             drawCtx.lineCap = 'round';
             drawCtx.lineJoin = 'round';
+            drawCtx.setLineDash([8, 5]);
             kvgStrokes.forEach(stroke => {
                 if (stroke.length < 2) return;
                 drawCtx.beginPath();
@@ -1458,6 +1492,7 @@
                 }
                 drawCtx.stroke();
             });
+            drawCtx.setLineDash([]);
             drawCtx.restore();
 
             // Draw stroke order numbers at start of each KanjiVG stroke
