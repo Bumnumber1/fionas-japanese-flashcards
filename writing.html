@@ -544,6 +544,41 @@
             pointer-events: none;
             animation: starFloat 1s ease forwards;
         }
+
+        /* Character mode tabs */
+        .char-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .char-tab {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid transparent;
+            border-radius: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.5);
+            color: #78909c;
+        }
+        .char-tab.active {
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            color: white;
+            box-shadow: 0 3px 12px rgba(171,71,188,0.3);
+        }
+        .char-btn-kanji {
+            width: 100%;
+            aspect-ratio: auto;
+            padding: 8px 4px;
+            font-size: 1.4em;
+        }
+        .char-btn-kanji .kanji-emoji {
+            font-size: 0.6em;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -601,6 +636,10 @@
 
         <!-- Character Grid BELOW with more space -->
         <div class="char-grid-section">
+            <div class="char-tabs">
+                <button class="char-tab active" id="tabHiragana" onclick="switchMode('hiragana')">Hiragana</button>
+                <button class="char-tab" id="tabKanji" onclick="switchMode('kanji')">Yuna's Kanji</button>
+            </div>
             <h3>Choose a character to practice:</h3>
             <div id="charGridContainer"></div>
         </div>
@@ -943,9 +982,108 @@
         'wa': 'WA row (わ)'
     };
 
+    // =========================================================================
+    // KANJI DATA - Grade 1 kanji for Yuna's Kanji mode
+    // =========================================================================
+    const kanjiData = [
+        // --- Numbers ---
+        { char: '一', romaji: 'ichi', english: 'one', emoji: '1️⃣', strokes: 1, row: 'numbers', paths: Array.from({length: 1}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '二', romaji: 'ni', english: 'two', emoji: '2️⃣', strokes: 2, row: 'numbers', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '三', romaji: 'san', english: 'three', emoji: '3️⃣', strokes: 3, row: 'numbers', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '四', romaji: 'shi/yon', english: 'four', emoji: '4️⃣', strokes: 5, row: 'numbers', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '五', romaji: 'go', english: 'five', emoji: '5️⃣', strokes: 4, row: 'numbers', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '六', romaji: 'roku', english: 'six', emoji: '6️⃣', strokes: 4, row: 'numbers', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '七', romaji: 'shichi/nana', english: 'seven', emoji: '7️⃣', strokes: 2, row: 'numbers', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '八', romaji: 'hachi', english: 'eight', emoji: '8️⃣', strokes: 2, row: 'numbers', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '九', romaji: 'kyuu/ku', english: 'nine', emoji: '9️⃣', strokes: 2, row: 'numbers', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '十', romaji: 'juu', english: 'ten', emoji: '🔟', strokes: 2, row: 'numbers', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '百', romaji: 'hyaku', english: 'hundred', emoji: '💯', strokes: 6, row: 'numbers', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '千', romaji: 'sen', english: 'thousand', emoji: '🔢', strokes: 3, row: 'numbers', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- Nature ---
+        { char: '山', romaji: 'yama', english: 'mountain', emoji: '⛰️', strokes: 3, row: 'nature', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '川', romaji: 'kawa', english: 'river', emoji: '🏞️', strokes: 3, row: 'nature', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '森', romaji: 'mori', english: 'forest', emoji: '🌲', strokes: 12, row: 'nature', paths: Array.from({length: 12}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '林', romaji: 'hayashi', english: 'grove', emoji: '🌳', strokes: 8, row: 'nature', paths: Array.from({length: 8}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '花', romaji: 'hana', english: 'flower', emoji: '🌸', strokes: 7, row: 'nature', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '雨', romaji: 'ame', english: 'rain', emoji: '🌧️', strokes: 8, row: 'nature', paths: Array.from({length: 8}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '空', romaji: 'sora', english: 'sky', emoji: '🌤️', strokes: 8, row: 'nature', paths: Array.from({length: 8}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '天', romaji: 'ten', english: 'heaven/sky', emoji: '⛅', strokes: 4, row: 'nature', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '石', romaji: 'ishi', english: 'stone', emoji: '🪨', strokes: 5, row: 'nature', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '竹', romaji: 'take', english: 'bamboo', emoji: '🎋', strokes: 6, row: 'nature', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '虫', romaji: 'mushi', english: 'insect', emoji: '🐛', strokes: 6, row: 'nature', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '草', romaji: 'kusa', english: 'grass', emoji: '🌿', strokes: 9, row: 'nature', paths: Array.from({length: 9}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '田', romaji: 'ta', english: 'rice field', emoji: '🌾', strokes: 5, row: 'nature', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- People ---
+        { char: '人', romaji: 'hito', english: 'person', emoji: '🧑', strokes: 2, row: 'people', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '子', romaji: 'ko', english: 'child', emoji: '👶', strokes: 3, row: 'people', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '女', romaji: 'onna', english: 'woman', emoji: '👩', strokes: 3, row: 'people', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '男', romaji: 'otoko', english: 'man', emoji: '👨', strokes: 7, row: 'people', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '王', romaji: 'ou', english: 'king', emoji: '👑', strokes: 4, row: 'people', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '先', romaji: 'sen', english: 'previous/ahead', emoji: '👆', strokes: 6, row: 'people', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '生', romaji: 'sei', english: 'life/birth', emoji: '🌱', strokes: 5, row: 'people', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '学', romaji: 'gaku', english: 'study', emoji: '📚', strokes: 8, row: 'people', paths: Array.from({length: 8}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '校', romaji: 'kou', english: 'school', emoji: '🏫', strokes: 10, row: 'people', paths: Array.from({length: 10}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '名', romaji: 'na', english: 'name', emoji: '📛', strokes: 6, row: 'people', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- Body ---
+        { char: '目', romaji: 'me', english: 'eye', emoji: '👁️', strokes: 5, row: 'body', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '耳', romaji: 'mimi', english: 'ear', emoji: '👂', strokes: 6, row: 'body', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '口', romaji: 'kuchi', english: 'mouth', emoji: '👄', strokes: 3, row: 'body', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '手', romaji: 'te', english: 'hand', emoji: '✋', strokes: 4, row: 'body', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '足', romaji: 'ashi', english: 'foot/leg', emoji: '🦶', strokes: 7, row: 'body', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '力', romaji: 'chikara', english: 'power', emoji: '💪', strokes: 2, row: 'body', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- Direction ---
+        { char: '上', romaji: 'ue', english: 'up/above', emoji: '⬆️', strokes: 3, row: 'direction', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '下', romaji: 'shita', english: 'down/below', emoji: '⬇️', strokes: 3, row: 'direction', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '左', romaji: 'hidari', english: 'left', emoji: '⬅️', strokes: 5, row: 'direction', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '右', romaji: 'migi', english: 'right', emoji: '➡️', strokes: 5, row: 'direction', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '大', romaji: 'oo/dai', english: 'big', emoji: '🔴', strokes: 3, row: 'direction', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '中', romaji: 'naka', english: 'middle/inside', emoji: '⭕', strokes: 4, row: 'direction', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '小', romaji: 'chiisai/shou', english: 'small', emoji: '🔹', strokes: 3, row: 'direction', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '入', romaji: 'iru', english: 'enter', emoji: '🚪', strokes: 2, row: 'direction', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '出', romaji: 'deru', english: 'exit/leave', emoji: '🚶', strokes: 5, row: 'direction', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '立', romaji: 'tatsu', english: 'stand', emoji: '🧍', strokes: 5, row: 'direction', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- Time/Calendar ---
+        { char: '日', romaji: 'hi/nichi', english: 'day/sun', emoji: '☀️', strokes: 4, row: 'time', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '月', romaji: 'tsuki/getsu', english: 'moon/month', emoji: '🌙', strokes: 4, row: 'time', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '火', romaji: 'hi/ka', english: 'fire', emoji: '🔥', strokes: 4, row: 'time', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '水', romaji: 'mizu/sui', english: 'water', emoji: '💧', strokes: 4, row: 'time', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '木', romaji: 'ki/moku', english: 'tree/wood', emoji: '🌲', strokes: 4, row: 'time', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '金', romaji: 'kin/kane', english: 'gold/money', emoji: '💰', strokes: 8, row: 'time', paths: Array.from({length: 8}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '土', romaji: 'tsuchi/do', english: 'earth/soil', emoji: '🌍', strokes: 3, row: 'time', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '年', romaji: 'toshi/nen', english: 'year', emoji: '📅', strokes: 6, row: 'time', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '早', romaji: 'hayai', english: 'early', emoji: '🌅', strokes: 6, row: 'time', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '気', romaji: 'ki', english: 'spirit/energy', emoji: '✨', strokes: 6, row: 'time', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- Objects ---
+        { char: '本', romaji: 'hon', english: 'book', emoji: '📕', strokes: 5, row: 'objects', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '文', romaji: 'bun', english: 'writing/sentence', emoji: '📝', strokes: 4, row: 'objects', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '字', romaji: 'ji', english: 'character/letter', emoji: '🔤', strokes: 6, row: 'objects', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '犬', romaji: 'inu', english: 'dog', emoji: '🐕', strokes: 4, row: 'objects', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '貝', romaji: 'kai', english: 'shellfish', emoji: '🐚', strokes: 7, row: 'objects', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '車', romaji: 'kuruma', english: 'car', emoji: '🚗', strokes: 7, row: 'objects', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '円', romaji: 'en', english: 'yen/circle', emoji: '💴', strokes: 4, row: 'objects', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '玉', romaji: 'tama', english: 'ball/jewel', emoji: '🔮', strokes: 5, row: 'objects', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '赤', romaji: 'aka', english: 'red', emoji: '🔴', strokes: 7, row: 'objects', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '青', romaji: 'ao', english: 'blue', emoji: '🔵', strokes: 8, row: 'objects', paths: Array.from({length: 8}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '白', romaji: 'shiro', english: 'white', emoji: '⬜', strokes: 5, row: 'objects', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '見', romaji: 'miru', english: 'see/look', emoji: '👀', strokes: 7, row: 'objects', paths: Array.from({length: 7}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: '休', romaji: 'yasumu', english: 'rest', emoji: '😴', strokes: 6, row: 'objects', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) }
+    ];
+
+    const kanjiRowNames = {
+        'numbers': 'Numbers',
+        'nature': 'Nature',
+        'people': 'People',
+        'body': 'Body',
+        'direction': 'Direction & Size',
+        'time': 'Time & Calendar',
+        'objects': 'Objects'
+    };
+
     // State
+    let currentMode = 'hiragana'; // 'hiragana' or 'kanji'
     let currentIndex = 0;
     let practiced = new Set();
+    let practicedKanji = new Set();
     let userStrokes = []; // Array of strokes, each stroke = array of {x,y} points
     let currentStroke = null;
     let isDrawing = false;
@@ -956,6 +1094,36 @@
         const saved = localStorage.getItem('fiona-writing-progress');
         if (saved) practiced = new Set(JSON.parse(saved));
     } catch(e) {}
+    try {
+        const savedKanji = localStorage.getItem('yuna-kanji-progress');
+        if (savedKanji) practicedKanji = new Set(JSON.parse(savedKanji));
+    } catch(e) {}
+
+    // Helper to get current data array
+    function getCurrentData() {
+        return currentMode === 'kanji' ? kanjiData : hiraganaData;
+    }
+
+    function getCurrentChar() {
+        return getCurrentData()[currentIndex];
+    }
+
+    // =========================================================================
+    // MODE SWITCHING (Hiragana / Kanji)
+    // =========================================================================
+    function switchMode(mode) {
+        if (mode === currentMode) return;
+        currentMode = mode;
+        currentIndex = 0;
+
+        // Update tab buttons
+        document.getElementById('tabHiragana').classList.toggle('active', mode === 'hiragana');
+        document.getElementById('tabKanji').classList.toggle('active', mode === 'kanji');
+
+        clearCanvas();
+        buildCharGrid();
+        updateUI();
+    }
 
     // =========================================================================
     // BUILD CHARACTER GRID
@@ -963,6 +1131,15 @@
     function buildCharGrid() {
         const container = document.getElementById('charGridContainer');
         container.innerHTML = '';
+
+        if (currentMode === 'kanji') {
+            buildKanjiGrid(container);
+        } else {
+            buildHiraganaGrid(container);
+        }
+    }
+
+    function buildHiraganaGrid(container) {
         const rowOrder = ['a','ka','sa','ta','na','ha','ma','ya','ra','wa'];
 
         rowOrder.forEach(row => {
@@ -1002,6 +1179,51 @@
         });
     }
 
+    function buildKanjiGrid(container) {
+        const rowOrder = ['numbers','nature','people','body','direction','time','objects'];
+
+        rowOrder.forEach(row => {
+            const label = document.createElement('div');
+            label.className = 'char-row-label';
+            label.textContent = kanjiRowNames[row];
+            container.appendChild(label);
+
+            const grid = document.createElement('div');
+            grid.className = 'char-grid';
+
+            kanjiData.forEach((k, idx) => {
+                if (k.row !== row) return;
+                const btn = document.createElement('button');
+                btn.className = 'char-btn char-btn-kanji';
+                btn.dataset.index = idx;
+
+                const emojiSpan = document.createElement('span');
+                emojiSpan.className = 'kanji-emoji';
+                emojiSpan.textContent = k.emoji;
+                btn.appendChild(emojiSpan);
+                btn.appendChild(document.createTextNode(k.char));
+
+                if (practicedKanji.has(k.char)) {
+                    btn.classList.add('practiced');
+                    const check = document.createElement('span');
+                    check.className = 'check-mark';
+                    check.textContent = '\u2713';
+                    btn.appendChild(check);
+                }
+
+                if (idx === currentIndex) btn.classList.add('active');
+
+                btn.addEventListener('click', () => {
+                    selectChar(idx);
+                });
+
+                grid.appendChild(btn);
+            });
+
+            container.appendChild(grid);
+        });
+    }
+
     function selectChar(idx) {
         currentIndex = idx;
         clearCanvas();
@@ -1010,12 +1232,16 @@
     }
 
     function updateUI() {
-        const h = hiraganaData[currentIndex];
+        const data = getCurrentChar();
 
         // Update reference
-        document.getElementById('refChar').textContent = h.char;
-        document.getElementById('refRomaji').textContent = h.romaji;
-        document.getElementById('refStrokes').textContent = h.strokes + (h.strokes === 1 ? ' stroke' : ' strokes');
+        document.getElementById('refChar').textContent = data.char;
+        if (currentMode === 'kanji') {
+            document.getElementById('refRomaji').textContent = data.emoji + ' ' + data.romaji + ' — ' + data.english;
+        } else {
+            document.getElementById('refRomaji').textContent = data.romaji;
+        }
+        document.getElementById('refStrokes').textContent = data.strokes + (data.strokes === 1 ? ' stroke' : ' strokes');
 
         // Update grid highlights
         document.querySelectorAll('.char-btn').forEach(btn => {
@@ -1036,16 +1262,27 @@
     }
 
     function updateProgress() {
-        const total = hiraganaData.length;
-        const done = practiced.size;
-        const pct = (done / total) * 100;
-        document.getElementById('progressFill').style.width = pct + '%';
-        document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
+        if (currentMode === 'kanji') {
+            const total = kanjiData.length;
+            const done = practicedKanji.size;
+            const pct = (done / total) * 100;
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
+        } else {
+            const total = hiraganaData.length;
+            const done = practiced.size;
+            const pct = (done / total) * 100;
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
+        }
     }
 
     // =========================================================================
     // GUIDE CANVAS (small reference)
     // =========================================================================
+    // Cache for KanjiVG guide data on small reference canvas
+    let guideKvgSmallCache = {};
+
     function drawGuide() {
         const canvas = document.getElementById('guideCanvas');
         const ctx = canvas.getContext('2d');
@@ -1053,7 +1290,7 @@
         const h_c = canvas.height;
         ctx.clearRect(0, 0, w, h_c);
 
-        const data = hiraganaData[currentIndex];
+        const data = getCurrentChar();
 
         // Draw cross guides
         ctx.strokeStyle = 'rgba(206, 147, 216, 0.2)';
@@ -1065,12 +1302,12 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        const pad = 10;
+        const pad = w * 0.08;
         const area = w - pad * 2;
 
-        // Draw actual font character as guide
+        // Draw font character as very light backup
         ctx.save();
-        ctx.globalAlpha = 0.25;
+        ctx.globalAlpha = 0.08;
         ctx.fillStyle = '#546e7a';
         ctx.font = 'bold ' + Math.floor(area * 0.85) + 'px "Noto Sans JP", sans-serif';
         ctx.textAlign = 'center';
@@ -1078,21 +1315,69 @@
         ctx.fillText(data.char, w / 2, h_c / 2 + 2);
         ctx.restore();
 
-        // Stroke order numbers
-        data.paths.forEach((stroke, i) => {
-            const pts = stroke.points;
-            const sx = pad + pts[0][0] * area;
-            const sy = pad + pts[0][1] * area;
-            ctx.fillStyle = '#e91e63';
-            ctx.beginPath();
-            ctx.arc(sx, sy, 7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 9px Nunito, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('' + (i + 1), sx, sy);
-        });
+        // Draw KanjiVG paths if cached
+        if (guideKvgSmallCache[data.char]) {
+            const kvgStrokes = guideKvgSmallCache[data.char];
+            ctx.save();
+            ctx.globalAlpha = 0.2;
+            ctx.strokeStyle = '#546e7a';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            kvgStrokes.forEach(stroke => {
+                if (stroke.length < 2) return;
+                ctx.beginPath();
+                ctx.moveTo(pad + stroke[0].x * area / 109, pad + stroke[0].y * area / 109);
+                for (let j = 1; j < stroke.length; j++) {
+                    ctx.lineTo(pad + stroke[j].x * area / 109, pad + stroke[j].y * area / 109);
+                }
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            // Stroke order numbers at start of each KanjiVG stroke
+            kvgStrokes.forEach((stroke, i) => {
+                if (stroke.length === 0) return;
+                const sx = pad + stroke[0].x * area / 109;
+                const sy = pad + stroke[0].y * area / 109;
+                ctx.fillStyle = '#e91e63';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 9px Nunito, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('' + (i + 1), sx, sy);
+            });
+        } else {
+            // Fallback: use local path data for stroke numbers until KanjiVG loads
+            data.paths.forEach((stroke, i) => {
+                const pts = stroke.points;
+                const sx = pad + pts[0][0] * area;
+                const sy = pad + pts[0][1] * area;
+                ctx.fillStyle = '#e91e63';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 9px Nunito, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('' + (i + 1), sx, sy);
+            });
+
+            // Trigger async fetch
+            getKvgPaths(data.char).then(kvgStrokes => {
+                if (kvgStrokes && kvgStrokes.length > 0) {
+                    guideKvgSmallCache[data.char] = kvgStrokes;
+                    // Only redraw if still on same character
+                    if (getCurrentChar().char === data.char) {
+                        drawGuide();
+                    }
+                }
+            });
+        }
     }
 
     // =========================================================================
@@ -1135,16 +1420,19 @@
         updateStrokeCounter();
     }
 
+    // Cache for KanjiVG guide data on main canvas
+    let guideKvgMainCache = {};
+
     function drawGuideOnMain() {
         const w = drawCanvas.width;
         const h = drawCanvas.height;
-        const data = hiraganaData[currentIndex];
+        const data = getCurrentChar();
         const pad = w * 0.08;
         const area = w - pad * 2;
 
-        // Draw the ACTUAL font character as a tracing guide
+        // Draw font character as very light backup behind SVG paths
         drawCtx.save();
-        drawCtx.globalAlpha = 0.18;
+        drawCtx.globalAlpha = 0.08;
         drawCtx.fillStyle = '#90a4ae';
         drawCtx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
         drawCtx.textAlign = 'center';
@@ -1152,23 +1440,73 @@
         drawCtx.fillText(data.char, w / 2, h / 2 + area * 0.03);
         drawCtx.restore();
 
-        // Draw stroke order numbers at approximate starting positions
-        data.paths.forEach((stroke, i) => {
-            const pts = stroke.points;
-            const sx = pad + pts[0][0] * area;
-            const sy = pad + pts[0][1] * area;
-            const r = Math.max(12, w * 0.035);
+        // Draw KanjiVG paths as thick gray guide lines if cached
+        if (guideKvgMainCache[data.char]) {
+            const kvgStrokes = guideKvgMainCache[data.char];
+            drawCtx.save();
+            drawCtx.globalAlpha = 0.2;
+            drawCtx.strokeStyle = '#546e7a';
+            drawCtx.lineWidth = 9;
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+            kvgStrokes.forEach(stroke => {
+                if (stroke.length < 2) return;
+                drawCtx.beginPath();
+                drawCtx.moveTo(pad + stroke[0].x * area / 109, pad + stroke[0].y * area / 109);
+                for (let j = 1; j < stroke.length; j++) {
+                    drawCtx.lineTo(pad + stroke[j].x * area / 109, pad + stroke[j].y * area / 109);
+                }
+                drawCtx.stroke();
+            });
+            drawCtx.restore();
 
-            drawCtx.fillStyle = 'rgba(233, 30, 99, 0.7)';
-            drawCtx.beginPath();
-            drawCtx.arc(sx, sy, r, 0, Math.PI * 2);
-            drawCtx.fill();
-            drawCtx.fillStyle = 'white';
-            drawCtx.font = 'bold ' + Math.max(10, w * 0.03) + 'px Nunito, sans-serif';
-            drawCtx.textAlign = 'center';
-            drawCtx.textBaseline = 'middle';
-            drawCtx.fillText('' + (i + 1), sx, sy);
-        });
+            // Draw stroke order numbers at start of each KanjiVG stroke
+            kvgStrokes.forEach((stroke, i) => {
+                if (stroke.length === 0) return;
+                const sx = pad + stroke[0].x * area / 109;
+                const sy = pad + stroke[0].y * area / 109;
+                const r = Math.max(12, w * 0.035);
+
+                drawCtx.fillStyle = 'rgba(233, 30, 99, 0.7)';
+                drawCtx.beginPath();
+                drawCtx.arc(sx, sy, r, 0, Math.PI * 2);
+                drawCtx.fill();
+                drawCtx.fillStyle = 'white';
+                drawCtx.font = 'bold ' + Math.max(10, w * 0.03) + 'px Nunito, sans-serif';
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'middle';
+                drawCtx.fillText('' + (i + 1), sx, sy);
+            });
+        } else {
+            // Fallback: use local path data for stroke numbers while KanjiVG loads
+            data.paths.forEach((stroke, i) => {
+                const pts = stroke.points;
+                const sx = pad + pts[0][0] * area;
+                const sy = pad + pts[0][1] * area;
+                const r = Math.max(12, w * 0.035);
+
+                drawCtx.fillStyle = 'rgba(233, 30, 99, 0.7)';
+                drawCtx.beginPath();
+                drawCtx.arc(sx, sy, r, 0, Math.PI * 2);
+                drawCtx.fill();
+                drawCtx.fillStyle = 'white';
+                drawCtx.font = 'bold ' + Math.max(10, w * 0.03) + 'px Nunito, sans-serif';
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'middle';
+                drawCtx.fillText('' + (i + 1), sx, sy);
+            });
+
+            // Trigger async fetch and redraw when ready
+            getKvgPaths(data.char).then(kvgStrokes => {
+                if (kvgStrokes && kvgStrokes.length > 0) {
+                    guideKvgMainCache[data.char] = kvgStrokes;
+                    // Only redraw if still on the same character
+                    if (getCurrentChar().char === data.char) {
+                        redrawCanvas();
+                    }
+                }
+            });
+        }
     }
 
     function drawStrokePath(points, color, width) {
@@ -1188,7 +1526,7 @@
 
     function updateStrokeCounter() {
         const count = userStrokes.length + (currentStroke ? 1 : 0);
-        const expected = hiraganaData[currentIndex].strokes;
+        const expected = getCurrentChar().strokes;
         document.getElementById('strokeCounter').textContent = 'Strokes: ' + count + ' / ' + expected;
     }
 
@@ -1272,13 +1610,15 @@
     }
 
     function nextChar() {
-        currentIndex = (currentIndex + 1) % hiraganaData.length;
+        const dataArr = getCurrentData();
+        currentIndex = (currentIndex + 1) % dataArr.length;
         clearCanvas();
         updateUI();
     }
 
     function prevChar() {
-        currentIndex = (currentIndex - 1 + hiraganaData.length) % hiraganaData.length;
+        const dataArr = getCurrentData();
+        currentIndex = (currentIndex - 1 + dataArr.length) % dataArr.length;
         clearCanvas();
         updateUI();
     }
@@ -1327,7 +1667,7 @@
     let guidePixelCache = { char: null, mask: null, w: 0 };
 
     function getGuidePixelMask(canvasW) {
-        const data = hiraganaData[currentIndex];
+        const data = getCurrentChar();
         if (guidePixelCache.char === data.char && guidePixelCache.w === canvasW) {
             return guidePixelCache.mask;
         }
@@ -1391,7 +1731,7 @@
     }
 
     function checkDrawing() {
-        const data = hiraganaData[currentIndex];
+        const data = getCurrentChar();
         const expectedCount = data.strokes;
         const userCount = userStrokes.length;
         const w = drawCanvas.width;
@@ -1431,7 +1771,11 @@
         if (pixelScore >= 0.6 && dirPct >= 0.5) {
             showFeedback('Great job! (' + Math.round(pixelScore * 100) + '% accuracy)', 'great');
             playSfx('correct');
-            practiced.add(data.char);
+            if (currentMode === 'kanji') {
+                practicedKanji.add(data.char);
+            } else {
+                practiced.add(data.char);
+            }
             savePracticed();
             buildCharGrid();
             updateProgress();
@@ -1465,6 +1809,7 @@
     function savePracticed() {
         try {
             localStorage.setItem('fiona-writing-progress', JSON.stringify([...practiced]));
+            localStorage.setItem('yuna-kanji-progress', JSON.stringify([...practicedKanji]));
         } catch(e) {}
     }
 
@@ -1610,7 +1955,7 @@
         userStrokes = [];
         currentStroke = null;
 
-        const data = hiraganaData[currentIndex];
+        const data = getCurrentChar();
         const w = drawCanvas.width;
         const lineW = Math.max(3, w * 0.012);
 
