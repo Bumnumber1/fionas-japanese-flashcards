@@ -1070,7 +1070,7 @@
 
         // Draw actual font character as guide
         ctx.save();
-        ctx.globalAlpha = 0.2;
+        ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#546e7a';
         ctx.font = 'bold ' + Math.floor(area * 0.85) + 'px "Noto Sans JP", sans-serif';
         ctx.textAlign = 'center';
@@ -1142,10 +1142,10 @@
         const pad = w * 0.08;
         const area = w - pad * 2;
 
-        // Draw the ACTUAL font character as a light tracing guide
+        // Draw the ACTUAL font character as a tracing guide
         drawCtx.save();
-        drawCtx.globalAlpha = 0.12;
-        drawCtx.fillStyle = '#7c4dff';
+        drawCtx.globalAlpha = 0.18;
+        drawCtx.fillStyle = '#90a4ae';
         drawCtx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
         drawCtx.textAlign = 'center';
         drawCtx.textBaseline = 'middle';
@@ -1650,10 +1650,39 @@
     // =========================================================================
     // INIT
     // =========================================================================
+    let fontLoaded = false;
+
     function init() {
         buildCharGrid();
         resizeCanvas();
         updateUI();
+    }
+
+    // Wait for the Japanese font to load before drawing guides
+    function waitForFont() {
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                fontLoaded = true;
+                resizeCanvas();
+                updateUI();
+            });
+        }
+        // Also try loading it explicitly
+        if (document.fonts && document.fonts.load) {
+            document.fonts.load('bold 100px "Noto Sans JP"', 'あ').then(() => {
+                fontLoaded = true;
+                resizeCanvas();
+                updateUI();
+            }).catch(() => {});
+        }
+        // Fallback: retry after a delay
+        setTimeout(() => {
+            if (!fontLoaded) {
+                fontLoaded = true;
+                resizeCanvas();
+                updateUI();
+            }
+        }, 2000);
     }
 
     window.addEventListener('resize', () => {
@@ -1673,6 +1702,7 @@
     }, { once: true });
 
     init();
+    waitForFont();
     </script>
 </body>
 </html>
