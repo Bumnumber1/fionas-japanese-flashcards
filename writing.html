@@ -1267,7 +1267,6 @@
         isDrawing = false;
         showingAnimation = false;
         guidePixelCache = { char: null, mask: null, w: 0 };
-        skeletonCache = { char: null, paths: null, w: 0 };
         redrawCanvas();
         hideFeedback();
     }
@@ -1490,165 +1489,119 @@
     }
 
     // =========================================================================
-    // SHOW ME ANIMATION - Font pixel skeleton extraction
+    // SHOW ME ANIMATION - Uses KanjiVG open-source stroke order SVG data
+    // KanjiVG (c) Ulrich Apel - Creative Commons Attribution-Share Alike 3.0
     // =========================================================================
-    // Zhang-Suen thinning: reduces thick strokes to 1px centerlines
-    let skeletonCache = { char: null, paths: null, w: 0 };
+    const kvgCache = {};
 
-    function zhangSuenThin(binary, w, h) {
-        // binary: Uint8Array, 1 = foreground, 0 = background
-        const img = new Uint8Array(binary);
-        let changed = true;
-        while (changed) {
-            changed = false;
-            for (let sub = 0; sub < 2; sub++) {
-                const toRemove = [];
-                for (let y = 1; y < h - 1; y++) {
-                    for (let x = 1; x < w - 1; x++) {
-                        if (!img[y * w + x]) continue;
-                        const p2 = img[(y-1)*w+x], p3 = img[(y-1)*w+x+1], p4 = img[y*w+x+1];
-                        const p5 = img[(y+1)*w+x+1], p6 = img[(y+1)*w+x], p7 = img[(y+1)*w+x-1];
-                        const p8 = img[y*w+x-1], p9 = img[(y-1)*w+x-1];
-                        const neighbors = [p2,p3,p4,p5,p6,p7,p8,p9];
-                        const B = neighbors.reduce((a,b) => a+b, 0);
-                        if (B < 2 || B > 6) continue;
-                        // Count 0->1 transitions in the ordered sequence
-                        let A = 0;
-                        const seq = [p2,p3,p4,p5,p6,p7,p8,p9,p2];
-                        for (let i = 0; i < 8; i++) { if (!seq[i] && seq[i+1]) A++; }
-                        if (A !== 1) continue;
-                        if (sub === 0) { if (p2*p4*p6 !== 0 || p4*p6*p8 !== 0) continue; }
-                        else { if (p2*p4*p8 !== 0 || p2*p6*p8 !== 0) continue; }
-                        toRemove.push(y * w + x);
-                    }
-                }
-                for (const idx of toRemove) { img[idx] = 0; changed = true; }
+    // Parse SVG path d attribute into array of {x,y} points
+    function parseSvgPath(d, steps) {
+        const pts = [];
+        // Tokenize
+        const tokens = d.match(/[a-zA-Z]|[-+]?[0-9]*\.?[0-9]+/g) || [];
+        let i = 0, cx = 0, cy = 0, lastCx2 = 0, lastCy2 = 0, lastCmd = '';
+
+        function num() { return parseFloat(tokens[i++]); }
+
+        function cubicBezier(x0,y0,x1,y1,x2,y2,x3,y3,n) {
+            for (let s = 1; s <= n; s++) {
+                const t = s / n, u = 1 - t;
+                pts.push({
+                    x: u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
+                    y: u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3
+                });
             }
         }
-        return img;
+
+        while (i < tokens.length) {
+            const cmd = /[a-zA-Z]/.test(tokens[i]) ? tokens[i++] : lastCmd;
+            lastCmd = cmd;
+
+            if (cmd === 'M') {
+                cx = num(); cy = num();
+                pts.push({x: cx, y: cy});
+            } else if (cmd === 'm') {
+                cx += num(); cy += num();
+                pts.push({x: cx, y: cy});
+            } else if (cmd === 'L') {
+                const x = num(), y = num();
+                cubicBezier(cx,cy, cx,cy, x,y, x,y, steps);
+                cx = x; cy = y;
+            } else if (cmd === 'l') {
+                const x = cx+num(), y = cy+num();
+                cubicBezier(cx,cy, cx,cy, x,y, x,y, steps);
+                cx = x; cy = y;
+            } else if (cmd === 'C') {
+                const x1=num(),y1=num(),x2=num(),y2=num(),x3=num(),y3=num();
+                cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+                lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+            } else if (cmd === 'c') {
+                const x1=cx+num(),y1=cy+num(),x2=cx+num(),y2=cy+num(),x3=cx+num(),y3=cy+num();
+                cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+                lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+            } else if (cmd === 'S') {
+                const x1=2*cx-lastCx2, y1=2*cy-lastCy2;
+                const x2=num(),y2=num(),x3=num(),y3=num();
+                cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+                lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+            } else if (cmd === 's') {
+                const x1=2*cx-lastCx2, y1=2*cy-lastCy2;
+                const x2=cx+num(),y2=cy+num(),x3=cx+num(),y3=cy+num();
+                cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+                lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+            } else if (cmd === 'Z' || cmd === 'z') {
+                // close path - ignore for stroke animation
+            } else {
+                i++; // skip unknown
+            }
+        }
+        return pts;
     }
 
-    function extractSkeletonPaths(charData, canvasW) {
-        if (skeletonCache.char === charData.char && skeletonCache.w === canvasW) {
-            return skeletonCache.paths;
-        }
+    // Fetch and parse KanjiVG SVG for a character
+    async function getKvgPaths(char) {
+        if (kvgCache[char]) return kvgCache[char];
 
-        const sz = 150; // work at smaller size for speed
-        const off = document.createElement('canvas');
-        off.width = sz; off.height = sz;
-        const ctx = off.getContext('2d');
-        const pad = sz * 0.08;
-        const area = sz - pad * 2;
+        const code = char.codePointAt(0).toString(16).padStart(5, '0');
+        const url = 'https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/' + code + '.svg';
 
-        // Render character
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(charData.char, sz / 2, sz / 2 + area * 0.03);
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const svgText = await resp.text();
 
-        // Extract binary image from alpha channel
-        const imgData = ctx.getImageData(0, 0, sz, sz);
-        const binary = new Uint8Array(sz * sz);
-        for (let i = 0; i < sz * sz; i++) {
-            binary[i] = imgData.data[i * 4 + 3] > 80 ? 1 : 0;
-        }
-
-        // Apply Zhang-Suen thinning
-        const skeleton = zhangSuenThin(binary, sz, sz);
-
-        // Trace paths from each stroke's start point
-        const scale = canvasW / sz;
-        const paths = [];
-        const visited = new Uint8Array(sz * sz);
-
-        for (const stroke of charData.paths) {
-            const startNorm = stroke.points[0];
-            const sx = Math.round(pad + startNorm[0] * area);
-            const sy = Math.round(pad + startNorm[1] * area);
-
-            // Find nearest skeleton pixel to the start point
-            let bestDist = Infinity, bestX = sx, bestY = sy;
-            const searchR = 20;
-            for (let dy = -searchR; dy <= searchR; dy++) {
-                for (let dx = -searchR; dx <= searchR; dx++) {
-                    const nx = sx + dx, ny = sy + dy;
-                    if (nx >= 0 && nx < sz && ny >= 0 && ny < sz && skeleton[ny * sz + nx] && !visited[ny * sz + nx]) {
-                        const d = dx*dx + dy*dy;
-                        if (d < bestDist) { bestDist = d; bestX = nx; bestY = ny; }
-                    }
-                }
+            // Parse path d attributes from SVG
+            const pathRegex = /<path[^>]*\sd="([^"]+)"/g;
+            const strokes = [];
+            let match;
+            while ((match = pathRegex.exec(svgText)) !== null) {
+                const d = match[1];
+                const points = parseSvgPath(d, 8); // 8 samples per bezier segment
+                if (points.length > 0) strokes.push(points);
             }
 
-            // Trace along skeleton from this point
-            const path = [];
-            const queue = [{x: bestX, y: bestY}];
-            const traceVisited = new Uint8Array(sz * sz);
-            traceVisited[bestY * sz + bestX] = 1;
-
-            // BFS/DFS trace along connected skeleton pixels
-            while (queue.length > 0) {
-                const pt = queue.shift();
-                path.push({x: pt.x * scale, y: pt.y * scale});
-                visited[pt.y * sz + pt.x] = 1;
-
-                // Find unvisited skeleton neighbors (8-connected)
-                const neighbors = [];
-                for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                        if (dx === 0 && dy === 0) continue;
-                        const nx = pt.x + dx, ny = pt.y + dy;
-                        if (nx >= 0 && nx < sz && ny >= 0 && ny < sz &&
-                            skeleton[ny * sz + nx] && !traceVisited[ny * sz + nx] && !visited[ny * sz + nx]) {
-                            traceVisited[ny * sz + nx] = 1;
-                            neighbors.push({x: nx, y: ny});
-                        }
-                    }
-                }
-                // Add neighbors - prefer continuing in same direction
-                if (neighbors.length > 0) {
-                    if (path.length > 1) {
-                        const prev = {x: path[path.length-2].x/scale, y: path[path.length-2].y/scale};
-                        const dirX = pt.x - prev.x, dirY = pt.y - prev.y;
-                        neighbors.sort((a,b) => {
-                            const da = (a.x-pt.x)*dirX + (a.y-pt.y)*dirY;
-                            const db = (b.x-pt.x)*dirX + (b.y-pt.y)*dirY;
-                            return db - da; // prefer same direction
-                        });
-                    }
-                    // Take the best continuation, push others back for branching
-                    queue.unshift(neighbors[0]);
-                }
-            }
-
-            if (path.length > 2) {
-                // Smooth the path by averaging neighbors
-                const smoothed = [path[0]];
-                for (let i = 1; i < path.length - 1; i++) {
-                    smoothed.push({
-                        x: (path[i-1].x + path[i].x + path[i+1].x) / 3,
-                        y: (path[i-1].y + path[i].y + path[i+1].y) / 3
-                    });
-                }
-                smoothed.push(path[path.length - 1]);
-
-                // Subsample to ~60 points for smooth animation
-                const step = Math.max(1, Math.floor(smoothed.length / 60));
-                const sampled = [];
-                for (let i = 0; i < smoothed.length; i += step) sampled.push(smoothed[i]);
-                if (sampled[sampled.length-1] !== smoothed[smoothed.length-1]) sampled.push(smoothed[smoothed.length-1]);
-                paths.push(sampled);
-            } else {
-                // Fallback: use the hand-coded path
-                paths.push(stroke.points.map(p => ({
-                    x: (pad + p[0] * area) * scale,
-                    y: (pad + p[1] * area) * scale
-                })));
-            }
+            kvgCache[char] = strokes;
+            return strokes;
+        } catch(e) {
+            console.log('KanjiVG fetch failed for ' + char + ':', e);
+            return null;
         }
+    }
 
-        skeletonCache = { char: charData.char, paths, w: canvasW };
-        return paths;
+    // Scale KanjiVG coords (109x109 viewbox) to our canvas
+    function scaleKvgToCanvas(strokes, canvasW) {
+        const pad = canvasW * 0.08;
+        const area = canvasW - pad * 2;
+        // KanjiVG uses 109x109 coordinate system
+        const scale = area / 109;
+        const offset = pad;
+
+        return strokes.map(stroke =>
+            stroke.map(pt => ({
+                x: offset + pt.x * scale,
+                y: offset + pt.y * scale
+            }))
+        );
     }
 
     function showMe() {
@@ -1661,64 +1614,77 @@
         const w = drawCanvas.width;
         const lineW = Math.max(3, w * 0.012);
 
-        // Extract skeleton paths from the actual font pixels
-        const skelPaths = extractSkeletonPaths(data, w);
-
         redrawCanvas();
 
-        let strokeIdx = 0;
-
-        function animateNextStroke() {
-            if (strokeIdx >= skelPaths.length) {
+        // Fetch KanjiVG paths, then animate
+        getKvgPaths(data.char).then(kvgStrokes => {
+            if (!kvgStrokes || kvgStrokes.length === 0) {
+                // Fallback: just show the character in pink briefly
+                drawCtx.save();
+                drawCtx.globalAlpha = 0.6;
+                drawCtx.fillStyle = '#e91e63';
+                const pad = w * 0.08, area = w - pad*2;
+                drawCtx.font = 'bold ' + Math.floor(area*0.88) + 'px "Noto Sans JP", sans-serif';
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'middle';
+                drawCtx.fillText(data.char, w/2, w/2 + area*0.03);
+                drawCtx.restore();
                 showingAnimation = false;
                 return;
             }
 
-            const animPts = skelPaths[strokeIdx];
-            let ptIdx = 0;
-            const drawnPts = [];
+            const scaledStrokes = scaleKvgToCanvas(kvgStrokes, w);
+            let strokeIdx = 0;
 
-            function drawNext() {
-                if (ptIdx >= animPts.length) {
-                    userStrokes.push(drawnPts.slice());
-                    strokeIdx++;
-                    setTimeout(animateNextStroke, 350);
+            function animateNextStroke() {
+                if (strokeIdx >= scaledStrokes.length) {
+                    showingAnimation = false;
                     return;
                 }
 
-                drawnPts.push(animPts[ptIdx]);
-                ptIdx++;
+                const animPts = scaledStrokes[strokeIdx];
+                let ptIdx = 0;
+                const drawnPts = [];
 
-                drawCtx.clearRect(0, 0, w, w);
-                drawGuideOnMain();
+                function drawNext() {
+                    if (ptIdx >= animPts.length) {
+                        userStrokes.push(drawnPts.slice());
+                        strokeIdx++;
+                        setTimeout(animateNextStroke, 350);
+                        return;
+                    }
 
-                // Draw completed strokes
-                userStrokes.forEach(s => {
-                    if (s.length >= 2) drawStrokePath(s, '#e91e63', lineW);
-                });
+                    drawnPts.push(animPts[ptIdx]);
+                    ptIdx++;
 
-                // Draw current stroke
-                if (drawnPts.length >= 2) {
-                    drawStrokePath(drawnPts, '#e91e63', lineW);
+                    drawCtx.clearRect(0, 0, w, w);
+                    drawGuideOnMain();
+
+                    userStrokes.forEach(s => {
+                        if (s.length >= 2) drawStrokePath(s, '#e91e63', lineW);
+                    });
+
+                    if (drawnPts.length >= 2) {
+                        drawStrokePath(drawnPts, '#e91e63', lineW);
+                    }
+
+                    if (drawnPts.length > 0) {
+                        const tip = drawnPts[drawnPts.length - 1];
+                        drawCtx.fillStyle = '#e91e63';
+                        drawCtx.beginPath();
+                        drawCtx.arc(tip.x, tip.y, lineW + 2, 0, Math.PI * 2);
+                        drawCtx.fill();
+                    }
+
+                    updateStrokeCounter();
+                    requestAnimationFrame(drawNext);
                 }
 
-                // Pen tip
-                if (drawnPts.length > 0) {
-                    const tip = drawnPts[drawnPts.length - 1];
-                    drawCtx.fillStyle = '#e91e63';
-                    drawCtx.beginPath();
-                    drawCtx.arc(tip.x, tip.y, lineW + 2, 0, Math.PI * 2);
-                    drawCtx.fill();
-                }
-
-                updateStrokeCounter();
-                requestAnimationFrame(drawNext);
+                drawNext();
             }
 
-            drawNext();
-        }
-
-        animateNextStroke();
+            animateNextStroke();
+        });
     }
 
     // =========================================================================
