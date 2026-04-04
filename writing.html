@@ -1961,14 +1961,22 @@
     // Score how well user strokes overlap with the actual font character pixels
     function fontProximityScore(canvasW) {
         const mask = getGuidePixelMask(canvasW);
-        // Generous tolerance (7%) - accounts for finger drawing imprecision on iPad
-        // and thin characters like 一 where the stroke is only ~10px tall
-        const tolerance = Math.max(12, Math.floor(canvasW * 0.07));
+        const data = getCurrentChar();
+
+        // Adaptive tolerance: simple characters (1-2 strokes like 一 二) get more room
+        // because the character is thin and hard to hit precisely with a finger.
+        // Complex characters use standard tolerance.
+        const strokeCount = data ? data.strokes : 3;
+        let tolPct = 0.07; // 7% base
+        if (strokeCount <= 2) tolPct = 0.10; // 10% for simple chars like 一 二 八 く
+        else if (strokeCount <= 4) tolPct = 0.08; // 8% for moderate
+        const tolerance = Math.max(14, Math.floor(canvasW * tolPct));
+
         let onChar = 0;
         let totalSampled = 0;
 
         userStrokes.forEach(stroke => {
-            const step = Math.max(1, Math.floor(stroke.length / 30));
+            const step = Math.max(1, Math.floor(stroke.length / 35));
             for (let i = 0; i < stroke.length; i += step) {
                 totalSampled++;
                 if (isNearCharacter(stroke[i].x, stroke[i].y, mask, canvasW, tolerance)) {

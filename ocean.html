@@ -1,0 +1,2838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ocean Adventure">
+    <title>Yuna's Ocean Adventure</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(180deg, #001a33 0%, #002244 30%, #003355 60%, #001a2e 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+            overflow-x: hidden;
+            padding: 0;
+            color: #c0e0ff;
+        }
+
+        /* Bubbles background animation */
+        .bubbles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .bubble {
+            position: absolute;
+            bottom: -40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(0,229,255,0.15), rgba(0,229,255,0.03));
+            border: 1px solid rgba(0,229,255,0.08);
+            animation: bubbleRise linear infinite;
+        }
+        @keyframes bubbleRise {
+            0% { transform: translateY(0) scale(1); opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-110vh) scale(0.5); opacity: 0; }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 12px 20px 10px;
+            background: rgba(0, 20, 50, 0.85);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(0,229,255,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.4em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00e5ff, #00bcd4, #4dd0e1, #80deea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .header-stats {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.9em;
+            font-weight: 700;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-lives .heart {
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        .stat-lives .heart.lost {
+            filter: grayscale(1);
+            opacity: 0.3;
+        }
+        .stat-lives .heart.pulse {
+            animation: heartPulse 0.5s ease;
+        }
+        @keyframes heartPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+        }
+
+        .stat-score {
+            color: #ffd700;
+        }
+
+        .stat-shields {
+            color: #64ffda;
+        }
+
+        .stat-depth {
+            color: #80deea;
+        }
+
+        .header-links {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .header-links a {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 16px;
+            font-size: 0.8em;
+            font-weight: 700;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+
+        .header-links a:active {
+            transform: scale(0.95);
+        }
+
+        .back-link {
+            background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(0,188,212,0.2));
+            color: #4dd0e1;
+            border: 1px solid rgba(0,229,255,0.3);
+        }
+
+        .writing-link {
+            background: linear-gradient(135deg, rgba(100,255,218,0.2), rgba(0,150,136,0.2));
+            color: #64ffda;
+            border: 1px solid rgba(100,255,218,0.3);
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Game layout */
+        .game-layout {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        /* Left panel: game controls */
+        .game-panel {
+            flex: 0 0 240px;
+            min-width: 200px;
+        }
+
+        /* Ocean panel (message + direction buttons) */
+        .ocean-panel {
+            background: rgba(0, 20, 40, 0.8);
+            border-radius: 16px;
+            padding: 14px;
+            border: 1px solid rgba(0,229,255,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(0,229,255,0.1);
+            margin-bottom: 12px;
+        }
+
+        .ocean-message {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #b0e0ff;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.4;
+            padding: 8px;
+            margin-bottom: 12px;
+            background: rgba(0,10,30,0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(0,229,255,0.08);
+        }
+
+        .ocean-message .msg-emoji {
+            font-size: 1.6em;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Direction buttons */
+        .direction-pad {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 6px;
+            max-width: 180px;
+            margin: 0 auto;
+        }
+
+        .dir-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #004466, #003355);
+            color: #4dd0e1;
+            border: 2px solid rgba(0,229,255,0.2);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+        }
+
+        .dir-btn:hover {
+            background: linear-gradient(135deg, #005577, #004466);
+            border-color: rgba(0,229,255,0.5);
+            box-shadow: 0 0 15px rgba(0,229,255,0.2);
+        }
+
+        .dir-btn:active {
+            transform: scale(0.92);
+        }
+
+        .dir-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .dir-btn.selected {
+            background: linear-gradient(135deg, #006688, #00acc1);
+            border-color: #00e5ff;
+            box-shadow: 0 0 20px rgba(0,229,255,0.4);
+            color: white;
+        }
+
+        .dir-spacer {
+            visibility: hidden;
+        }
+
+        /* Game utility buttons */
+        .game-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .game-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .game-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-map {
+            background: linear-gradient(135deg, #1a5276, #2471a3);
+            border: 1px solid rgba(0,229,255,0.2);
+        }
+
+        .btn-sonar {
+            background: linear-gradient(135deg, #0e6655, #1abc9c);
+            border: 1px solid rgba(100,255,218,0.2);
+        }
+
+        .btn-surface {
+            background: linear-gradient(135deg, #b7950b, #f1c40f);
+            border: 1px solid rgba(255,215,0,0.3);
+            color: #1a1a00;
+            display: none;
+        }
+
+        .btn-surface.visible {
+            display: block;
+        }
+
+        /* Center panel: writing canvas */
+        .writing-panel {
+            flex: 1;
+            min-width: 280px;
+            max-width: 420px;
+        }
+
+        /* Kanji display */
+        .kanji-display {
+            background: rgba(0, 20, 40, 0.8);
+            border-radius: 16px;
+            padding: 12px;
+            border: 1px solid rgba(0,229,255,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .kanji-char {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 3.5em;
+            font-weight: 700;
+            color: #00e5ff;
+            text-shadow: 0 0 20px rgba(0,229,255,0.4);
+            line-height: 1.1;
+        }
+
+        .kanji-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .kanji-romaji {
+            font-size: 1em;
+            font-weight: 700;
+            color: #80deea;
+        }
+
+        .kanji-english {
+            font-size: 1em;
+            font-weight: 700;
+            color: #b0e0ff;
+        }
+
+        .kanji-emoji {
+            font-size: 1.4em;
+        }
+
+        .kanji-strokes-info {
+            font-size: 0.8em;
+            color: #546e7a;
+            margin-top: 2px;
+        }
+
+        /* Drawing canvas */
+        .drawing-canvas-container {
+            position: relative;
+            background: rgba(0, 15, 30, 0.9);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            border: 2px solid rgba(0,229,255,0.2);
+            aspect-ratio: 1 / 1;
+            width: 100%;
+        }
+
+        .drawing-canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .canvas-grid {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        .canvas-grid::before,
+        .canvas-grid::after {
+            content: '';
+            position: absolute;
+        }
+
+        .canvas-grid::before {
+            left: 50%; top: 10%;
+            width: 1px; height: 80%;
+            border-left: 1px dashed rgba(0,229,255,0.15);
+        }
+
+        .canvas-grid::after {
+            top: 50%; left: 10%;
+            height: 1px; width: 80%;
+            border-top: 1px dashed rgba(0,229,255,0.15);
+        }
+
+        .stroke-counter {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: rgba(0,20,40,0.8);
+            border-radius: 10px;
+            padding: 3px 10px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #4dd0e1;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Action buttons under canvas */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+            color: white;
+            min-width: 70px;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #e57373, #ef5350);
+        }
+
+        .btn-show {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+        }
+
+        .btn-check {
+            background: linear-gradient(135deg, #66bb6a, #43a047);
+        }
+
+        /* Feedback */
+        .feedback {
+            text-align: center;
+            margin-top: 8px;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feedback-msg {
+            display: inline-block;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.95em;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .feedback-msg.show {
+            opacity: 1;
+            transform: scale(1);
+            animation: bounceIn 0.4s ease forwards;
+        }
+
+        .feedback-msg.great {
+            background: linear-gradient(135deg, rgba(0,229,255,0.3), rgba(0,188,212,0.3));
+            color: #00e5ff;
+            border: 1px solid rgba(0,229,255,0.3);
+        }
+
+        .feedback-msg.tryagain {
+            background: linear-gradient(135deg, rgba(255,235,59,0.3), rgba(255,193,7,0.3));
+            color: #ffd740;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .feedback-msg.wrong {
+            background: linear-gradient(135deg, rgba(239,83,80,0.3), rgba(229,57,53,0.3));
+            color: #ef5350;
+            border: 1px solid rgba(239,83,80,0.3);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Star particles */
+        @keyframes starFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-60px) scale(0.5); opacity: 0; }
+        }
+
+        .star-particle {
+            position: absolute;
+            font-size: 1.4em;
+            pointer-events: none;
+            animation: starFloat 1s ease forwards;
+        }
+
+        /* Right panel: mini-map */
+        .minimap-panel {
+            flex: 0 0 200px;
+            min-width: 160px;
+        }
+
+        .minimap-container {
+            background: rgba(0, 20, 40, 0.8);
+            border-radius: 16px;
+            padding: 12px;
+            border: 1px solid rgba(0,229,255,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .minimap-title {
+            font-size: 0.8em;
+            font-weight: 700;
+            color: #4dd0e1;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .minimap-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 1px;
+            aspect-ratio: 1;
+        }
+
+        .minimap-cell {
+            aspect-ratio: 1;
+            border-radius: 1px;
+            background: rgba(0,10,30,0.8);
+            font-size: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: background 0.3s;
+        }
+
+        .minimap-cell.visited {
+            background: rgba(0,80,120,0.5);
+        }
+
+        .minimap-cell.player {
+            background: rgba(0,229,255,0.5);
+            box-shadow: 0 0 4px rgba(0,229,255,0.5);
+        }
+
+        .minimap-cell.warning {
+            background: rgba(255,87,34,0.3);
+        }
+
+        .minimap-cell.treasure {
+            background: rgba(255,215,0,0.3);
+        }
+
+        .minimap-cell.danger-vis {
+            background: rgba(239,83,80,0.3);
+        }
+
+        /* Position display */
+        .position-display {
+            text-align: center;
+            font-size: 0.8em;
+            color: #546e7a;
+            margin-top: 8px;
+            font-weight: 700;
+        }
+
+        /* MAP OVERLAY */
+        .map-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,5,15,0.92);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .map-overlay.active {
+            display: flex;
+        }
+
+        .map-content {
+            background: rgba(0,20,40,0.95);
+            border-radius: 20px;
+            padding: 20px;
+            border: 2px solid rgba(0,229,255,0.3);
+            box-shadow: 0 0 40px rgba(0,229,255,0.15);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .map-title {
+            font-size: 1.2em;
+            font-weight: 800;
+            color: #00e5ff;
+        }
+
+        .map-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid rgba(239,83,80,0.5);
+            background: rgba(239,83,80,0.15);
+            color: #ef5350;
+            font-size: 1.2em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 2px;
+        }
+
+        .map-cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            background: rgba(0,10,25,0.9);
+            border: 1px solid rgba(0,229,255,0.05);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .map-cell.visited-map {
+            background: rgba(0,60,100,0.4);
+            border-color: rgba(0,229,255,0.1);
+        }
+
+        .map-cell.player-map {
+            background: rgba(0,229,255,0.4);
+            border-color: #00e5ff;
+            box-shadow: 0 0 8px rgba(0,229,255,0.4);
+        }
+
+        .map-cell.warning-map::after {
+            content: '\u26a0\ufe0f';
+            position: absolute;
+            font-size: 7px;
+            top: -2px;
+            right: -2px;
+        }
+
+        .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #80deea;
+        }
+
+        /* GAME OVER / VICTORY OVERLAY */
+        .result-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,5,15,0.95);
+            z-index: 300;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .result-overlay.active {
+            display: flex;
+        }
+
+        .result-content {
+            background: rgba(0,20,40,0.95);
+            border-radius: 24px;
+            padding: 30px;
+            border: 2px solid rgba(0,229,255,0.3);
+            box-shadow: 0 0 60px rgba(0,229,255,0.15);
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .result-title {
+            font-size: 1.8em;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .result-title.victory {
+            background: linear-gradient(135deg, #ffd700, #ffab00, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .result-title.gameover {
+            color: #ef5350;
+        }
+
+        .result-stats {
+            text-align: left;
+            margin: 16px 0;
+            font-size: 1em;
+        }
+
+        .result-stats div {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(0,229,255,0.08);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-stats .stat-label {
+            color: #80deea;
+        }
+
+        .result-stats .stat-value {
+            color: #ffd700;
+            font-weight: 800;
+        }
+
+        .result-btn {
+            margin-top: 20px;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            font-size: 1.1em;
+            cursor: pointer;
+            background: linear-gradient(135deg, #00e5ff, #00acc1);
+            color: #001a33;
+            box-shadow: 0 4px 20px rgba(0,229,255,0.3);
+            transition: all 0.2s;
+        }
+
+        .result-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Waiting state (before direction selected) */
+        .waiting-prompt {
+            font-size: 0.9em;
+            color: #4dd0e1;
+            text-align: center;
+            padding: 8px;
+            font-weight: 700;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .minimap-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .game-layout {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .game-panel {
+                flex: none;
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .writing-panel {
+                width: 100%;
+                max-width: 360px;
+            }
+
+            .direction-pad {
+                max-width: 160px;
+            }
+
+            .header h1 {
+                font-size: 1.2em;
+            }
+
+            .header-stats {
+                font-size: 0.8em;
+                gap: 10px;
+            }
+        }
+
+        /* Intro screen */
+        .intro-overlay {
+            display: flex;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,5,15,0.97);
+            z-index: 400;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .intro-overlay.hidden {
+            display: none;
+        }
+
+        .intro-content {
+            background: rgba(0,20,40,0.95);
+            border-radius: 24px;
+            padding: 30px;
+            border: 2px solid rgba(0,229,255,0.3);
+            box-shadow: 0 0 60px rgba(0,229,255,0.15);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .intro-title {
+            font-size: 2em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00e5ff, #00bcd4, #4dd0e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .intro-subtitle {
+            font-size: 1em;
+            color: #80deea;
+            margin-bottom: 16px;
+        }
+
+        .intro-diver {
+            font-size: 4em;
+            margin: 10px 0;
+        }
+
+        .intro-rules {
+            text-align: left;
+            color: #b0e0ff;
+            font-size: 0.9em;
+            line-height: 1.6;
+            margin: 16px 0;
+        }
+
+        .intro-rules strong {
+            color: #00e5ff;
+        }
+
+        .intro-rules .rule-item {
+            margin-bottom: 8px;
+            padding-left: 8px;
+        }
+
+        .intro-btn {
+            margin-top: 16px;
+            padding: 14px 40px;
+            border: none;
+            border-radius: 18px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            font-size: 1.2em;
+            cursor: pointer;
+            background: linear-gradient(135deg, #00e5ff, #00acc1);
+            color: #001a33;
+            box-shadow: 0 4px 20px rgba(0,229,255,0.3);
+            transition: all 0.2s;
+        }
+
+        .intro-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Encounter animation */
+        @keyframes encounterFlash {
+            0% { box-shadow: 0 0 0 rgba(0,229,255,0); }
+            50% { box-shadow: 0 0 30px rgba(0,229,255,0.3); }
+            100% { box-shadow: 0 0 0 rgba(0,229,255,0); }
+        }
+
+        .encounter-flash {
+            animation: encounterFlash 0.6s ease;
+        }
+
+        /* Danger flash */
+        @keyframes dangerFlash {
+            0% { box-shadow: 0 0 0 rgba(239,83,80,0); }
+            50% { box-shadow: 0 0 30px rgba(239,83,80,0.4); }
+            100% { box-shadow: 0 0 0 rgba(239,83,80,0); }
+        }
+
+        .danger-flash {
+            animation: dangerFlash 0.6s ease;
+        }
+
+        /* Treasure flash */
+        @keyframes treasureFlash {
+            0% { box-shadow: 0 0 0 rgba(255,215,0,0); }
+            50% { box-shadow: 0 0 40px rgba(255,215,0,0.5); }
+            100% { box-shadow: 0 0 0 rgba(255,215,0,0); }
+        }
+
+        .treasure-flash {
+            animation: treasureFlash 0.8s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Bubbles background -->
+    <div class="bubbles" id="bubblesContainer"></div>
+
+    <!-- Intro overlay -->
+    <div class="intro-overlay" id="introOverlay">
+        <div class="intro-content">
+            <div class="intro-title">Yuna's Ocean Adventure</div>
+            <div class="intro-subtitle">A Deep-Sea Kanji Treasure Hunt</div>
+            <div class="intro-diver">🤿</div>
+            <div class="intro-rules">
+                <div class="rule-item">🗺️ Explore a 16x16 underwater grid searching for treasure!</div>
+                <div class="rule-item">✍️ <strong>Write kanji</strong> to move through the ocean depths.</div>
+                <div class="rule-item">🏆 Find the <strong>Grand Treasure</strong> (2000 pts), 💎 Gems (200 pts), and 🪙 Coins (50 pts).</div>
+                <div class="rule-item">🦈 Beware of <strong>sharks</strong>, 🪼 jellyfish, 🐉 sea serpents, and 🌀 whirlpools!</div>
+                <div class="rule-item">🛡️ Collect <strong>shields</strong> to survive danger. 📡 Use <strong>sonar</strong> to reveal nearby cells.</div>
+                <div class="rule-item">❤️ You have <strong>3 lives</strong>. Wrong answers make dangers move closer!</div>
+                <div class="rule-item">🔔 Find the <strong>diving bell</strong> to surface and bank your score!</div>
+            </div>
+            <button class="intro-btn" onclick="startGame()">Dive In! 🌊</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Yuna's Ocean Adventure</h1>
+        <div class="header-stats">
+            <div class="stat-item stat-lives" id="livesDisplay">
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+            </div>
+            <div class="stat-item stat-score">Score: <span id="scoreDisplay">0</span></div>
+            <div class="stat-item stat-shields">🛡️ x <span id="shieldDisplay">0</span></div>
+            <div class="stat-item stat-depth">Depth: <span id="depthDisplay">0</span></div>
+        </div>
+        <div class="header-links">
+            <a href="index.html" class="back-link">Flashcards</a>
+            <a href="writing.html" class="writing-link">Writing</a>
+        </div>
+    </div>
+
+    <!-- Main game -->
+    <div class="container">
+        <div class="game-layout">
+            <!-- Left: Game panel -->
+            <div class="game-panel">
+                <div class="ocean-panel">
+                    <div class="ocean-message" id="oceanMessage">
+                        <div>
+                            <span class="msg-emoji">🤿</span>
+                            Choose a direction to swim!
+                        </div>
+                    </div>
+
+                    <div class="direction-pad">
+                        <div class="dir-spacer"></div>
+                        <button class="dir-btn" id="btnNorth" onclick="selectDirection('north')">⬆️</button>
+                        <div class="dir-spacer"></div>
+                        <button class="dir-btn" id="btnWest" onclick="selectDirection('west')">⬅️</button>
+                        <div class="dir-spacer"></div>
+                        <button class="dir-btn" id="btnEast" onclick="selectDirection('east')">➡️</button>
+                        <div class="dir-spacer"></div>
+                        <button class="dir-btn" id="btnSouth" onclick="selectDirection('south')">⬇️</button>
+                        <div class="dir-spacer"></div>
+                    </div>
+
+                    <div class="game-buttons">
+                        <button class="game-btn btn-map" onclick="openMap()">🗺️ Map</button>
+                        <button class="game-btn btn-sonar" id="btnSonar" onclick="useSonar()">📡 Sonar (<span id="sonarCount">0</span>)</button>
+                    </div>
+                    <button class="game-btn btn-surface" id="btnSurface" onclick="surfaceGame()">🔔 Surface!</button>
+                </div>
+
+                <div class="position-display" id="positionDisplay">Position: (0, 0)</div>
+            </div>
+
+            <!-- Center: Writing canvas -->
+            <div class="writing-panel">
+                <div class="kanji-display" id="kanjiDisplay" style="display:none;">
+                    <div class="kanji-char" id="kanjiChar"></div>
+                    <div class="kanji-info">
+                        <span class="kanji-emoji" id="kanjiEmoji"></span>
+                        <span class="kanji-english" id="kanjiEnglish"></span>
+                        <span class="kanji-romaji" id="kanjiRomaji"></span>
+                    </div>
+                    <div class="kanji-strokes-info" id="kanjiStrokesInfo"></div>
+                </div>
+
+                <div class="drawing-canvas-container" id="canvasContainer">
+                    <canvas id="drawCanvas"></canvas>
+                    <div class="canvas-grid"></div>
+                    <div class="stroke-counter" id="strokeCounter">Strokes: 0</div>
+                </div>
+
+                <div class="action-buttons" id="actionButtons" style="display:none;">
+                    <button class="action-btn btn-clear" onclick="clearCanvas()">Clear</button>
+                    <button class="action-btn btn-show" onclick="showMe()">Show Me</button>
+                    <button class="action-btn btn-check" onclick="checkDrawing()">Check ✓</button>
+                </div>
+
+                <div class="feedback">
+                    <div class="feedback-msg" id="feedbackMsg"></div>
+                </div>
+            </div>
+
+            <!-- Right: Mini-map (wider screens) -->
+            <div class="minimap-panel">
+                <div class="minimap-container">
+                    <div class="minimap-title">Sonar Map</div>
+                    <div class="minimap-grid" id="minimapGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map overlay -->
+    <div class="map-overlay" id="mapOverlay">
+        <div class="map-content">
+            <div class="map-header">
+                <div class="map-title">🗺️ Ocean Map</div>
+                <button class="map-close" onclick="closeMap()">✕</button>
+            </div>
+            <div class="map-grid" id="mapGrid"></div>
+            <div class="map-legend">
+                <span>🤿 You</span>
+                <span>⬛ Unknown</span>
+                <span>🟦 Visited</span>
+                <span>⚠️ Danger Near</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result overlay -->
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-content">
+            <div class="result-title" id="resultTitle"></div>
+            <div style="font-size:3em;" id="resultEmoji"></div>
+            <div class="result-stats" id="resultStats"></div>
+            <button class="result-btn" onclick="restartGame()">Play Again 🌊</button>
+        </div>
+    </div>
+
+<script>
+// =========================================================================
+// KANJI DATA - 80+ kanji (1st & 2nd grade mix)
+// =========================================================================
+const gameKanji = [
+    // --- 1st Grade ---
+    { char: '一', romaji: 'ichi', english: 'one', emoji: '1️⃣', strokes: 1 },
+    { char: '二', romaji: 'ni', english: 'two', emoji: '2️⃣', strokes: 2 },
+    { char: '三', romaji: 'san', english: 'three', emoji: '3️⃣', strokes: 3 },
+    { char: '四', romaji: 'shi', english: 'four', emoji: '4️⃣', strokes: 5 },
+    { char: '五', romaji: 'go', english: 'five', emoji: '5️⃣', strokes: 4 },
+    { char: '六', romaji: 'roku', english: 'six', emoji: '6️⃣', strokes: 4 },
+    { char: '七', romaji: 'nana', english: 'seven', emoji: '7️⃣', strokes: 2 },
+    { char: '八', romaji: 'hachi', english: 'eight', emoji: '8️⃣', strokes: 2 },
+    { char: '九', romaji: 'ku', english: 'nine', emoji: '9️⃣', strokes: 2 },
+    { char: '十', romaji: 'juu', english: 'ten', emoji: '🔟', strokes: 2 },
+    { char: '山', romaji: 'yama', english: 'mountain', emoji: '⛰️', strokes: 3 },
+    { char: '川', romaji: 'kawa', english: 'river', emoji: '🏞️', strokes: 3 },
+    { char: '花', romaji: 'hana', english: 'flower', emoji: '🌸', strokes: 7 },
+    { char: '雨', romaji: 'ame', english: 'rain', emoji: '🌧️', strokes: 8 },
+    { char: '空', romaji: 'sora', english: 'sky', emoji: '🌤️', strokes: 8 },
+    { char: '天', romaji: 'ten', english: 'heaven', emoji: '⛅', strokes: 4 },
+    { char: '石', romaji: 'ishi', english: 'stone', emoji: '🪨', strokes: 5 },
+    { char: '田', romaji: 'ta', english: 'rice field', emoji: '🌾', strokes: 5 },
+    { char: '人', romaji: 'hito', english: 'person', emoji: '🧑', strokes: 2 },
+    { char: '子', romaji: 'ko', english: 'child', emoji: '👶', strokes: 3 },
+    { char: '女', romaji: 'onna', english: 'woman', emoji: '👩', strokes: 3 },
+    { char: '男', romaji: 'otoko', english: 'man', emoji: '👨', strokes: 7 },
+    { char: '王', romaji: 'ou', english: 'king', emoji: '👑', strokes: 4 },
+    { char: '生', romaji: 'sei', english: 'life', emoji: '🌱', strokes: 5 },
+    { char: '学', romaji: 'gaku', english: 'study', emoji: '📚', strokes: 8 },
+    { char: '目', romaji: 'me', english: 'eye', emoji: '👁️', strokes: 5 },
+    { char: '耳', romaji: 'mimi', english: 'ear', emoji: '👂', strokes: 6 },
+    { char: '口', romaji: 'kuchi', english: 'mouth', emoji: '👄', strokes: 3 },
+    { char: '手', romaji: 'te', english: 'hand', emoji: '✋', strokes: 4 },
+    { char: '足', romaji: 'ashi', english: 'foot', emoji: '🦶', strokes: 7 },
+    { char: '力', romaji: 'chikara', english: 'power', emoji: '💪', strokes: 2 },
+    { char: '上', romaji: 'ue', english: 'up', emoji: '⬆️', strokes: 3 },
+    { char: '下', romaji: 'shita', english: 'down', emoji: '⬇️', strokes: 3 },
+    { char: '大', romaji: 'dai', english: 'big', emoji: '🔴', strokes: 3 },
+    { char: '中', romaji: 'naka', english: 'middle', emoji: '⭕', strokes: 4 },
+    { char: '小', romaji: 'shou', english: 'small', emoji: '🔹', strokes: 3 },
+    { char: '入', romaji: 'iru', english: 'enter', emoji: '🚪', strokes: 2 },
+    { char: '出', romaji: 'deru', english: 'exit', emoji: '🚶', strokes: 5 },
+    { char: '日', romaji: 'hi', english: 'day', emoji: '☀️', strokes: 4 },
+    { char: '月', romaji: 'tsuki', english: 'moon', emoji: '🌙', strokes: 4 },
+    { char: '火', romaji: 'hi', english: 'fire', emoji: '🔥', strokes: 4 },
+    { char: '水', romaji: 'mizu', english: 'water', emoji: '💧', strokes: 4 },
+    { char: '木', romaji: 'ki', english: 'tree', emoji: '🌲', strokes: 4 },
+    { char: '金', romaji: 'kin', english: 'gold', emoji: '💰', strokes: 8 },
+    { char: '土', romaji: 'tsuchi', english: 'earth', emoji: '🌍', strokes: 3 },
+    { char: '本', romaji: 'hon', english: 'book', emoji: '📕', strokes: 5 },
+    { char: '犬', romaji: 'inu', english: 'dog', emoji: '🐕', strokes: 4 },
+    { char: '貝', romaji: 'kai', english: 'shellfish', emoji: '🐚', strokes: 7 },
+    { char: '車', romaji: 'kuruma', english: 'car', emoji: '🚗', strokes: 7 },
+    { char: '赤', romaji: 'aka', english: 'red', emoji: '🔴', strokes: 7 },
+    { char: '青', romaji: 'ao', english: 'blue', emoji: '🔵', strokes: 8 },
+    { char: '白', romaji: 'shiro', english: 'white', emoji: '⬜', strokes: 5 },
+    { char: '見', romaji: 'miru', english: 'see', emoji: '👀', strokes: 7 },
+    // --- 2nd Grade ---
+    { char: '海', romaji: 'umi', english: 'sea', emoji: '🌊', strokes: 9 },
+    { char: '魚', romaji: 'sakana', english: 'fish', emoji: '🐟', strokes: 11 },
+    { char: '船', romaji: 'fune', english: 'ship', emoji: '🚢', strokes: 11 },
+    { char: '光', romaji: 'hikari', english: 'light', emoji: '💡', strokes: 6 },
+    { char: '星', romaji: 'hoshi', english: 'star', emoji: '⭐', strokes: 9 },
+    { char: '風', romaji: 'kaze', english: 'wind', emoji: '🌬️', strokes: 9 },
+    { char: '雪', romaji: 'yuki', english: 'snow', emoji: '🌨️', strokes: 11 },
+    { char: '雲', romaji: 'kumo', english: 'cloud', emoji: '☁️', strokes: 12 },
+    { char: '強', romaji: 'tsuyoi', english: 'strong', emoji: '💪', strokes: 11 },
+    { char: '弱', romaji: 'yowai', english: 'weak', emoji: '😢', strokes: 10 },
+    { char: '走', romaji: 'hashiru', english: 'run', emoji: '🏃', strokes: 7 },
+    { char: '止', romaji: 'tomaru', english: 'stop', emoji: '🛑', strokes: 4 },
+    { char: '食', romaji: 'taberu', english: 'eat', emoji: '🍽️', strokes: 9 },
+    { char: '心', romaji: 'kokoro', english: 'heart', emoji: '❤️', strokes: 4 },
+    { char: '友', romaji: 'tomo', english: 'friend', emoji: '🤝', strokes: 4 },
+    { char: '父', romaji: 'chichi', english: 'father', emoji: '👨', strokes: 4 },
+    { char: '母', romaji: 'haha', english: 'mother', emoji: '👩', strokes: 5 },
+    { char: '新', romaji: 'atarashii', english: 'new', emoji: '🆕', strokes: 13 },
+    { char: '古', romaji: 'furui', english: 'old', emoji: '🏚️', strokes: 5 },
+    { char: '長', romaji: 'nagai', english: 'long', emoji: '📏', strokes: 8 },
+    { char: '高', romaji: 'takai', english: 'tall', emoji: '🏔️', strokes: 10 },
+    { char: '近', romaji: 'chikai', english: 'near', emoji: '👋', strokes: 7 },
+    { char: '遠', romaji: 'tooi', english: 'far', emoji: '🔭', strokes: 13 },
+    { char: '多', romaji: 'ooi', english: 'many', emoji: '📦', strokes: 6 },
+    { char: '少', romaji: 'sukunai', english: 'few', emoji: '🤏', strokes: 4 },
+    { char: '色', romaji: 'iro', english: 'color', emoji: '🎨', strokes: 6 },
+    { char: '今', romaji: 'ima', english: 'now', emoji: '⏰', strokes: 4 },
+    { char: '夜', romaji: 'yoru', english: 'night', emoji: '🌙', strokes: 8 },
+    { char: '朝', romaji: 'asa', english: 'morning', emoji: '🌅', strokes: 12 },
+    { char: '家', romaji: 'ie', english: 'house', emoji: '🏠', strokes: 10 },
+    { char: '道', romaji: 'michi', english: 'road', emoji: '🛤️', strokes: 12 },
+    { char: '鳥', romaji: 'tori', english: 'bird', emoji: '🐦', strokes: 11 },
+    { char: '牛', romaji: 'ushi', english: 'cow', emoji: '🐄', strokes: 4 },
+    { char: '馬', romaji: 'uma', english: 'horse', emoji: '🐴', strokes: 10 },
+    { char: '黒', romaji: 'kuro', english: 'black', emoji: '⬛', strokes: 11 },
+    { char: '池', romaji: 'ike', english: 'pond', emoji: '🏞️', strokes: 6 },
+    { char: '広', romaji: 'hiroi', english: 'wide', emoji: '↔️', strokes: 5 },
+    { char: '元', romaji: 'moto', english: 'origin', emoji: '🌱', strokes: 4 },
+    { char: '半', romaji: 'han', english: 'half', emoji: '½', strokes: 5 },
+    { char: '方', romaji: 'hou', english: 'direction', emoji: '🧭', strokes: 4 },
+];
+
+// =========================================================================
+// OCEAN SENTENCE TEMPLATES
+// =========================================================================
+const oceanSentences = [
+    (k) => `A mysterious ${k.english} appears in the deep...`,
+    (k) => `The ocean whispers "${k.char}" (${k.english})...`,
+    (k) => `Write "${k.char}" to swim forward!`,
+    (k) => `Deep currents carry the spirit of ${k.english}...`,
+    (k) => `Bioluminescent lights spell out "${k.char}"...`,
+    (k) => `A sea turtle shows you ${k.english} (${k.char})!`,
+    (k) => `Coral formations resemble ${k.english}...`,
+    (k) => `An ancient shell is inscribed with "${k.char}"...`,
+    (k) => `Bubbles form the shape of ${k.english}!`,
+    (k) => `A manta ray glides past... write ${k.english}!`,
+    (k) => `The abyss echoes with ${k.english} (${k.char})...`,
+    (k) => `Glowing plankton trace "${k.char}" in the water!`,
+    (k) => `A whale song reminds you of ${k.english}...`,
+    (k) => `The current carries a message: ${k.english}!`,
+    (k) => `Jellyfish light up, revealing "${k.char}"...`,
+    (k) => `An octopus writes "${k.char}" with its tentacles!`,
+    (k) => `Sunken treasure bears the mark of ${k.english}...`,
+    (k) => `A dolphin clicks: "${k.char}" means ${k.english}!`,
+    (k) => `Ancient ruins display "${k.char}" (${k.english})...`,
+    (k) => `The deep sea reveals ${k.english} to brave divers!`,
+];
+
+// Special ocean-themed sentences for specific kanji
+const specialSentences = {
+    '魚': 'You see a school of fish swim by!',
+    '水': 'Bubbles rise through the deep water...',
+    '強': 'A strong current pushes against you!',
+    '光': 'A beam of light pierces the darkness!',
+    '海': 'The vast ocean stretches in every direction...',
+    '船': 'A ghostly shipwreck looms ahead...',
+    '風': 'An underwater current swirls around you like wind!',
+    '星': 'Bioluminescent creatures shine like stars...',
+    '大': 'A big shadow passes overhead...',
+    '小': 'Tiny seahorses dart between the coral...',
+    '金': 'Gold coins glitter on the ocean floor!',
+    '貝': 'Beautiful shellfish cling to the rocks...',
+    '石': 'Smooth stones line the sea bed...',
+    '青': 'The deep blue surrounds you...',
+    '黒': 'The water grows darker as you descend...',
+    '白': 'White sand stretches below...',
+    '赤': 'Red coral formations glow nearby...',
+    '火': 'A volcanic vent shoots fire underwater!',
+    '雨': 'The surface above ripples with rain...',
+    '雲': 'A cloud of ink disperses nearby...',
+    '夜': 'Night falls on the ocean surface above...',
+    '池': 'You discover a still underwater pool...',
+    '鳥': 'A diving bird plunges from the surface!',
+    '目': 'Huge eyes watch you from the dark...',
+    '心': 'Your heart beats strong in the deep...',
+    '力': 'You summon your power to swim on!',
+    '走': 'You run your hands through the current!',
+    '止': 'The water grows still. Stop and listen...',
+    '入': 'You enter an underwater cave...',
+    '出': 'Light shows the way out!',
+};
+
+// =========================================================================
+// GAME STATE
+// =========================================================================
+const GRID_SIZE = 16;
+const CELL_TYPES = {
+    EMPTY: 'empty',
+    GRAND_TREASURE: 'grand_treasure',
+    MAJOR_TREASURE: 'major_treasure',
+    MINOR_TREASURE: 'minor_treasure',
+    DIVING_BELL: 'diving_bell',
+    SHARK: 'shark',
+    JELLYFISH: 'jellyfish',
+    SEA_SERPENT: 'sea_serpent',
+    WHIRLPOOL: 'whirlpool',
+    SHIELD: 'shield',
+    SONAR: 'sonar',
+};
+
+const DANGER_TYPES = [CELL_TYPES.SHARK, CELL_TYPES.JELLYFISH, CELL_TYPES.SEA_SERPENT, CELL_TYPES.WHIRLPOOL];
+const MOBILE_DANGERS = [CELL_TYPES.SHARK, CELL_TYPES.SEA_SERPENT];
+const TREASURE_TYPES = [CELL_TYPES.GRAND_TREASURE, CELL_TYPES.MAJOR_TREASURE, CELL_TYPES.MINOR_TREASURE];
+
+const CELL_DISPLAY = {
+    [CELL_TYPES.GRAND_TREASURE]: '🏆',
+    [CELL_TYPES.MAJOR_TREASURE]: '💎',
+    [CELL_TYPES.MINOR_TREASURE]: '🪙',
+    [CELL_TYPES.DIVING_BELL]: '🔔',
+    [CELL_TYPES.SHARK]: '🦈',
+    [CELL_TYPES.JELLYFISH]: '🪼',
+    [CELL_TYPES.SEA_SERPENT]: '🐉',
+    [CELL_TYPES.WHIRLPOOL]: '🌀',
+    [CELL_TYPES.SHIELD]: '🛡️',
+    [CELL_TYPES.SONAR]: '📡',
+};
+
+const TREASURE_POINTS = {
+    [CELL_TYPES.GRAND_TREASURE]: 2000,
+    [CELL_TYPES.MAJOR_TREASURE]: 200,
+    [CELL_TYPES.MINOR_TREASURE]: 50,
+};
+
+const EMPTY_OCEAN_EMOJI = ['🐚','🌊','🐠','🐡','🦀','🦑','🐙','🪸','🦐','🐳','🦞','🫧'];
+
+let grid = [];           // 16x16 grid of cell types
+let visited = [];         // 16x16 boolean of visited cells
+let collected = [];       // 16x16 boolean of collected items
+let playerRow = 0;
+let playerCol = 0;
+let lives = 3;
+let score = 0;
+let shields = 0;
+let sonarCharges = 0;
+let depth = 0;            // Move counter
+let selectedDirection = null;
+let currentKanji = null;
+let gameActive = false;
+let kanjiAttempts = 0;
+let kanjiCorrect = 0;
+let treasuresFound = [];
+let kanjiPracticed = new Set();
+
+// For writing system
+let userStrokes = [];
+let currentStroke = null;
+let isDrawing = false;
+let showingAnimation = false;
+let guidePixelCache = { char: null, mask: null, w: 0 };
+const kvgCache = {};
+let guideKvgMainCache = {};
+
+// =========================================================================
+// GRID GENERATION
+// =========================================================================
+function generateGrid() {
+    grid = [];
+    visited = [];
+    collected = [];
+    for (let r = 0; r < GRID_SIZE; r++) {
+        grid[r] = [];
+        visited[r] = [];
+        collected[r] = [];
+        for (let c = 0; c < GRID_SIZE; c++) {
+            grid[r][c] = CELL_TYPES.EMPTY;
+            visited[r][c] = false;
+            collected[r][c] = false;
+        }
+    }
+
+    // Place items randomly (avoiding edges for dangers, to give player safe start)
+    function placeRandom(type, count, avoidEdge) {
+        let placed = 0;
+        let attempts = 0;
+        while (placed < count && attempts < 1000) {
+            attempts++;
+            let r, c;
+            if (avoidEdge) {
+                r = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                c = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+            } else {
+                r = Math.floor(Math.random() * GRID_SIZE);
+                c = Math.floor(Math.random() * GRID_SIZE);
+            }
+            if (grid[r][c] === CELL_TYPES.EMPTY) {
+                grid[r][c] = type;
+                placed++;
+            }
+        }
+    }
+
+    // Place treasures
+    placeRandom(CELL_TYPES.GRAND_TREASURE, 1, false);
+    placeRandom(CELL_TYPES.MAJOR_TREASURE, 4, false);
+    placeRandom(CELL_TYPES.MINOR_TREASURE, 10, false);
+
+    // Place diving bell
+    placeRandom(CELL_TYPES.DIVING_BELL, 1, false);
+
+    // Place dangers
+    placeRandom(CELL_TYPES.SHARK, 6, true);
+    placeRandom(CELL_TYPES.JELLYFISH, 4, true);
+    placeRandom(CELL_TYPES.SEA_SERPENT, 3, true);
+    placeRandom(CELL_TYPES.WHIRLPOOL, 2, true);
+
+    // Place power-ups
+    placeRandom(CELL_TYPES.SHIELD, 3, false);
+    placeRandom(CELL_TYPES.SONAR, 2, false);
+
+    // Place player on random edge cell that's empty
+    let edgeCells = [];
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            if ((r === 0 || r === GRID_SIZE - 1 || c === 0 || c === GRID_SIZE - 1) && grid[r][c] === CELL_TYPES.EMPTY) {
+                edgeCells.push([r, c]);
+            }
+        }
+    }
+    if (edgeCells.length === 0) {
+        edgeCells = [[0, 0]];
+        grid[0][0] = CELL_TYPES.EMPTY;
+    }
+    const start = edgeCells[Math.floor(Math.random() * edgeCells.length)];
+    playerRow = start[0];
+    playerCol = start[1];
+    visited[playerRow][playerCol] = true;
+}
+
+// =========================================================================
+// GAME INIT
+// =========================================================================
+function startGame() {
+    document.getElementById('introOverlay').classList.add('hidden');
+    generateGrid();
+    lives = 3;
+    score = 0;
+    shields = 0;
+    sonarCharges = 0;
+    depth = 0;
+    selectedDirection = null;
+    currentKanji = null;
+    gameActive = true;
+    kanjiAttempts = 0;
+    kanjiCorrect = 0;
+    treasuresFound = [];
+    kanjiPracticed = new Set();
+
+    updateAllUI();
+    setOceanMessage('🤿', 'You dive into the deep ocean! Choose a direction to explore.');
+    hideKanjiPanel();
+
+    initDrawCanvas();
+}
+
+function restartGame() {
+    document.getElementById('resultOverlay').classList.remove('active');
+    generateGrid();
+    lives = 3;
+    score = 0;
+    shields = 0;
+    sonarCharges = 0;
+    depth = 0;
+    selectedDirection = null;
+    currentKanji = null;
+    gameActive = true;
+    kanjiAttempts = 0;
+    kanjiCorrect = 0;
+    treasuresFound = [];
+    kanjiPracticed = new Set();
+
+    updateAllUI();
+    setOceanMessage('🤿', 'A new dive begins! Choose a direction to explore.');
+    hideKanjiPanel();
+}
+
+// =========================================================================
+// UI UPDATES
+// =========================================================================
+function updateAllUI() {
+    updateLives();
+    updateScore();
+    updateShields();
+    updateDepth();
+    updatePosition();
+    updateMinimap();
+    updateDirectionButtons();
+    updateSonarCount();
+    updateSurfaceButton();
+}
+
+function updateLives() {
+    const container = document.getElementById('livesDisplay');
+    let html = '';
+    for (let i = 0; i < 3; i++) {
+        const cls = i < lives ? 'heart' : 'heart lost';
+        html += `<span class="${cls}">❤️</span>`;
+    }
+    container.innerHTML = html;
+}
+
+function updateScore() {
+    document.getElementById('scoreDisplay').textContent = score;
+}
+
+function updateShields() {
+    document.getElementById('shieldDisplay').textContent = shields;
+}
+
+function updateDepth() {
+    document.getElementById('depthDisplay').textContent = depth;
+}
+
+function updatePosition() {
+    document.getElementById('positionDisplay').textContent = `Position: (${playerRow}, ${playerCol})`;
+}
+
+function updateSonarCount() {
+    document.getElementById('sonarCount').textContent = sonarCharges;
+}
+
+function updateSurfaceButton() {
+    const btn = document.getElementById('btnSurface');
+    if (grid[playerRow][playerCol] === CELL_TYPES.DIVING_BELL || collected[playerRow][playerCol] && getCellOriginalType(playerRow, playerCol) === CELL_TYPES.DIVING_BELL) {
+        // Check if player is on diving bell cell
+        btn.classList.add('visible');
+    } else {
+        btn.classList.remove('visible');
+    }
+    // Also check if original type was diving bell and it was already visited
+    if (visited[playerRow][playerCol]) {
+        // Need to track what the original cell type was
+        // Since collecting removes it, we store it in a separate map
+    }
+}
+
+// Keep track of original cell types for diving bell detection
+let originalGrid = [];
+
+function getCellOriginalType(r, c) {
+    if (originalGrid[r] && originalGrid[r][c] !== undefined) {
+        return originalGrid[r][c];
+    }
+    return grid[r][c];
+}
+
+function updateDirectionButtons() {
+    const dirs = {
+        'north': { r: -1, c: 0, btn: 'btnNorth' },
+        'south': { r: 1, c: 0, btn: 'btnSouth' },
+        'east': { r: 0, c: 1, btn: 'btnEast' },
+        'west': { r: 0, c: -1, btn: 'btnWest' },
+    };
+
+    for (const [dir, info] of Object.entries(dirs)) {
+        const btn = document.getElementById(info.btn);
+        const nr = playerRow + info.r;
+        const nc = playerCol + info.c;
+        const valid = nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE;
+
+        btn.classList.toggle('disabled', !valid);
+        btn.classList.toggle('selected', selectedDirection === dir);
+    }
+}
+
+function setOceanMessage(emoji, text) {
+    document.getElementById('oceanMessage').innerHTML = `<div><span class="msg-emoji">${emoji}</span>${text}</div>`;
+}
+
+function hideKanjiPanel() {
+    document.getElementById('kanjiDisplay').style.display = 'none';
+    document.getElementById('actionButtons').style.display = 'none';
+}
+
+function showKanjiPanel(kanji) {
+    document.getElementById('kanjiChar').textContent = kanji.char;
+    document.getElementById('kanjiEmoji').textContent = kanji.emoji;
+    document.getElementById('kanjiEnglish').textContent = kanji.english;
+    document.getElementById('kanjiRomaji').textContent = kanji.romaji;
+    document.getElementById('kanjiStrokesInfo').textContent = kanji.strokes + ' strokes';
+    document.getElementById('kanjiDisplay').style.display = 'block';
+    document.getElementById('actionButtons').style.display = 'flex';
+}
+
+// =========================================================================
+// MINIMAP
+// =========================================================================
+function updateMinimap() {
+    const container = document.getElementById('minimapGrid');
+    let html = '';
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            let cls = 'minimap-cell';
+            if (r === playerRow && c === playerCol) {
+                cls += ' player';
+            } else if (visited[r][c]) {
+                cls += ' visited';
+                if (TREASURE_TYPES.includes(grid[r][c]) && !collected[r][c]) {
+                    cls += ' treasure';
+                }
+                if (DANGER_TYPES.includes(grid[r][c])) {
+                    cls += ' danger-vis';
+                }
+            } else if (isAdjacentToPlayer(r, c) && hasDangerAt(r, c)) {
+                cls += ' warning';
+            }
+            html += `<div class="${cls}"></div>`;
+        }
+    }
+    container.innerHTML = html;
+}
+
+function isAdjacentToPlayer(r, c) {
+    return Math.abs(r - playerRow) <= 1 && Math.abs(c - playerCol) <= 1 && !(r === playerRow && c === playerCol);
+}
+
+function hasDangerAt(r, c) {
+    return DANGER_TYPES.includes(grid[r][c]);
+}
+
+// =========================================================================
+// MAP OVERLAY
+// =========================================================================
+function openMap() {
+    const container = document.getElementById('mapGrid');
+    let html = '';
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            let cls = 'map-cell';
+            let content = '';
+
+            if (r === playerRow && c === playerCol) {
+                cls += ' player-map';
+                content = '🤿';
+            } else if (visited[r][c]) {
+                cls += ' visited-map';
+                const cellType = grid[r][c];
+                if (cellType === CELL_TYPES.EMPTY || collected[r][c]) {
+                    // Show ocean emoji for visited empty/collected cells
+                    content = EMPTY_OCEAN_EMOJI[((r * 7 + c * 13) % EMPTY_OCEAN_EMOJI.length)];
+                } else if (CELL_DISPLAY[cellType]) {
+                    content = CELL_DISPLAY[cellType];
+                }
+            } else {
+                // Unvisited - check for adjacent danger warning
+                if (isAdjacentToPlayer(r, c) && hasDangerAt(r, c)) {
+                    cls += ' warning-map';
+                }
+                // Check if diving bell is adjacent
+                if (isAdjacentToPlayer(r, c) && grid[r][c] === CELL_TYPES.DIVING_BELL) {
+                    cls += ' visited-map';
+                    content = '🔔';
+                }
+            }
+
+            html += `<div class="${cls}">${content}</div>`;
+        }
+    }
+    container.innerHTML = html;
+    document.getElementById('mapOverlay').classList.add('active');
+}
+
+function closeMap() {
+    document.getElementById('mapOverlay').classList.remove('active');
+}
+
+// =========================================================================
+// SONAR
+// =========================================================================
+function useSonar() {
+    if (sonarCharges <= 0 || !gameActive) return;
+    sonarCharges--;
+    playSfx('sonar');
+
+    // Reveal 3x3 area around player
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            const nr = playerRow + dr;
+            const nc = playerCol + dc;
+            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                visited[nr][nc] = true;
+            }
+        }
+    }
+
+    updateSonarCount();
+    updateMinimap();
+    setOceanMessage('📡', 'Sonar pulse! Nearby cells revealed on your map.');
+}
+
+// =========================================================================
+// DIRECTION SELECTION & KANJI CHALLENGE
+// =========================================================================
+function selectDirection(dir) {
+    if (!gameActive) return;
+    if (currentKanji) return; // Already in a challenge
+
+    const dirs = {
+        'north': { r: -1, c: 0 },
+        'south': { r: 1, c: 0 },
+        'east': { r: 0, c: 1 },
+        'west': { r: 0, c: -1 },
+    };
+
+    const delta = dirs[dir];
+    const nr = playerRow + delta.r;
+    const nc = playerCol + delta.c;
+
+    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
+
+    selectedDirection = dir;
+    updateDirectionButtons();
+
+    // Present kanji challenge
+    currentKanji = gameKanji[Math.floor(Math.random() * gameKanji.length)];
+    kanjiPracticed.add(currentKanji.char);
+
+    // Generate ocean sentence
+    let sentence;
+    if (specialSentences[currentKanji.char]) {
+        sentence = specialSentences[currentKanji.char];
+    } else {
+        const template = oceanSentences[Math.floor(Math.random() * oceanSentences.length)];
+        sentence = template(currentKanji);
+    }
+
+    setOceanMessage('🌊', sentence);
+    showKanjiPanel(currentKanji);
+    clearCanvas();
+
+    // Trigger KanjiVG preload for this character
+    getKvgPaths(currentKanji.char);
+}
+
+// =========================================================================
+// MOVEMENT & ENCOUNTER
+// =========================================================================
+function movePlayer() {
+    if (!selectedDirection) return;
+
+    const dirs = {
+        'north': { r: -1, c: 0 },
+        'south': { r: 1, c: 0 },
+        'east': { r: 0, c: 1 },
+        'west': { r: 0, c: -1 },
+    };
+
+    const delta = dirs[selectedDirection];
+    const nr = playerRow + delta.r;
+    const nc = playerCol + delta.c;
+
+    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
+
+    playerRow = nr;
+    playerCol = nc;
+    visited[nr][nc] = true;
+    depth++;
+
+    // Process cell encounter
+    const cellType = grid[nr][nc];
+    processEncounter(cellType, nr, nc);
+
+    selectedDirection = null;
+    currentKanji = null;
+    hideKanjiPanel();
+    updateAllUI();
+}
+
+function processEncounter(cellType, r, c) {
+    const panel = document.querySelector('.ocean-panel');
+
+    if (TREASURE_TYPES.includes(cellType) && !collected[r][c]) {
+        // Treasure!
+        const pts = TREASURE_POINTS[cellType];
+        score += pts;
+        collected[r][c] = true;
+        treasuresFound.push(cellType);
+        playSfx('treasure');
+        panel.classList.add('treasure-flash');
+        setTimeout(() => panel.classList.remove('treasure-flash'), 800);
+
+        if (cellType === CELL_TYPES.GRAND_TREASURE) {
+            setOceanMessage('🏆', `GRAND TREASURE found! +${pts} points! A golden crown gleams in the darkness!`);
+        } else if (cellType === CELL_TYPES.MAJOR_TREASURE) {
+            setOceanMessage('💎', `Gem discovered! +${pts} points! It sparkles with bioluminescent light!`);
+        } else {
+            setOceanMessage('🪙', `Ancient coin found! +${pts} points!`);
+        }
+    } else if (cellType === CELL_TYPES.SHIELD) {
+        shields++;
+        collected[r][c] = true;
+        grid[r][c] = CELL_TYPES.EMPTY;
+        playSfx('powerup');
+        panel.classList.add('encounter-flash');
+        setTimeout(() => panel.classList.remove('encounter-flash'), 600);
+        setOceanMessage('🛡️', 'Shield acquired! It will protect you from one attack.');
+    } else if (cellType === CELL_TYPES.SONAR) {
+        sonarCharges++;
+        collected[r][c] = true;
+        grid[r][c] = CELL_TYPES.EMPTY;
+        playSfx('powerup');
+        panel.classList.add('encounter-flash');
+        setTimeout(() => panel.classList.remove('encounter-flash'), 600);
+        setOceanMessage('📡', 'Sonar device found! Use it to scan nearby cells.');
+    } else if (cellType === CELL_TYPES.DIVING_BELL) {
+        playSfx('powerup');
+        panel.classList.add('encounter-flash');
+        setTimeout(() => panel.classList.remove('encounter-flash'), 600);
+        setOceanMessage('🔔', 'Diving Bell found! You can surface here to bank your score!');
+    } else if (DANGER_TYPES.includes(cellType)) {
+        // DANGER!
+        handleDanger(cellType);
+    } else {
+        // Empty ocean
+        const emoji = EMPTY_OCEAN_EMOJI[Math.floor(Math.random() * EMPTY_OCEAN_EMOJI.length)];
+        const messages = [
+            'The water is calm here...',
+            'Nothing but open ocean...',
+            'Quiet depths surround you...',
+            'The sea floor stretches on...',
+            'Soft coral sways in the current...',
+            'Sand shifts beneath you...',
+            'Schools of tiny fish scatter...',
+        ];
+        setOceanMessage(emoji, messages[Math.floor(Math.random() * messages.length)]);
+    }
+}
+
+function handleDanger(cellType) {
+    const panel = document.querySelector('.ocean-panel');
+    panel.classList.add('danger-flash');
+    setTimeout(() => panel.classList.remove('danger-flash'), 600);
+
+    if (shields > 0) {
+        shields--;
+        playSfx('shield');
+        const name = cellType === CELL_TYPES.SHARK ? 'shark' :
+                     cellType === CELL_TYPES.JELLYFISH ? 'jellyfish' :
+                     cellType === CELL_TYPES.SEA_SERPENT ? 'sea serpent' :
+                     'whirlpool';
+        setOceanMessage('🛡️', `Your shield blocked the ${name}! Shield destroyed.`);
+        updateShields();
+        return;
+    }
+
+    lives--;
+    playSfx('danger');
+    updateLives();
+
+    // Pulse animation on hearts
+    const hearts = document.querySelectorAll('.stat-lives .heart');
+    hearts.forEach(h => {
+        h.classList.add('pulse');
+        setTimeout(() => h.classList.remove('pulse'), 500);
+    });
+
+    if (cellType === CELL_TYPES.SHARK) {
+        setOceanMessage('🦈', 'A shark attacks! You lose a life! (' + lives + ' remaining)');
+    } else if (cellType === CELL_TYPES.JELLYFISH) {
+        setOceanMessage('🪼', 'Jellyfish sting! You lose a life! (' + lives + ' remaining)');
+    } else if (cellType === CELL_TYPES.SEA_SERPENT) {
+        setOceanMessage('🐉', 'Sea serpent strikes! You lose a life! (' + lives + ' remaining)');
+    } else if (cellType === CELL_TYPES.WHIRLPOOL) {
+        setOceanMessage('🌀', 'Caught in a whirlpool! You lose a life! (' + lives + ' remaining)');
+    }
+
+    if (lives <= 0) {
+        gameActive = false;
+        setTimeout(() => showGameOver(), 1200);
+    }
+}
+
+// =========================================================================
+// DANGER MOVEMENT (on wrong answer)
+// =========================================================================
+function moveDangers() {
+    // Move sharks 1 step, sea serpents up to 2 steps
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            if (grid[r][c] === CELL_TYPES.SHARK) {
+                moveDanger(r, c, 1);
+            }
+        }
+    }
+    // Second pass for sea serpents (after sharks moved)
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            if (grid[r][c] === CELL_TYPES.SEA_SERPENT) {
+                moveDanger(r, c, 2);
+            }
+        }
+    }
+    updateMinimap();
+}
+
+function moveDanger(r, c, maxSteps) {
+    const type = grid[r][c];
+    let cr = r, cc = c;
+
+    for (let step = 0; step < maxSteps; step++) {
+        const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+        // Shuffle directions
+        for (let i = directions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [directions[i], directions[j]] = [directions[j], directions[i]];
+        }
+
+        let moved = false;
+        for (const [dr, dc] of directions) {
+            const nr = cr + dr;
+            const nc = cc + dc;
+            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === CELL_TYPES.EMPTY) {
+                grid[cr][cc] = CELL_TYPES.EMPTY;
+                grid[nr][nc] = type;
+                cr = nr;
+                cc = nc;
+                moved = true;
+                break;
+            }
+        }
+        if (!moved) break;
+    }
+}
+
+// =========================================================================
+// SURFACE / GAME END
+// =========================================================================
+function surfaceGame() {
+    if (!gameActive) return;
+    // Check if on diving bell
+    if (getCellOriginalType(playerRow, playerCol) === CELL_TYPES.DIVING_BELL ||
+        grid[playerRow][playerCol] === CELL_TYPES.DIVING_BELL) {
+        gameActive = false;
+        showVictory();
+    }
+}
+
+function showVictory() {
+    playSfx('victory');
+    const overlay = document.getElementById('resultOverlay');
+    document.getElementById('resultTitle').textContent = 'You Surfaced!';
+    document.getElementById('resultTitle').className = 'result-title victory';
+    document.getElementById('resultEmoji').textContent = '🏆🤿🌊';
+
+    const grandCount = treasuresFound.filter(t => t === CELL_TYPES.GRAND_TREASURE).length;
+    const majorCount = treasuresFound.filter(t => t === CELL_TYPES.MAJOR_TREASURE).length;
+    const minorCount = treasuresFound.filter(t => t === CELL_TYPES.MINOR_TREASURE).length;
+    const accuracy = kanjiAttempts > 0 ? Math.round((kanjiCorrect / kanjiAttempts) * 100) : 0;
+
+    document.getElementById('resultStats').innerHTML = `
+        <div><span class="stat-label">Final Score</span><span class="stat-value">${score}</span></div>
+        <div><span class="stat-label">🏆 Grand Treasures</span><span class="stat-value">${grandCount} / 1</span></div>
+        <div><span class="stat-label">💎 Gems</span><span class="stat-value">${majorCount} / 4</span></div>
+        <div><span class="stat-label">🪙 Coins</span><span class="stat-value">${minorCount} / 10</span></div>
+        <div><span class="stat-label">Depth Reached</span><span class="stat-value">${depth} moves</span></div>
+        <div><span class="stat-label">Kanji Practiced</span><span class="stat-value">${kanjiPracticed.size}</span></div>
+        <div><span class="stat-label">Writing Accuracy</span><span class="stat-value">${accuracy}%</span></div>
+    `;
+
+    overlay.classList.add('active');
+}
+
+function showGameOver() {
+    playSfx('gameover');
+    const overlay = document.getElementById('resultOverlay');
+    document.getElementById('resultTitle').textContent = 'Game Over';
+    document.getElementById('resultTitle').className = 'result-title gameover';
+    document.getElementById('resultEmoji').textContent = '🦈💀🌊';
+
+    const accuracy = kanjiAttempts > 0 ? Math.round((kanjiCorrect / kanjiAttempts) * 100) : 0;
+
+    document.getElementById('resultStats').innerHTML = `
+        <div><span class="stat-label">Final Score</span><span class="stat-value">${score}</span></div>
+        <div><span class="stat-label">Treasures Found</span><span class="stat-value">${treasuresFound.length}</span></div>
+        <div><span class="stat-label">Depth Reached</span><span class="stat-value">${depth} moves</span></div>
+        <div><span class="stat-label">Kanji Practiced</span><span class="stat-value">${kanjiPracticed.size}</span></div>
+        <div><span class="stat-label">Writing Accuracy</span><span class="stat-value">${accuracy}%</span></div>
+    `;
+
+    overlay.classList.add('active');
+}
+
+// =========================================================================
+// DRAWING CANVAS SYSTEM (from writing.html)
+// =========================================================================
+const drawCanvas = document.getElementById('drawCanvas');
+const drawCtx = drawCanvas.getContext('2d');
+let canvasRect = null;
+
+function initDrawCanvas() {
+    resizeCanvas();
+}
+
+function resizeCanvas() {
+    const container = document.getElementById('canvasContainer');
+    const rect = container.getBoundingClientRect();
+    const size = Math.floor(rect.width);
+    if (size <= 0) return;
+    drawCanvas.width = size;
+    drawCanvas.height = size;
+    drawCanvas.style.width = size + 'px';
+    drawCanvas.style.height = size + 'px';
+    canvasRect = drawCanvas.getBoundingClientRect();
+    redrawCanvas();
+}
+
+function redrawCanvas() {
+    const w = drawCanvas.width;
+    const h = drawCanvas.height;
+    if (w === 0) return;
+    drawCtx.clearRect(0, 0, w, h);
+
+    // Draw guide strokes
+    if (currentKanji) {
+        drawGuideOnMain();
+    }
+
+    // Redraw user strokes
+    userStrokes.forEach(stroke => {
+        drawStrokePath(stroke, '#00e5ff', 4);
+    });
+
+    // Draw current stroke
+    if (currentStroke && currentStroke.length > 0) {
+        drawStrokePath(currentStroke, '#00e5ff', 4);
+    }
+
+    updateStrokeCounter();
+}
+
+function drawGuideOnMain() {
+    if (!currentKanji) return;
+    const w = drawCanvas.width;
+    const pad = w * 0.08;
+    const area = w - pad * 2;
+
+    if (guideKvgMainCache[currentKanji.char]) {
+        const kvgStrokes = guideKvgMainCache[currentKanji.char];
+        drawCtx.save();
+        drawCtx.globalAlpha = 0.3;
+        drawCtx.strokeStyle = '#4dd0e1';
+        drawCtx.lineWidth = Math.max(4, w * 0.014);
+        drawCtx.lineCap = 'round';
+        drawCtx.lineJoin = 'round';
+        drawCtx.setLineDash([8, 5]);
+        kvgStrokes.forEach(stroke => {
+            if (stroke.length < 2) return;
+            drawCtx.beginPath();
+            drawCtx.moveTo(pad + stroke[0].x * area / 109, pad + stroke[0].y * area / 109);
+            for (let j = 1; j < stroke.length; j++) {
+                drawCtx.lineTo(pad + stroke[j].x * area / 109, pad + stroke[j].y * area / 109);
+            }
+            drawCtx.stroke();
+        });
+        drawCtx.setLineDash([]);
+        drawCtx.restore();
+
+        // Stroke order numbers
+        kvgStrokes.forEach((stroke, i) => {
+            if (stroke.length === 0) return;
+            const sx = pad + stroke[0].x * area / 109;
+            const sy = pad + stroke[0].y * area / 109;
+            const r = Math.max(12, w * 0.035);
+
+            drawCtx.fillStyle = 'rgba(0, 229, 255, 0.6)';
+            drawCtx.beginPath();
+            drawCtx.arc(sx, sy, r, 0, Math.PI * 2);
+            drawCtx.fill();
+            drawCtx.fillStyle = '#001a33';
+            drawCtx.font = 'bold ' + Math.max(10, w * 0.03) + 'px Nunito, sans-serif';
+            drawCtx.textAlign = 'center';
+            drawCtx.textBaseline = 'middle';
+            drawCtx.fillText('' + (i + 1), sx, sy);
+        });
+    } else {
+        // Trigger async fetch and redraw when ready
+        getKvgPaths(currentKanji.char).then(kvgStrokes => {
+            if (kvgStrokes && kvgStrokes.length > 0) {
+                guideKvgMainCache[currentKanji.char] = kvgStrokes;
+                if (currentKanji && getCurrentKanjiChar() === currentKanji.char) {
+                    redrawCanvas();
+                }
+            }
+        });
+    }
+}
+
+function getCurrentKanjiChar() {
+    return currentKanji ? currentKanji.char : '';
+}
+
+function drawStrokePath(points, color, width) {
+    if (points.length < 2) return;
+    drawCtx.strokeStyle = color;
+    drawCtx.lineWidth = width;
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+    drawCtx.setLineDash([]);
+    drawCtx.beginPath();
+    drawCtx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        drawCtx.lineTo(points[i].x, points[i].y);
+    }
+    drawCtx.stroke();
+}
+
+function updateStrokeCounter() {
+    const count = userStrokes.length + (currentStroke ? 1 : 0);
+    const expected = currentKanji ? currentKanji.strokes : '?';
+    document.getElementById('strokeCounter').textContent = 'Strokes: ' + count + ' / ' + expected;
+}
+
+// =========================================================================
+// TOUCH / MOUSE INPUT
+// =========================================================================
+function getPos(e) {
+    canvasRect = drawCanvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    const scaleX = drawCanvas.width / canvasRect.width;
+    const scaleY = drawCanvas.height / canvasRect.height;
+    return {
+        x: (clientX - canvasRect.left) * scaleX,
+        y: (clientY - canvasRect.top) * scaleY
+    };
+}
+
+function startStroke(e) {
+    if (showingAnimation || !currentKanji) return;
+    e.preventDefault();
+    isDrawing = true;
+    const pos = getPos(e);
+    currentStroke = [pos];
+}
+
+function moveStroke(e) {
+    if (!isDrawing || !currentStroke || showingAnimation) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    currentStroke.push(pos);
+    redrawCanvas();
+}
+
+function endStroke(e) {
+    if (!isDrawing || !currentStroke || showingAnimation) return;
+    e.preventDefault();
+    isDrawing = false;
+    if (currentStroke.length > 2) {
+        userStrokes.push(currentStroke);
+    }
+    currentStroke = null;
+    redrawCanvas();
+}
+
+drawCanvas.addEventListener('touchstart', startStroke, { passive: false });
+drawCanvas.addEventListener('touchmove', moveStroke, { passive: false });
+drawCanvas.addEventListener('touchend', endStroke, { passive: false });
+drawCanvas.addEventListener('touchcancel', endStroke, { passive: false });
+drawCanvas.addEventListener('mousedown', startStroke);
+drawCanvas.addEventListener('mousemove', moveStroke);
+drawCanvas.addEventListener('mouseup', endStroke);
+drawCanvas.addEventListener('mouseleave', endStroke);
+
+document.getElementById('canvasContainer').addEventListener('touchmove', function(e) {
+    e.preventDefault();
+}, { passive: false });
+
+// =========================================================================
+// CANVAS ACTIONS
+// =========================================================================
+function clearCanvas() {
+    userStrokes = [];
+    currentStroke = null;
+    isDrawing = false;
+    showingAnimation = false;
+    guidePixelCache = { char: null, mask: null, w: 0 };
+    redrawCanvas();
+    hideFeedback();
+}
+
+// =========================================================================
+// PIXEL PROXIMITY CHECK (from writing.html)
+// =========================================================================
+function getGuidePixelMask(canvasW) {
+    if (!currentKanji) return null;
+    if (guidePixelCache.char === currentKanji.char && guidePixelCache.w === canvasW) {
+        return guidePixelCache.mask;
+    }
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = canvasW;
+    offscreen.height = canvasW;
+    const ctx = offscreen.getContext('2d');
+    const pad = canvasW * 0.08;
+    const area = canvasW - pad * 2;
+
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold ' + Math.floor(area * 0.88) + 'px "Noto Sans JP", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(currentKanji.char, canvasW / 2, canvasW / 2 + area * 0.03);
+
+    const imageData = ctx.getImageData(0, 0, canvasW, canvasW);
+    const mask = imageData.data;
+    guidePixelCache = { char: currentKanji.char, mask, w: canvasW };
+    return mask;
+}
+
+function isNearCharacter(x, y, mask, w, tolerance) {
+    const ix = Math.round(x);
+    const iy = Math.round(y);
+    for (let dy = -tolerance; dy <= tolerance; dy++) {
+        for (let dx = -tolerance; dx <= tolerance; dx++) {
+            const px = ix + dx;
+            const py = iy + dy;
+            if (px >= 0 && px < w && py >= 0 && py < w) {
+                const idx = (py * w + px) * 4;
+                if (mask[idx + 3] > 30) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function fontProximityScore(canvasW) {
+    const mask = getGuidePixelMask(canvasW);
+    if (!mask) return 0;
+
+    // Adaptive tolerance: thin/simple characters (1-2 strokes) get more room,
+    // complex characters use standard tolerance
+    const strokeCount = currentKanji ? currentKanji.strokes : 3;
+    let tolPct = 0.07; // 7% base
+    if (strokeCount <= 2) tolPct = 0.10; // 10% for simple chars like 一 二 八
+    else if (strokeCount <= 4) tolPct = 0.08; // 8% for moderate
+    const tolerance = Math.max(14, Math.floor(canvasW * tolPct));
+
+    let onChar = 0;
+    let totalSampled = 0;
+
+    userStrokes.forEach(stroke => {
+        const step = Math.max(1, Math.floor(stroke.length / 35));
+        for (let i = 0; i < stroke.length; i += step) {
+            totalSampled++;
+            if (isNearCharacter(stroke[i].x, stroke[i].y, mask, canvasW, tolerance)) {
+                onChar++;
+            }
+        }
+    });
+
+    if (totalSampled === 0) return 0;
+    return onChar / totalSampled;
+}
+
+// =========================================================================
+// CHECK DRAWING
+// =========================================================================
+function checkDrawing() {
+    if (!currentKanji || !gameActive) return;
+
+    const expectedCount = currentKanji.strokes;
+    const userCount = userStrokes.length;
+    const w = drawCanvas.width;
+
+    kanjiAttempts++;
+
+    if (userCount === 0) {
+        showFeedback('Draw the character first!', 'tryagain');
+        playSfx('wrong');
+        return;
+    }
+
+    // Check stroke count
+    if (userCount !== expectedCount) {
+        if (userCount < expectedCount) {
+            showFeedback('Need ' + expectedCount + ' strokes - you drew ' + userCount + '!', 'wrong');
+        } else {
+            showFeedback('Too many strokes! ' + currentKanji.char + ' has ' + expectedCount + '.', 'wrong');
+        }
+        playSfx('wrong');
+        handleWrongAnswer();
+        return;
+    }
+
+    // Check pixel proximity
+    const pixelScore = fontProximityScore(w);
+
+    if (pixelScore >= 0.45) {
+        // CORRECT!
+        kanjiCorrect++;
+        score += 10;
+        showFeedback('Correct! (' + Math.round(pixelScore * 100) + '%) +10 pts', 'great');
+        playSfx('correct');
+        spawnStars();
+
+        // Move player
+        setTimeout(() => {
+            movePlayer();
+        }, 600);
+    } else if (pixelScore >= 0.3) {
+        showFeedback('Almost! ' + Math.round(pixelScore * 100) + '% - trace closer!', 'tryagain');
+        playSfx('wrong');
+        handleWrongAnswer();
+    } else {
+        showFeedback('Try tracing over the guide! (' + Math.round(pixelScore * 100) + '%)', 'wrong');
+        playSfx('wrong');
+        handleWrongAnswer();
+    }
+}
+
+function handleWrongAnswer() {
+    // Move dangers on wrong answer
+    moveDangers();
+    playSfx('sharkMove');
+    setOceanMessage('⚠️', 'Wrong! Dangers are moving closer... Try again!');
+}
+
+function showFeedback(msg, type) {
+    const el = document.getElementById('feedbackMsg');
+    el.textContent = msg;
+    el.className = 'feedback-msg ' + type;
+    void el.offsetWidth;
+    el.classList.add('show');
+}
+
+function hideFeedback() {
+    const el = document.getElementById('feedbackMsg');
+    el.classList.remove('show');
+}
+
+// =========================================================================
+// STAR PARTICLES
+// =========================================================================
+function spawnStars() {
+    const container = document.getElementById('canvasContainer');
+    const symbols = ['\u2b50', '\u2728', '\ud83c\udf1f', '\ud83e\udeb8'];
+    for (let i = 0; i < 8; i++) {
+        const star = document.createElement('div');
+        star.className = 'star-particle';
+        star.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        star.style.left = (20 + Math.random() * 60) + '%';
+        star.style.top = (20 + Math.random() * 60) + '%';
+        star.style.animationDelay = (Math.random() * 0.3) + 's';
+        container.appendChild(star);
+        setTimeout(() => star.remove(), 1500);
+    }
+}
+
+// =========================================================================
+// SVG PATH PARSER (from writing.html)
+// =========================================================================
+function parseSvgPath(d, steps) {
+    const pts = [];
+    const tokens = d.match(/[a-zA-Z]|[-+]?[0-9]*\.?[0-9]+/g) || [];
+    let i = 0, cx = 0, cy = 0, lastCx2 = 0, lastCy2 = 0, lastCmd = '';
+
+    function num() { return parseFloat(tokens[i++]); }
+
+    function cubicBezier(x0,y0,x1,y1,x2,y2,x3,y3,n) {
+        for (let s = 1; s <= n; s++) {
+            const t = s / n, u = 1 - t;
+            pts.push({
+                x: u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
+                y: u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3
+            });
+        }
+    }
+
+    while (i < tokens.length) {
+        const cmd = /[a-zA-Z]/.test(tokens[i]) ? tokens[i++] : lastCmd;
+        lastCmd = cmd;
+
+        if (cmd === 'M') {
+            cx = num(); cy = num();
+            pts.push({x: cx, y: cy});
+        } else if (cmd === 'm') {
+            cx += num(); cy += num();
+            pts.push({x: cx, y: cy});
+        } else if (cmd === 'L') {
+            const x = num(), y = num();
+            cubicBezier(cx,cy, cx,cy, x,y, x,y, steps);
+            cx = x; cy = y;
+        } else if (cmd === 'l') {
+            const x = cx+num(), y = cy+num();
+            cubicBezier(cx,cy, cx,cy, x,y, x,y, steps);
+            cx = x; cy = y;
+        } else if (cmd === 'C') {
+            const x1=num(),y1=num(),x2=num(),y2=num(),x3=num(),y3=num();
+            cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+            lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+        } else if (cmd === 'c') {
+            const x1=cx+num(),y1=cy+num(),x2=cx+num(),y2=cy+num(),x3=cx+num(),y3=cy+num();
+            cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+            lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+        } else if (cmd === 'S') {
+            const x1=2*cx-lastCx2, y1=2*cy-lastCy2;
+            const x2=num(),y2=num(),x3=num(),y3=num();
+            cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+            lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+        } else if (cmd === 's') {
+            const x1=2*cx-lastCx2, y1=2*cy-lastCy2;
+            const x2=cx+num(),y2=cy+num(),x3=cx+num(),y3=cy+num();
+            cubicBezier(cx,cy,x1,y1,x2,y2,x3,y3,steps);
+            lastCx2=x2; lastCy2=y2; cx=x3; cy=y3;
+        } else if (cmd === 'Z' || cmd === 'z') {
+            // close path
+        } else {
+            i++;
+        }
+    }
+    return pts;
+}
+
+// =========================================================================
+// KANJIVG FETCH (from writing.html)
+// =========================================================================
+async function getKvgPaths(char) {
+    if (kvgCache[char]) return kvgCache[char];
+
+    const code = char.codePointAt(0).toString(16).padStart(5, '0');
+    const url = 'https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/' + code + '.svg';
+
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const svgText = await resp.text();
+
+        const pathRegex = /<path[^>]*\sd="([^"]+)"/g;
+        const strokes = [];
+        let match;
+        while ((match = pathRegex.exec(svgText)) !== null) {
+            const d = match[1];
+            const points = parseSvgPath(d, 8);
+            if (points.length > 0) strokes.push(points);
+        }
+
+        kvgCache[char] = strokes;
+        return strokes;
+    } catch(e) {
+        console.log('KanjiVG fetch failed for ' + char + ':', e);
+        return null;
+    }
+}
+
+function scaleKvgToCanvas(strokes, canvasW) {
+    const pad = canvasW * 0.08;
+    const area = canvasW - pad * 2;
+    const scale = area / 109;
+    const offset = pad;
+
+    return strokes.map(stroke =>
+        stroke.map(pt => ({
+            x: offset + pt.x * scale,
+            y: offset + pt.y * scale
+        }))
+    );
+}
+
+// =========================================================================
+// SHOW ME ANIMATION (from writing.html)
+// =========================================================================
+function showMe() {
+    if (showingAnimation || !currentKanji) return;
+    showingAnimation = true;
+    userStrokes = [];
+    currentStroke = null;
+
+    const w = drawCanvas.width;
+    const lineW = Math.max(3, w * 0.012);
+
+    redrawCanvas();
+
+    getKvgPaths(currentKanji.char).then(kvgStrokes => {
+        if (!kvgStrokes || kvgStrokes.length === 0) {
+            drawCtx.save();
+            drawCtx.globalAlpha = 0.6;
+            drawCtx.fillStyle = '#00e5ff';
+            const pad = w * 0.08, area = w - pad*2;
+            drawCtx.font = 'bold ' + Math.floor(area*0.88) + 'px "Noto Sans JP", sans-serif';
+            drawCtx.textAlign = 'center';
+            drawCtx.textBaseline = 'middle';
+            drawCtx.fillText(currentKanji.char, w/2, w/2 + area*0.03);
+            drawCtx.restore();
+            showingAnimation = false;
+            return;
+        }
+
+        const scaledStrokes = scaleKvgToCanvas(kvgStrokes, w);
+        let strokeIdx = 0;
+
+        function animateNextStroke() {
+            if (strokeIdx >= scaledStrokes.length) {
+                showingAnimation = false;
+                return;
+            }
+
+            const animPts = scaledStrokes[strokeIdx];
+            let ptIdx = 0;
+            const drawnPts = [];
+
+            function drawNext() {
+                if (ptIdx >= animPts.length) {
+                    userStrokes.push(drawnPts.slice());
+                    strokeIdx++;
+                    setTimeout(animateNextStroke, 350);
+                    return;
+                }
+
+                drawnPts.push(animPts[ptIdx]);
+                ptIdx++;
+
+                drawCtx.clearRect(0, 0, w, w);
+                drawGuideOnMain();
+
+                userStrokes.forEach(s => {
+                    if (s.length >= 2) drawStrokePath(s, '#00e5ff', lineW);
+                });
+
+                if (drawnPts.length >= 2) {
+                    drawStrokePath(drawnPts, '#00e5ff', lineW);
+                }
+
+                if (drawnPts.length > 0) {
+                    const tip = drawnPts[drawnPts.length - 1];
+                    drawCtx.fillStyle = '#00e5ff';
+                    drawCtx.beginPath();
+                    drawCtx.arc(tip.x, tip.y, lineW + 2, 0, Math.PI * 2);
+                    drawCtx.fill();
+                }
+
+                updateStrokeCounter();
+                requestAnimationFrame(drawNext);
+            }
+
+            drawNext();
+        }
+
+        animateNextStroke();
+    });
+}
+
+// =========================================================================
+// SOUND EFFECTS (Web Audio API)
+// =========================================================================
+let audioCtx = null;
+function getAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+function playSfx(type) {
+    try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+
+        if (type === 'correct') {
+            // Happy ascending chime
+            [523, 659, 784].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, now + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.12);
+                osc.stop(now + i * 0.12 + 0.4);
+            });
+        } else if (type === 'wrong') {
+            // Low buzz
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 180;
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'treasure') {
+            // Special fanfare - ascending bright notes
+            [523, 659, 784, 1047].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.18, now + i * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.5);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.1);
+                osc.stop(now + i * 0.1 + 0.55);
+            });
+        } else if (type === 'danger') {
+            // Low ominous tone
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = 90;
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.65);
+            // Second lower tone
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sawtooth';
+            osc2.frequency.value = 60;
+            gain2.gain.setValueAtTime(0.1, now + 0.1);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+            osc2.connect(gain2).connect(ctx.destination);
+            osc2.start(now + 0.1);
+            osc2.stop(now + 0.75);
+        } else if (type === 'sharkMove') {
+            // Quick low note
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = 120;
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        } else if (type === 'powerup') {
+            // Bright ascending
+            [660, 880].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.12, now + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.08);
+                osc.stop(now + i * 0.08 + 0.35);
+            });
+        } else if (type === 'shield') {
+            // Metallic clang
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = 440;
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.45);
+        } else if (type === 'sonar') {
+            // Sonar ping
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.55);
+        } else if (type === 'gameover') {
+            // Descending notes
+            [440, 349, 294, 220].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, now + i * 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.5);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.2);
+                osc.stop(now + i * 0.2 + 0.55);
+            });
+        } else if (type === 'victory') {
+            // Big fanfare
+            [523, 659, 784, 1047, 1319].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.18, now + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.6);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.12);
+                osc.stop(now + i * 0.12 + 0.65);
+            });
+            // Harmony chord
+            [523, 659, 784].forEach(freq => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, now + 0.6);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + 0.6);
+                osc.stop(now + 1.6);
+            });
+        }
+    } catch(e) {
+        // Audio not available
+    }
+}
+
+// =========================================================================
+// BUBBLES BACKGROUND
+// =========================================================================
+function createBubbles() {
+    const container = document.getElementById('bubblesContainer');
+    for (let i = 0; i < 20; i++) {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        const size = 10 + Math.random() * 40;
+        bubble.style.width = size + 'px';
+        bubble.style.height = size + 'px';
+        bubble.style.left = Math.random() * 100 + '%';
+        bubble.style.animationDuration = (8 + Math.random() * 15) + 's';
+        bubble.style.animationDelay = Math.random() * 10 + 's';
+        container.appendChild(bubble);
+    }
+}
+
+// =========================================================================
+// KEYBOARD SHORTCUTS
+// =========================================================================
+document.addEventListener('keydown', function(e) {
+    if (!gameActive) return;
+
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!currentKanji) selectDirection('north');
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!currentKanji) selectDirection('south');
+    } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (!currentKanji) selectDirection('west');
+    } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (!currentKanji) selectDirection('east');
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (currentKanji) checkDrawing();
+    } else if (e.key === 'Escape' || e.key === 'Delete') {
+        e.preventDefault();
+        if (currentKanji) clearCanvas();
+    } else if (e.key === 'm' || e.key === 'M') {
+        const overlay = document.getElementById('mapOverlay');
+        if (overlay.classList.contains('active')) {
+            closeMap();
+        } else {
+            openMap();
+        }
+    }
+});
+
+// =========================================================================
+// INIT
+// =========================================================================
+let fontLoaded = false;
+
+function preloadKvg() {
+    // Preload KanjiVG for first 20 kanji
+    let i = 0;
+    function fetchBatch() {
+        const batch = gameKanji.slice(i, i + 4).map(k => k.char);
+        if (batch.length === 0) return;
+        i += 4;
+        Promise.all(batch.map(c => getKvgPaths(c).catch(() => null)))
+            .then(() => setTimeout(fetchBatch, 100));
+    }
+    fetchBatch();
+}
+
+function waitForFont() {
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+            fontLoaded = true;
+            if (drawCanvas.width > 0) redrawCanvas();
+        });
+    }
+    if (document.fonts && document.fonts.load) {
+        document.fonts.load('bold 100px "Noto Sans JP"', '\u3042').then(() => {
+            fontLoaded = true;
+            if (drawCanvas.width > 0) redrawCanvas();
+        }).catch(() => {});
+    }
+    setTimeout(() => {
+        if (!fontLoaded) {
+            fontLoaded = true;
+            if (drawCanvas.width > 0) redrawCanvas();
+        }
+    }, 2000);
+}
+
+// Initialization is handled at the bottom of the script
+
+// Patch startGame/restartGame to save originalGrid
+const _startGame = startGame;
+startGame = function() {
+    _startGame();
+    // Deep copy grid to originalGrid
+    originalGrid = grid.map(row => row.slice());
+};
+
+const _restartGame = restartGame;
+restartGame = function() {
+    _restartGame();
+    originalGrid = grid.map(row => row.slice());
+};
+
+// Also fix surface button to properly detect diving bell
+const _updateSurfaceButton = updateSurfaceButton;
+updateSurfaceButton = function() {
+    const btn = document.getElementById('btnSurface');
+    const origType = originalGrid[playerRow] ? originalGrid[playerRow][playerCol] : null;
+    if (origType === CELL_TYPES.DIVING_BELL || grid[playerRow][playerCol] === CELL_TYPES.DIVING_BELL) {
+        btn.classList.add('visible');
+    } else {
+        btn.classList.remove('visible');
+    }
+};
+
+window.addEventListener('resize', () => {
+    if (drawCanvas.width > 0) {
+        resizeCanvas();
+    }
+});
+
+// Ensure audio context is created on first user interaction
+document.addEventListener('touchstart', function initAudio() {
+    getAudioCtx();
+    document.removeEventListener('touchstart', initAudio);
+}, { once: true });
+
+document.addEventListener('click', function initAudio() {
+    getAudioCtx();
+    document.removeEventListener('click', initAudio);
+}, { once: true });
+
+// Initialize
+createBubbles();
+preloadKvg();
+waitForFont();
+
+// Auto-resize canvas when it becomes visible
+setTimeout(() => {
+    resizeCanvas();
+}, 100);
+</script>
+</body>
+</html>
