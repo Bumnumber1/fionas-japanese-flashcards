@@ -1128,9 +1128,9 @@
                 <div class="rule-item">🗺️ Explore a 16x16 underwater grid searching for treasure!</div>
                 <div class="rule-item">✍️ <strong>Write kanji</strong> to move through the ocean depths.</div>
                 <div class="rule-item">🏆 Find the <strong>Grand Treasure</strong> (2000 pts), 💎 Gems (200 pts), and 🪙 Coins (50 pts).</div>
-                <div class="rule-item">🦈 Beware of <strong>sharks</strong>, 🪼 jellyfish, 🐉 sea serpents, and 🌀 whirlpools!</div>
+                <div class="rule-item">🦈 Beware of <strong>sharks</strong>, 🎐 jellyfish, 🐉 sea serpents, and 🌀 whirlpools!</div>
                 <div class="rule-item">🛡️ Collect <strong>shields</strong> to survive danger. 📡 Use <strong>sonar</strong> to reveal nearby cells.</div>
-                <div class="rule-item">❤️ You have <strong>3 lives</strong>. Wrong answers make dangers move closer!</div>
+                <div class="rule-item">❤️ You have <strong>3 health</strong>. Wrong answers make dangers move closer!</div>
                 <div class="rule-item">🔔 Find the <strong>diving bell</strong> to surface and bank your score!</div>
             </div>
             <button class="intro-btn" onclick="startGame()">Dive In! 🌊</button>
@@ -1284,7 +1284,7 @@ const gameKanji = [
     { char: '雨', romaji: 'ame', english: 'rain', emoji: '🌧️', strokes: 8 },
     { char: '空', romaji: 'sora', english: 'sky', emoji: '🌤️', strokes: 8 },
     { char: '天', romaji: 'ten', english: 'heaven', emoji: '⛅', strokes: 4 },
-    { char: '石', romaji: 'ishi', english: 'stone', emoji: '🪨', strokes: 5 },
+    { char: '石', romaji: 'ishi', english: 'stone', emoji: '🗿', strokes: 5 },
     { char: '田', romaji: 'ta', english: 'rice field', emoji: '🌾', strokes: 5 },
     { char: '人', romaji: 'hito', english: 'person', emoji: '🧑', strokes: 2 },
     { char: '子', romaji: 'ko', english: 'child', emoji: '👶', strokes: 3 },
@@ -1452,7 +1452,7 @@ const CELL_DISPLAY = {
     [CELL_TYPES.MINOR_TREASURE]: '🪙',
     [CELL_TYPES.DIVING_BELL]: '🔔',
     [CELL_TYPES.SHARK]: '🦈',
-    [CELL_TYPES.JELLYFISH]: '🪼',
+    [CELL_TYPES.JELLYFISH]: '🎐',
     [CELL_TYPES.SEA_SERPENT]: '🐉',
     [CELL_TYPES.WHIRLPOOL]: '🌀',
     [CELL_TYPES.SHIELD]: '🛡️',
@@ -1465,19 +1465,19 @@ const TREASURE_POINTS = {
     [CELL_TYPES.MINOR_TREASURE]: 50,
 };
 
-const EMPTY_OCEAN_EMOJI = ['🐚','🌊','🐠','🐡','🦀','🦑','🐙','🪸','🦐','🐳','🦞','🫧'];
+const EMPTY_OCEAN_EMOJI = ['🐚','🌊','🐠','🐡','🦀','🦑','🐙','🌿','🦐','🐳','🦞','💧'];
 
 // =========================================================================
 // RICH ENCOUNTER SCENE DATA
 // =========================================================================
 const emptyEncounters = [
     {
-        emoji: '🐠🐟🐠\n🌊🌊🌊\n🪸🪸🪸',
+        emoji: '🐠🐟🐠\n🌊🌊🌊\n🌿🌿🌿',
         title: 'Coral Reef',
         text: 'You glide over a vibrant coral reef teeming with tropical fish. Their scales shimmer in the filtered light.',
     },
     {
-        emoji: '🚢\n💀⚓💀\n🪸🦀🪸',
+        emoji: '🚢\n💀⚓💀\n🌿🦀🌿',
         title: 'Sunken Shipwreck',
         text: 'The ghostly hull of an ancient ship looms from the darkness. Barnacles cover every surface. Could there be treasure inside?',
     },
@@ -1507,7 +1507,7 @@ const emptyEncounters = [
         text: 'The ocean floor drops away into a bottomless trench. Something enormous moves in the darkness far below...',
     },
     {
-        emoji: '⭐⭐⭐\n🌊💎🌊\n🪸🪸🪸',
+        emoji: '⭐⭐⭐\n🌊💎🌊\n🌿🌿🌿',
         title: 'Bioluminescent Garden',
         text: 'Thousands of tiny creatures light up like stars, creating an underwater galaxy. The water itself seems to glow.',
     },
@@ -1517,7 +1517,7 @@ const emptyEncounters = [
         text: 'A gentle sea turtle glides past, ancient and wise. It seems to nod at you as if sharing a secret of the deep.',
     },
     {
-        emoji: '⚓⛓️\n🪸🦞🪸\n🌊🌊🌊',
+        emoji: '⚓⛓️\n🌿🦞🌿\n🌊🌊🌊',
         title: 'Lost Anchor',
         text: 'A massive rusted anchor, chains trailing into the gloom. What great ship did this once hold? The metal is covered in sea life.',
     },
@@ -1527,12 +1527,12 @@ const emptyEncounters = [
         text: 'Carved stone faces stare from the seafloor \u2014 ancient guardians of a forgotten kingdom. Their eyes seem to follow you.',
     },
     {
-        emoji: '🪼🪼🪼\n✨✨✨\n🌊🌊🌊',
+        emoji: '🎐🎐🎐\n✨✨✨\n🌊🌊🌊',
         title: 'Jellyfish Ballet',
         text: 'Hundreds of translucent jellyfish pulse gracefully through the water, trailing glowing tendrils like living chandeliers.',
     },
     {
-        emoji: '📦📦\n⚓🗺️⚓\n🪸🪸🪸',
+        emoji: '📦📦\n⚓🗺️⚓\n🌿🌿🌿',
         title: 'Cargo Wreck',
         text: 'Scattered cargo boxes from a merchant ship lie half-buried in sand. Most are rotted away, but some look sealed tight...',
     },
@@ -1542,12 +1542,12 @@ const emptyEncounters = [
         text: 'A reef shark patrols lazily overhead, not interested in you today. Schools of fish part around it like a living curtain.',
     },
     {
-        emoji: '🫧🫧🫧\n🌋🌋\n🦀🦐🦀',
+        emoji: '💧💧💧\n🌋🌋\n🦀🦐🦀',
         title: 'Hydrothermal Vent',
         text: 'Mineral-rich water spews from cracks in the earth. Blind white shrimp and strange worms cluster around the warmth.',
     },
     {
-        emoji: '🐙\n🏺🏺🏺\n🪸🪸🪸',
+        emoji: '🐙\n🏺🏺🏺\n🌿🌿🌿',
         title: 'Octopus Garden',
         text: 'A clever octopus has decorated its den with shells, pottery, and colorful stones. It watches you with one curious eye.',
     },
@@ -1557,7 +1557,7 @@ const emptyEncounters = [
         text: 'A perfectly preserved sailing ship rests upright on the seafloor, sails still raised. Not a soul aboard. An eerie stillness surrounds it.',
     },
     {
-        emoji: '🏰\n🧜\u200d♀️🧜\u200d♂️\n🪸🐚🪸',
+        emoji: '🏰\n🧜\u200d♀️🧜\u200d♂️\n🌿🐚🌿',
         title: 'Mermaid Ruins',
         text: 'Graceful arches and towers of carved coral \u2014 could this be a palace of the merfolk? Faint music seems to echo from within.',
     },
@@ -1567,7 +1567,7 @@ const emptyEncounters = [
         text: 'Towering kelp sways in the current like an underwater forest. Shafts of green light filter through the canopy above.',
     },
     {
-        emoji: '💀⚔️\n🗡️🛡️🗡️\n🪸🪸🪸',
+        emoji: '💀⚔️\n🗡️🛡️🗡️\n🌿🌿🌿',
         title: 'Pirate\'s Last Stand',
         text: 'Ancient weapons and armor scattered on the seafloor \u2014 evidence of a great battle fought here long ago. What were they fighting over?',
     },
@@ -1577,7 +1577,7 @@ const emptyEncounters = [
         text: 'A magnificent archway carved with symbols and crowned with a golden trident. Beyond it, the water shimmers with ancient power.',
     },
     {
-        emoji: '🐡🐡\n🪸🌺🪸\n🦀🐚🦀',
+        emoji: '🐡🐡\n🌿🌺🌿\n🦀🐚🦀',
         title: 'Pufferfish Cove',
         text: 'Chubby pufferfish bob around a garden of sea anemones. One puffs up in surprise at your arrival \u2014 adorable!',
     },
@@ -1602,7 +1602,7 @@ const emptyEncounters = [
         text: 'You drift into the shallow waters of a hidden lagoon. Sunlight dances on the sandy bottom and pink flamingos wade above.',
     },
     {
-        emoji: '🧲🧲\n🪨🪨🪨\n⚡⚡⚡',
+        emoji: '🧲🧲\n🗿🗿🗿\n⚡⚡⚡',
         title: 'Magnetic Rocks',
         text: 'Strange black stones hum with magnetic energy. Your compass spins wildly. Ancient sailors warned of these cursed rocks.',
     },
@@ -1612,7 +1612,7 @@ const emptyEncounters = [
         text: 'The water is ink-dark here, but bioluminescent fish create a constellation of tiny lights all around you.',
     },
     {
-        emoji: '🏺🏺🏺\n🍶🍷🍶\n🪸🪸🪸',
+        emoji: '🏺🏺🏺\n🍶🍷🍶\n🌿🌿🌿',
         title: 'Amphora Field',
         text: 'Dozens of ancient clay jars litter the seafloor \u2014 cargo from a Roman trading vessel. Some still hold traces of wine and oil.',
     },
@@ -1625,7 +1625,7 @@ const emptyEncounters = [
 
 const treasureScenes = {
     minor: {
-        emoji: '✨🪙✨\n🏺🏺🏺\n🪸🪸🪸',
+        emoji: '✨🪙✨\n🏺🏺🏺\n🌿🌿🌿',
         title: 'Treasure Cache!',
         text: 'Glinting coins spill from a cracked clay pot! Ancient gold pieces from a long-lost trading ship. <span class="highlight">+50 points!</span>'
     },
@@ -1648,7 +1648,7 @@ const dangerScenes = {
         text: 'Three great white sharks circle you, their dead eyes fixed on your movements. There\'s nowhere to hide!'
     },
     jellyfish: {
-        emoji: '🪼🪼🪼\n⚡🌊⚡\n🪼🪼🪼',
+        emoji: '🎐🎐🎐\n⚡🌊⚡\n🎐🎐🎐',
         title: '\u26a0\ufe0f JELLYFISH SWARM!',
         text: 'A massive bloom of jellyfish surrounds you! Their glowing tendrils trail venom through the water. The sting is electric!'
     },
@@ -1671,7 +1671,7 @@ const dangerShieldedScenes = {
         text: 'Sharks lunged at you, but your magical shield flared with light and drove them back! <span class="highlight">Shield destroyed.</span>'
     },
     jellyfish: {
-        emoji: '🛡️✨🛡️\n🪼🌊🪼\n🌊🌊🌊',
+        emoji: '🛡️✨🛡️\n🎐🌊🎐\n🌊🌊🌊',
         title: 'Shield Blocked!',
         text: 'Jellyfish tendrils wrapped around you, but your shield absorbed the venom in a flash of blue light! <span class="highlight">Shield destroyed.</span>'
     },
@@ -1689,7 +1689,7 @@ const dangerShieldedScenes = {
 
 const powerupScenes = {
     shield: {
-        emoji: '✨🛡️✨\n🏛️⚔️🏛️\n🪸🪸🪸',
+        emoji: '✨🛡️✨\n🏛️⚔️🏛️\n🌿🌿🌿',
         title: 'Ancient Shield!',
         text: 'A glowing magical shield floats among the ruins of a warrior\'s tomb. It pulses with protective energy! <span class="highlight">Shield acquired!</span>'
     },
@@ -1701,7 +1701,7 @@ const powerupScenes = {
 };
 
 const bellScene = {
-    emoji: '🔔✨🔔\n⛓️🔔⛓️\n🫧🫧🫧',
+    emoji: '🔔✨🔔\n⛓️🔔⛓️\n💧💧💧',
     title: 'The Diving Bell!',
     text: 'A golden diving bell hangs suspended by ancient chains, swaying gently in the current. This is your way back to the surface! <span class="highlight">Board it when you\'re ready to claim your treasure.</span>'
 };
@@ -2224,6 +2224,36 @@ function movePlayer() {
     updateAllUI();
 }
 
+// Detect nearby dangers and return a warning string
+function getNearbyDangerWarning() {
+    const dirNames = {
+        '-1,0': 'to the north', '1,0': 'to the south',
+        '0,-1': 'to the west', '0,1': 'to the east',
+        '-1,-1': 'to the northwest', '-1,1': 'to the northeast',
+        '1,-1': 'to the southwest', '1,1': 'to the southeast'
+    };
+    const dangerNames = {
+        [CELL_TYPES.SHARK]: '🦈 sharks', [CELL_TYPES.JELLYFISH]: '🎐 jellyfish',
+        [CELL_TYPES.SEA_SERPENT]: '🐉 a sea serpent', [CELL_TYPES.WHIRLPOOL]: '🌀 a whirlpool'
+    };
+    const warnings = [];
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            const nr = playerRow + dr, nc = playerCol + dc;
+            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                const ct = grid[nr][nc];
+                if (DANGER_TYPES.includes(ct)) {
+                    const name = dangerNames[ct] || 'danger';
+                    const dir = dirNames[dr+','+dc] || 'nearby';
+                    warnings.push(`You sense ${name} ${dir}!`);
+                }
+            }
+        }
+    }
+    return warnings.length > 0 ? '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>' : '';
+}
+
 function processEncounter(cellType, r, c) {
     const panel = document.querySelector('.ocean-panel');
 
@@ -2269,15 +2299,22 @@ function processEncounter(cellType, r, c) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        showScene(bellScene, 'powerup-glow');
+        const warning = getNearbyDangerWarning();
+        showScene({emoji: bellScene.emoji, title: bellScene.title, text: bellScene.text + warning}, 'powerup-glow');
         setOceanMessage('🔔', 'Diving Bell found! You can surface here!');
     } else if (DANGER_TYPES.includes(cellType)) {
         // DANGER!
         handleDanger(cellType);
     } else {
-        // Empty ocean - rich encounter
+        // Empty ocean - rich encounter with nearby danger warnings
         const encounter = getNextEmptyEncounter();
-        showScene(encounter, null);
+        const warning = getNearbyDangerWarning();
+        const sceneWithWarning = {
+            emoji: encounter.emoji,
+            title: encounter.title,
+            text: encounter.text + warning
+        };
+        showScene(sceneWithWarning, warning ? null : null);
         setOceanMessage('🤿', encounter.title + ' \u2014 Choose a direction to continue exploring.');
     }
 }
@@ -2314,14 +2351,17 @@ function handleDanger(cellType) {
 
     showScene(dangerScenes[dangerKey], 'danger-glow');
 
+    // Enemy disappears after attacking
+    grid[playerRow][playerCol] = CELL_TYPES.EMPTY;
+
     if (cellType === CELL_TYPES.SHARK) {
-        setOceanMessage('🦈', 'A shark attacks! You lose a life! (' + lives + ' remaining)');
+        setOceanMessage('🦈', 'A shark attacks! You lose health! (' + lives + ' remaining)');
     } else if (cellType === CELL_TYPES.JELLYFISH) {
-        setOceanMessage('🪼', 'Jellyfish sting! You lose a life! (' + lives + ' remaining)');
+        setOceanMessage('🎐', 'Jellyfish sting! You lose health! (' + lives + ' remaining)');
     } else if (cellType === CELL_TYPES.SEA_SERPENT) {
-        setOceanMessage('🐉', 'Sea serpent strikes! You lose a life! (' + lives + ' remaining)');
+        setOceanMessage('🐉', 'Sea serpent strikes! You lose health! (' + lives + ' remaining)');
     } else if (cellType === CELL_TYPES.WHIRLPOOL) {
-        setOceanMessage('🌀', 'Caught in a whirlpool! You lose a life! (' + lives + ' remaining)');
+        setOceanMessage('🌀', 'Caught in a whirlpool! You lose health! (' + lives + ' remaining)');
     }
 
     if (lives <= 0) {
