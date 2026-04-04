@@ -1958,25 +1958,19 @@
         return false;
     }
 
-    // Score how well user strokes overlap with the actual font character pixels
+    // Score how well user strokes match the character
+    // Two-way check: (1) are user points on the character? (2) does the user cover the character's extent?
     function fontProximityScore(canvasW) {
         const mask = getGuidePixelMask(canvasW);
         const data = getCurrentChar();
+        const tolerance = Math.max(10, Math.floor(canvasW * 0.06)); // 6% for all characters
 
-        // Adaptive tolerance: simple characters (1-2 strokes like 一 二) get more room
-        // because the character is thin and hard to hit precisely with a finger.
-        // Complex characters use standard tolerance.
-        const strokeCount = data ? data.strokes : 3;
-        let tolPct = 0.07; // 7% base
-        if (strokeCount <= 2) tolPct = 0.10; // 10% for simple chars like 一 二 八 く
-        else if (strokeCount <= 4) tolPct = 0.08; // 8% for moderate
-        const tolerance = Math.max(14, Math.floor(canvasW * tolPct));
-
+        // SCORE 1: What % of user points are near the character?
         let onChar = 0;
         let totalSampled = 0;
 
         userStrokes.forEach(stroke => {
-            const step = Math.max(1, Math.floor(stroke.length / 35));
+            const step = Math.max(1, Math.floor(stroke.length / 40));
             for (let i = 0; i < stroke.length; i += step) {
                 totalSampled++;
                 if (isNearCharacter(stroke[i].x, stroke[i].y, mask, canvasW, tolerance)) {
@@ -1986,7 +1980,46 @@
         });
 
         if (totalSampled === 0) return 0;
-        return onChar / totalSampled; // 1.0 = perfect, 0 = all off
+        const precisionScore = onChar / totalSampled;
+
+        // SCORE 2: Coverage check - does the user drawing span the character's area?
+        // Find the bounding box of the actual character pixels
+        let charMinX = canvasW, charMaxX = 0, charMinY = canvasW, charMaxY = 0;
+        for (let y = 0; y < canvasW; y += 3) {
+            for (let x = 0; x < canvasW; x += 3) {
+                if (mask[(y * canvasW + x) * 4 + 3] > 30) {
+                    if (x < charMinX) charMinX = x;
+                    if (x > charMaxX) charMaxX = x;
+                    if (y < charMinY) charMinY = y;
+                    if (y > charMaxY) charMaxY = y;
+                }
+            }
+        }
+
+        // Find bounding box of user strokes
+        let userMinX = canvasW, userMaxX = 0, userMinY = canvasW, userMaxY = 0;
+        userStrokes.forEach(stroke => {
+            stroke.forEach(pt => {
+                if (pt.x < userMinX) userMinX = pt.x;
+                if (pt.x > userMaxX) userMaxX = pt.x;
+                if (pt.y < userMinY) userMinY = pt.y;
+                if (pt.y > userMaxY) userMaxY = pt.y;
+            });
+        });
+
+        // How much of the character's width and height does the user cover?
+        const charW = Math.max(1, charMaxX - charMinX);
+        const charH = Math.max(1, charMaxY - charMinY);
+        const overlapX = Math.max(0, Math.min(userMaxX, charMaxX) - Math.max(userMinX, charMinX));
+        const overlapY = Math.max(0, Math.min(userMaxY, charMaxY) - Math.max(userMinY, charMinY));
+        const coverageX = overlapX / charW;
+        const coverageY = overlapY / charH;
+        const coverageScore = Math.min(coverageX, coverageY);
+
+        // Combined: both precision AND coverage must be good
+        // This prevents "67" from passing on 二 because "67" wouldn't cover
+        // the right area, and many points would be off-character
+        return precisionScore * 0.7 + Math.min(coverageScore, 1.0) * 0.3;
     }
 
     function checkDrawing() {

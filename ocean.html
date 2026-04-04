@@ -2828,20 +2828,14 @@ function isNearCharacter(x, y, mask, w, tolerance) {
 function fontProximityScore(canvasW) {
     const mask = getGuidePixelMask(canvasW);
     if (!mask) return 0;
+    const tolerance = Math.max(10, Math.floor(canvasW * 0.06)); // 6% uniform
 
-    // Adaptive tolerance: thin/simple characters (1-2 strokes) get more room,
-    // complex characters use standard tolerance
-    const strokeCount = currentKanji ? currentKanji.strokes : 3;
-    let tolPct = 0.07; // 7% base
-    if (strokeCount <= 2) tolPct = 0.10; // 10% for simple chars like 一 二 八
-    else if (strokeCount <= 4) tolPct = 0.08; // 8% for moderate
-    const tolerance = Math.max(14, Math.floor(canvasW * tolPct));
-
+    // SCORE 1: What % of user points are near the character?
     let onChar = 0;
     let totalSampled = 0;
 
     userStrokes.forEach(stroke => {
-        const step = Math.max(1, Math.floor(stroke.length / 35));
+        const step = Math.max(1, Math.floor(stroke.length / 40));
         for (let i = 0; i < stroke.length; i += step) {
             totalSampled++;
             if (isNearCharacter(stroke[i].x, stroke[i].y, mask, canvasW, tolerance)) {
@@ -2851,7 +2845,39 @@ function fontProximityScore(canvasW) {
     });
 
     if (totalSampled === 0) return 0;
-    return onChar / totalSampled;
+    const precisionScore = onChar / totalSampled;
+
+    // SCORE 2: Coverage - user strokes should span the character area
+    let charMinX = canvasW, charMaxX = 0, charMinY = canvasW, charMaxY = 0;
+    for (let y = 0; y < canvasW; y += 3) {
+        for (let x = 0; x < canvasW; x += 3) {
+            if (mask[(y * canvasW + x) * 4 + 3] > 30) {
+                if (x < charMinX) charMinX = x;
+                if (x > charMaxX) charMaxX = x;
+                if (y < charMinY) charMinY = y;
+                if (y > charMaxY) charMaxY = y;
+            }
+        }
+    }
+
+    let userMinX = canvasW, userMaxX = 0, userMinY = canvasW, userMaxY = 0;
+    userStrokes.forEach(stroke => {
+        stroke.forEach(pt => {
+            if (pt.x < userMinX) userMinX = pt.x;
+            if (pt.x > userMaxX) userMaxX = pt.x;
+            if (pt.y < userMinY) userMinY = pt.y;
+            if (pt.y > userMaxY) userMaxY = pt.y;
+        });
+    });
+
+    const charW = Math.max(1, charMaxX - charMinX);
+    const charH = Math.max(1, charMaxY - charMinY);
+    const overlapX = Math.max(0, Math.min(userMaxX, charMaxX) - Math.max(userMinX, charMinX));
+    const overlapY = Math.max(0, Math.min(userMaxY, charMaxY) - Math.max(userMinY, charMinY));
+    const coverageScore = Math.min(overlapX / charW, overlapY / charH);
+
+    // Combined: precision (70%) + coverage (30%)
+    return precisionScore * 0.7 + Math.min(coverageScore, 1.0) * 0.3;
 }
 
 // =========================================================================
