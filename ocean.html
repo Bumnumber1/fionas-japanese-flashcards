@@ -166,21 +166,56 @@
             align-items: flex-start;
         }
 
-        /* Left panel: game controls */
-        .game-panel {
-            flex: 0 0 240px;
-            min-width: 200px;
+        /* Left: Scene/Story panel */
+        .scene-panel {
+            flex: 1;
+            min-width: 280px;
         }
 
-        /* Ocean panel (message + direction buttons) */
-        .ocean-panel {
-            background: rgba(0, 20, 40, 0.8);
-            border-radius: 16px;
-            padding: 14px;
-            border: 1px solid rgba(0,229,255,0.15);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(0,229,255,0.1);
-            margin-bottom: 12px;
+        /* Right: Controls + Writing */
+        .controls-panel {
+            flex: 0 0 360px;
+            min-width: 300px;
         }
+
+        .controls-top {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: flex-start;
+        }
+
+        .controls-right-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .writing-section {
+            background: rgba(0, 20, 40, 0.6);
+            border-radius: 16px;
+            padding: 12px;
+            border: 1px solid rgba(0,229,255,0.1);
+        }
+
+        /* Scene image container */
+        .scene-img {
+            width: 100%;
+            max-height: 250px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .scene-img img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+        }
+
+        .scene-img:empty { display: none; }
 
         .ocean-message {
             font-size: 0.95em;
@@ -939,27 +974,27 @@
         }
 
         /* Responsive */
-        @media (max-width: 900px) {
-            .minimap-panel {
-                display: none;
-            }
-        }
-
         @media (max-width: 700px) {
             .game-layout {
                 flex-direction: column;
                 align-items: center;
             }
 
-            .game-panel {
+            .scene-panel {
+                flex: none;
+                width: 100%;
+                max-width: 500px;
+            }
+
+            .controls-panel {
                 flex: none;
                 width: 100%;
                 max-width: 400px;
             }
 
-            .writing-panel {
-                width: 100%;
-                max-width: 360px;
+            .controls-top {
+                flex-direction: column;
+                align-items: center;
             }
 
             .direction-pad {
@@ -1159,77 +1194,78 @@
     <!-- Main game -->
     <div class="container">
         <div class="game-layout">
-            <!-- Left: Game panel -->
-            <div class="game-panel">
-                <div class="ocean-panel">
-                    <div class="scene-card" id="sceneCard">
-                        <div class="scene-title" id="sceneTitle"></div>
-                        <div class="scene-emoji" id="sceneEmoji"></div>
-                        <div class="scene-text" id="sceneText"></div>
+            <!-- Left: Scene/Story panel -->
+            <div class="scene-panel">
+                <div class="scene-card" id="sceneCard">
+                    <div class="scene-img" id="sceneImg"></div>
+                    <div class="scene-title" id="sceneTitle"></div>
+                    <div class="scene-emoji" id="sceneEmoji"></div>
+                    <div class="scene-text" id="sceneText"></div>
+                </div>
+                <div class="ocean-message" id="oceanMessage">
+                    <div>
+                        <span class="msg-emoji">🤿</span>
+                        Choose a direction to swim!
                     </div>
-                    <div class="ocean-message" id="oceanMessage">
-                        <div>
-                            <span class="msg-emoji">🤿</span>
-                            Choose a direction to swim!
+                </div>
+            </div>
+
+            <!-- Right: Controls + Writing -->
+            <div class="controls-panel">
+                <!-- Mini-map + Direction pad -->
+                <div class="controls-top">
+                    <div class="minimap-container">
+                        <div class="minimap-title">Sonar Map</div>
+                        <div class="minimap-grid" id="minimapGrid"></div>
+                    </div>
+                    <div class="controls-right-col">
+                        <div class="direction-pad">
+                            <div class="dir-spacer"></div>
+                            <button class="dir-btn" id="btnNorth" onclick="selectDirection('north')">⬆️</button>
+                            <div class="dir-spacer"></div>
+                            <button class="dir-btn" id="btnWest" onclick="selectDirection('west')">⬅️</button>
+                            <div class="dir-spacer"></div>
+                            <button class="dir-btn" id="btnEast" onclick="selectDirection('east')">➡️</button>
+                            <div class="dir-spacer"></div>
+                            <button class="dir-btn" id="btnSouth" onclick="selectDirection('south')">⬇️</button>
+                            <div class="dir-spacer"></div>
                         </div>
+                        <div class="game-buttons">
+                            <button class="game-btn btn-map" onclick="openMap()">🗺️ Map</button>
+                            <button class="game-btn btn-sonar" id="btnSonar" onclick="useSonar()">📡 Sonar (<span id="sonarCount">0</span>)</button>
+                        </div>
+                        <button class="game-btn btn-surface" id="btnSurface" onclick="surfaceGame()">🔔 Surface!</button>
+                        <div class="position-display" id="positionDisplay">Position: (0, 0)</div>
+                    </div>
+                </div>
+
+                <!-- Kanji Writing -->
+                <div class="writing-section">
+                    <div class="kanji-display" id="kanjiDisplay" style="display:none;">
+                        <div class="kanji-char" id="kanjiChar"></div>
+                        <div class="kanji-info">
+                            <span class="kanji-emoji" id="kanjiEmoji"></span>
+                            <span class="kanji-english" id="kanjiEnglish"></span>
+                            <span class="kanji-romaji" id="kanjiRomaji"></span>
+                        </div>
+                        <div class="kanji-strokes-info" id="kanjiStrokesInfo"></div>
                     </div>
 
-                    <div class="direction-pad">
-                        <div class="dir-spacer"></div>
-                        <button class="dir-btn" id="btnNorth" onclick="selectDirection('north')">⬆️</button>
-                        <div class="dir-spacer"></div>
-                        <button class="dir-btn" id="btnWest" onclick="selectDirection('west')">⬅️</button>
-                        <div class="dir-spacer"></div>
-                        <button class="dir-btn" id="btnEast" onclick="selectDirection('east')">➡️</button>
-                        <div class="dir-spacer"></div>
-                        <button class="dir-btn" id="btnSouth" onclick="selectDirection('south')">⬇️</button>
-                        <div class="dir-spacer"></div>
+                    <div class="drawing-canvas-container" id="canvasContainer">
+                        <canvas id="drawCanvas"></canvas>
+                        <div class="canvas-grid"></div>
+                        <div class="stroke-counter" id="strokeCounter">Strokes: 0</div>
                     </div>
 
-                    <div class="game-buttons">
-                        <button class="game-btn btn-map" onclick="openMap()">🗺️ Map</button>
-                        <button class="game-btn btn-sonar" id="btnSonar" onclick="useSonar()">📡 Sonar (<span id="sonarCount">0</span>)</button>
+                    <div class="action-buttons" id="actionButtons" style="display:none;">
+                        <button class="action-btn btn-clear" onclick="clearCanvas()">Clear</button>
+                        <button class="action-btn btn-show" onclick="showMe()">Show Me</button>
+                        <button class="action-btn btn-check" onclick="checkDrawing()">Check ✓</button>
                     </div>
-                    <button class="game-btn btn-surface" id="btnSurface" onclick="surfaceGame()">🔔 Surface!</button>
-                </div>
 
-                <div class="position-display" id="positionDisplay">Position: (0, 0)</div>
-            </div>
-
-            <!-- Center: Writing canvas -->
-            <div class="writing-panel">
-                <div class="kanji-display" id="kanjiDisplay" style="display:none;">
-                    <div class="kanji-char" id="kanjiChar"></div>
-                    <div class="kanji-info">
-                        <span class="kanji-emoji" id="kanjiEmoji"></span>
-                        <span class="kanji-english" id="kanjiEnglish"></span>
-                        <span class="kanji-romaji" id="kanjiRomaji"></span>
+                    <div class="feedback">
+                        <div class="feedback-msg" id="feedbackMsg"></div>
                     </div>
-                    <div class="kanji-strokes-info" id="kanjiStrokesInfo"></div>
-                </div>
-
-                <div class="drawing-canvas-container" id="canvasContainer">
-                    <canvas id="drawCanvas"></canvas>
-                    <div class="canvas-grid"></div>
-                    <div class="stroke-counter" id="strokeCounter">Strokes: 0</div>
-                </div>
-
-                <div class="action-buttons" id="actionButtons" style="display:none;">
-                    <button class="action-btn btn-clear" onclick="clearCanvas()">Clear</button>
-                    <button class="action-btn btn-show" onclick="showMe()">Show Me</button>
-                    <button class="action-btn btn-check" onclick="checkDrawing()">Check ✓</button>
-                </div>
-
-                <div class="feedback">
-                    <div class="feedback-msg" id="feedbackMsg"></div>
-                </div>
-            </div>
-
-            <!-- Right: Mini-map (wider screens) -->
-            <div class="minimap-panel">
-                <div class="minimap-container">
-                    <div class="minimap-title">Sonar Map</div>
-                    <div class="minimap-grid" id="minimapGrid"></div>
                 </div>
             </div>
         </div>
@@ -1473,126 +1509,151 @@ const EMPTY_OCEAN_EMOJI = ['🐚','🌊','🐠','🐡','🦀','🦑','🐙','�
 const emptyEncounters = [
     {
         emoji: '🐠🐟🐠\n🌊🌊🌊\n🌿🌿🌿',
+        image: 'coral_reef.png',
         title: 'Coral Reef',
         text: 'You glide over a vibrant coral reef teeming with tropical fish. Their scales shimmer in the filtered light.',
     },
     {
         emoji: '🚢\n💀⚓💀\n🌿🦀🌿',
+        image: 'shipwreck.png',
         title: 'Sunken Shipwreck',
         text: 'The ghostly hull of an ancient ship looms from the darkness. Barnacles cover every surface. Could there be treasure inside?',
     },
     {
         emoji: '🏛️\n🏛️🗿🏛️\n🌿🌿🌿',
+        image: 'temple_ruins.png',
         title: 'Lost Temple',
         text: 'Ancient stone columns rise from the ocean floor \u2014 a temple from a civilization lost to the waves thousands of years ago.',
     },
     {
         emoji: '🏠🏚️\n🌊🌊🌊\n🐟🦐🐟',
+        image: 'sunken_village.png',
         title: 'Sunken Village',
         text: 'Crumbling houses from a village swallowed by the sea. Fish swim in and out of broken windows. What stories do these walls hold?',
     },
     {
         emoji: '🌋\n💨💨💨\n🔴🟠🔴',
+        image: 'underwater_volcano.png',
         title: 'Underwater Volcano',
         text: 'A thermal vent bubbles with superheated water! Strange tube worms and pale crabs thrive in the scorching heat.',
     },
     {
         emoji: '🐋\n🌊🌊🌊\n✨✨✨',
+        image: 'whale.png',
         title: 'Whale Song',
         text: 'A magnificent whale passes overhead, its haunting song reverberating through the deep. You feel small but at peace.',
     },
     {
         emoji: '🦑\n🌑🌑🌑\n👀👀',
+        image: 'the_abyss.png',
         title: 'The Abyss',
         text: 'The ocean floor drops away into a bottomless trench. Something enormous moves in the darkness far below...',
     },
     {
         emoji: '⭐⭐⭐\n🌊💎🌊\n🌿🌿🌿',
+        image: 'bioluminescent.png',
         title: 'Bioluminescent Garden',
         text: 'Thousands of tiny creatures light up like stars, creating an underwater galaxy. The water itself seems to glow.',
     },
     {
         emoji: '🐢\n🌊🌊🌊\n🌿🐚🌿',
+        image: 'sea_turtle.png',
         title: 'Sea Turtle Haven',
         text: 'A gentle sea turtle glides past, ancient and wise. It seems to nod at you as if sharing a secret of the deep.',
     },
     {
         emoji: '⚓⛓️\n🌿🦞🌿\n🌊🌊🌊',
+        image: 'lost_anchor.png',
         title: 'Lost Anchor',
         text: 'A massive rusted anchor, chains trailing into the gloom. What great ship did this once hold? The metal is covered in sea life.',
     },
     {
         emoji: '🗿\n🗿🗿🗿\n🌿🌿🌿',
+        image: 'stone_guardians.png',
         title: 'Stone Guardians',
         text: 'Carved stone faces stare from the seafloor \u2014 ancient guardians of a forgotten kingdom. Their eyes seem to follow you.',
     },
     {
         emoji: '🎐🎐🎐\n✨✨✨\n🌊🌊🌊',
+        image: 'jellyfish_ballet.png',
         title: 'Jellyfish Ballet',
         text: 'Hundreds of translucent jellyfish pulse gracefully through the water, trailing glowing tendrils like living chandeliers.',
     },
     {
         emoji: '📦📦\n⚓🗺️⚓\n🌿🌿🌿',
+        image: 'cargo_wreck.png',
         title: 'Cargo Wreck',
         text: 'Scattered cargo boxes from a merchant ship lie half-buried in sand. Most are rotted away, but some look sealed tight...',
     },
     {
         emoji: '🦈\n🐟🐟🐟\n🌊🌊🌊',
+        image: 'reef_shark.png',
         title: 'Shark Patrol',
         text: 'A reef shark patrols lazily overhead, not interested in you today. Schools of fish part around it like a living curtain.',
     },
     {
         emoji: '💧💧💧\n🌋🌋\n🦀🦐🦀',
+        image: 'hydrothermal_vent.png',
         title: 'Hydrothermal Vent',
         text: 'Mineral-rich water spews from cracks in the earth. Blind white shrimp and strange worms cluster around the warmth.',
     },
     {
         emoji: '🐙\n🏺🏺🏺\n🌿🌿🌿',
+        image: 'octopus_garden.png',
         title: 'Octopus Garden',
         text: 'A clever octopus has decorated its den with shells, pottery, and colorful stones. It watches you with one curious eye.',
     },
     {
         emoji: '⛵\n🌊🌊🌊\n🐟💀🐟',
+        image: 'ghost_ship.png',
         title: 'Ghost Ship',
         text: 'A perfectly preserved sailing ship rests upright on the seafloor, sails still raised. Not a soul aboard. An eerie stillness surrounds it.',
     },
     {
         emoji: '🏰\n🧜\u200d♀️🧜\u200d♂️\n🌿🐚🌿',
+        image: 'mermaid_ruins.png',
         title: 'Mermaid Ruins',
         text: 'Graceful arches and towers of carved coral \u2014 could this be a palace of the merfolk? Faint music seems to echo from within.',
     },
     {
         emoji: '🌿🌿🌿\n🐊🐢🐊\n🌊🌊🌊',
+        image: 'kelp_forest.png',
         title: 'Kelp Forest',
         text: 'Towering kelp sways in the current like an underwater forest. Shafts of green light filter through the canopy above.',
     },
     {
         emoji: '💀⚔️\n🗡️🛡️🗡️\n🌿🌿🌿',
+        image: 'pirate_battle.png',
         title: 'Pirate\'s Last Stand',
         text: 'Ancient weapons and armor scattered on the seafloor \u2014 evidence of a great battle fought here long ago. What were they fighting over?',
     },
     {
         emoji: '🔱\n👑💎👑\n🏛️🏛️🏛️',
+        image: 'atlantean_gateway.png',
         title: 'Atlantean Gateway',
         text: 'A magnificent archway carved with symbols and crowned with a golden trident. Beyond it, the water shimmers with ancient power.',
     },
     {
         emoji: '🐡🐡\n🌿🌺🌿\n🦀🐚🦀',
+        image: 'pufferfish_cove.png',
         title: 'Pufferfish Cove',
         text: 'Chubby pufferfish bob around a garden of sea anemones. One puffs up in surprise at your arrival \u2014 adorable!',
     },
     {
         emoji: '📜📜\n🗺️🧭🗺️\n⚓⚓⚓',
+        image: 'navigator_cache.png',
         title: 'Navigator\'s Cache',
         text: 'Waterlogged maps and navigation instruments lie in a stone chest. These ancient charts might have led to legendary treasures.',
     },
     {
         emoji: '🦭🦭\n🧊🧊🧊\n🌊🌊🌊',
+        image: 'deep_cold.png',
         title: 'Deep Cold',
         text: 'The water turns ice-cold. Curious seals investigate you from a distance, their dark eyes full of intelligence.',
     },
     {
         emoji: '🎵🎶\n🐚🐚🐚\n🌊✨🌊',
+        image: 'singing_shells.png',
         title: 'Singing Shells',
         text: 'Giant conch shells are arranged in a circle on the seafloor. When the current passes through them, they produce an otherworldly melody.',
     },
@@ -1618,6 +1679,7 @@ const emptyEncounters = [
     },
     {
         emoji: '🐬🐬\n🌊🌈🌊\n✨✨✨',
+        image: 'dolphin_pod.png',
         title: 'Dolphin Dance',
         text: 'A pod of playful dolphins spirals around you! They click and whistle, inviting you to join their joyful dance through the currents.',
     },
@@ -1626,16 +1688,19 @@ const emptyEncounters = [
 const treasureScenes = {
     minor: {
         emoji: '✨🪙✨\n🏺🏺🏺\n🌿🌿🌿',
+        image: 'treasure_minor.png',
         title: 'Treasure Cache!',
         text: 'Glinting coins spill from a cracked clay pot! Ancient gold pieces from a long-lost trading ship. <span class="highlight">+50 points!</span>'
     },
     major: {
         emoji: '✨💎✨\n👑💎👑\n🏛️🏛️🏛️',
+        image: 'treasure_major.png',
         title: 'Royal Treasure!',
         text: 'A jewel-encrusted chest sits in the ruins of an underwater palace! Rubies, sapphires, and emeralds cascade out as you open it. <span class="highlight">+200 points!</span>'
     },
     grand: {
         emoji: '🌟🏆🌟\n👑💎👑\n✨🔱✨\n🏛️🏛️🏛️',
+        image: 'treasure_grand.png',
         title: '\u26a1 THE GRAND TREASURE! \u26a1',
         text: 'The legendary Crown of the Deep \u2014 a golden crown set with the Heart of the Ocean, a gem that glows with its own inner light! Legends say it grants the wearer the power to speak with all sea creatures. <span class="highlight">+2000 POINTS!</span>'
     }
@@ -1644,21 +1709,25 @@ const treasureScenes = {
 const dangerScenes = {
     shark: {
         emoji: '🦈🦈🦈\n🌊💀🌊\n🌊🩸🌊',
+        image: 'shark_attack.png',
         title: '\u26a0\ufe0f SHARK ATTACK!',
         text: 'Three great white sharks circle you, their dead eyes fixed on your movements. There\'s nowhere to hide!'
     },
     jellyfish: {
         emoji: '🎐🎐🎐\n⚡🌊⚡\n🎐🎐🎐',
+        image: 'jellyfish_swarm.png',
         title: '\u26a0\ufe0f JELLYFISH SWARM!',
         text: 'A massive bloom of jellyfish surrounds you! Their glowing tendrils trail venom through the water. The sting is electric!'
     },
     serpent: {
         emoji: '🐉🐉\n🌊🌊🌊\n💀⚡💀',
+        image: 'sea_serpent.png',
         title: '\u26a0\ufe0f SEA SERPENT!',
         text: 'A monstrous sea serpent erupts from a crevice! Its scales are black as midnight and its eyes burn like embers. It strikes!'
     },
     whirlpool: {
         emoji: '🌀🌀🌀\n🌊🌀🌊\n🌀🌀🌀',
+        image: 'whirlpool.png',
         title: '\u26a0\ufe0f WHIRLPOOL!',
         text: 'The water spins into a violent maelstrom! You\'re caught in a crushing whirlpool that pulls you down into the dark!'
     }
@@ -1667,21 +1736,25 @@ const dangerScenes = {
 const dangerShieldedScenes = {
     shark: {
         emoji: '🛡️✨🛡️\n🦈🌊🦈\n🌊🌊🌊',
+        image: 'shield_block.png',
         title: 'Shield Blocked!',
         text: 'Sharks lunged at you, but your magical shield flared with light and drove them back! <span class="highlight">Shield destroyed.</span>'
     },
     jellyfish: {
         emoji: '🛡️✨🛡️\n🎐🌊🎐\n🌊🌊🌊',
+        image: 'shield_block.png',
         title: 'Shield Blocked!',
         text: 'Jellyfish tendrils wrapped around you, but your shield absorbed the venom in a flash of blue light! <span class="highlight">Shield destroyed.</span>'
     },
     serpent: {
         emoji: '🛡️✨🛡️\n🐉🌊🐉\n🌊🌊🌊',
+        image: 'shield_block.png',
         title: 'Shield Blocked!',
         text: 'The sea serpent struck, but your shield erupted with energy, sending the creature reeling! <span class="highlight">Shield destroyed.</span>'
     },
     whirlpool: {
         emoji: '🛡️✨🛡️\n🌀🌊🌀\n🌊🌊🌊',
+        image: 'shield_block.png',
         title: 'Shield Blocked!',
         text: 'The whirlpool tried to drag you down, but your shield created a bubble of calm water around you! <span class="highlight">Shield destroyed.</span>'
     }
@@ -1690,11 +1763,13 @@ const dangerShieldedScenes = {
 const powerupScenes = {
     shield: {
         emoji: '✨🛡️✨\n🏛️⚔️🏛️\n🌿🌿🌿',
+        image: 'shield_pickup.png',
         title: 'Ancient Shield!',
         text: 'A glowing magical shield floats among the ruins of a warrior\'s tomb. It pulses with protective energy! <span class="highlight">Shield acquired!</span>'
     },
     sonar: {
         emoji: '📡✨📡\n🔊🌊🔊\n🐟🐟🐟',
+        image: 'sonar_pickup.png',
         title: 'Sonar Device!',
         text: 'An advanced sonar device from a research submarine! It can reveal the area around you. <span class="highlight">Sonar charge acquired!</span>'
     }
@@ -1702,6 +1777,7 @@ const powerupScenes = {
 
 const bellScene = {
     emoji: '🔔✨🔔\n⛓️🔔⛓️\n💧💧💧',
+    image: 'diving_bell.png',
     title: 'The Diving Bell!',
     text: 'A golden diving bell hangs suspended by ancient chains, swaying gently in the current. This is your way back to the surface! <span class="highlight">Board it when you\'re ready to claim your treasure.</span>'
 };
@@ -1731,10 +1807,20 @@ function showScene(scene, glowType) {
     const titleEl = document.getElementById('sceneTitle');
     const emojiEl = document.getElementById('sceneEmoji');
     const textEl = document.getElementById('sceneText');
+    const imgEl = document.getElementById('sceneImg');
 
     // Remove old glow classes and particles
     card.className = 'scene-card';
     card.querySelectorAll('.scene-particle').forEach(p => p.remove());
+
+    // Set image if available, otherwise show emoji
+    if (scene.image) {
+        imgEl.innerHTML = `<img src="ocean_images/${scene.image}" alt="${scene.title}" onerror="this.parentElement.innerHTML=''">`;
+        emojiEl.style.display = 'none';
+    } else {
+        imgEl.innerHTML = '';
+        emojiEl.style.display = 'block';
+    }
 
     // Set content
     titleEl.textContent = scene.title;
