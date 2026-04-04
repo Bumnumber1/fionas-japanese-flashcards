@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ocean Image Generator - Bing Image Creator Helper</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; min-height: 100vh; }
+        h1 { text-align: center; color: #00e5ff; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
+        .progress { text-align: center; font-size: 1.2em; color: #ffd700; margin-bottom: 20px; font-weight: bold; }
+        .progress-bar { width: 100%; max-width: 600px; margin: 0 auto 20px; height: 12px; background: #333; border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00e5ff, #ffd700); border-radius: 6px; transition: width 0.3s; }
+        .card { max-width: 800px; margin: 0 auto 20px; background: #16213e; border: 1px solid #0f3460; border-radius: 16px; padding: 24px; }
+        .card h2 { color: #00e5ff; margin-bottom: 8px; font-size: 1.3em; }
+        .card .filename { color: #ffd700; font-family: monospace; font-size: 0.95em; margin-bottom: 12px; }
+        .prompt-box { background: #0a0a1a; border: 1px solid #333; border-radius: 10px; padding: 16px; font-size: 0.9em; line-height: 1.5; color: #b0e0ff; margin-bottom: 14px; cursor: pointer; position: relative; white-space: pre-wrap; }
+        .prompt-box:hover { border-color: #00e5ff; }
+        .prompt-box .copy-hint { position: absolute; top: 8px; right: 10px; font-size: 0.75em; color: #555; }
+        .copied { border-color: #4caf50 !important; }
+        .copied .copy-hint { color: #4caf50 !important; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 0.95em; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-copy { background: #0f3460; color: #00e5ff; border: 1px solid #00e5ff; }
+        .btn-open { background: #00e5ff; color: #001a33; }
+        .btn-next { background: #ffd700; color: #1a1a2e; }
+        .btn-prev { background: #333; color: #aaa; }
+        .btn-done { background: #4caf50; color: white; }
+        .btn-skip { background: #333; color: #888; }
+        .status { display: inline-block; margin-left: 10px; padding: 4px 12px; border-radius: 8px; font-size: 0.85em; font-weight: 700; }
+        .status-pending { background: #333; color: #888; }
+        .status-done { background: #1b5e20; color: #4caf50; }
+        .instructions { max-width: 800px; margin: 0 auto 20px; background: #1e3a5f; border-radius: 12px; padding: 16px; font-size: 0.9em; line-height: 1.6; }
+        .instructions h3 { color: #ffd700; margin-bottom: 8px; }
+        .instructions ol { padding-left: 20px; }
+        .instructions li { margin-bottom: 6px; }
+        .nav-grid { max-width: 800px; margin: 20px auto; display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+        .nav-dot { width: 100%; aspect-ratio: 1; border-radius: 6px; border: none; font-size: 0.7em; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .nav-dot.pending { background: #333; color: #666; }
+        .nav-dot.done { background: #1b5e20; color: #4caf50; }
+        .nav-dot.current { background: #00e5ff; color: #001a33; box-shadow: 0 0 10px #00e5ff; }
+    </style>
+</head>
+<body>
+    <h1>🌊 Ocean Image Generator</h1>
+    <p class="subtitle">Click through each prompt to generate images in Bing Image Creator</p>
+
+    <div class="instructions" id="instructions">
+        <h3>📋 How to use:</h3>
+        <ol>
+            <li><strong>Click "Copy Prompt"</strong> to copy the text</li>
+            <li><strong>Click "Open Bing Creator"</strong> to open Bing Image Creator</li>
+            <li><strong>Paste the prompt</strong> and click Create</li>
+            <li><strong>Download</strong> the best result, rename it to the filename shown</li>
+            <li>Put it in <code>C:\JapaneseLessons\ocean_images\</code></li>
+            <li><strong>Click "Mark Done & Next"</strong> to move on</li>
+        </ol>
+        <p style="margin-top:8px; color:#ff9800;">💡 <strong>Tip:</strong> For transparency, after downloading, go to <a href="https://www.remove.bg" target="_blank" style="color:#00e5ff">remove.bg</a> to remove the background.</p>
+    </div>
+
+    <div class="progress">Image <span id="currentNum">1</span> of 60 — <span id="doneCount">0</span> completed</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div class="nav-grid" id="navGrid"></div>
+
+    <div class="card" id="currentCard">
+        <div class="btn-row" style="justify-content:space-between; margin-bottom:12px;">
+            <h2 id="cardTitle"></h2>
+            <span class="status status-pending" id="cardStatus">Pending</span>
+        </div>
+        <div class="filename" id="cardFilename"></div>
+        <div class="prompt-box" id="promptBox" onclick="copyPrompt()">
+            <span class="copy-hint" id="copyHint">Click to copy</span>
+            <span id="promptText"></span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-prev" onclick="prev()">← Prev</button>
+            <button class="btn btn-copy" onclick="copyPrompt()">📋 Copy Prompt</button>
+            <button class="btn btn-open" onclick="openBing()">🔗 Open Bing Creator</button>
+            <button class="btn btn-done" onclick="markDone()">✅ Mark Done & Next</button>
+            <button class="btn btn-skip" onclick="next()">Skip →</button>
+        </div>
+    </div>
+
+    <script>
+    const images = [
+        { name: "Coral Reef", file: "coral_reef.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A vibrant underwater coral reef scene with colorful branching corals in pink, orange, and purple, sea anemones swaying, and a school of bright tropical fish (clownfish, angelfish, tangs) swimming among the corals. Cute anime-inspired art style with soft underwater lighting. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sunken Shipwreck", file: "shipwreck.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An old wooden sailing ship wreck resting on the ocean floor, hull broken open, covered in barnacles and green seaweed. Small fish swim through the broken windows and holes. A ship's wheel is visible. Cute anime-inspired style, slightly eerie but not scary, underwater setting. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Ancient Temple Ruins", file: "temple_ruins.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Ancient stone temple columns and carved blocks underwater, covered in moss and sea vines. A mysterious soft golden glow emanates from between the pillars. Small fish swim around the ruins. Cute anime-inspired style with a sense of wonder and mystery. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sunken Village", file: "sunken_village.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Crumbling stone cottages and houses sitting on the sandy seafloor, a village swallowed by the ocean long ago. Fish swim through broken windows and doorways. Coral and seaweed grow on the rooftops. Cute anime-inspired style, peaceful underwater scene. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Underwater Volcano", file: "underwater_volcano.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An underwater hydrothermal vent with glowing orange and red cracks in dark rock, bubbles streaming upward, strange pale tube worms and crabs gathered around the heat. Dramatic lighting from the vent glow. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Whale Song", file: "whale.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A majestic blue whale swimming gracefully, seen from slightly below. Shafts of sunlight filter down around it. Small fish scatter beneath. The whale looks peaceful and enormous. Cute anime-inspired style with beautiful lighting. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "The Abyss", file: "the_abyss.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. The edge of a dark ocean trench dropping into total blackness below. A faint eerie bioluminescent glow comes from deep within. Rocky ledges frame the abyss. A few brave fish peer over the edge. Cute anime-inspired style, mysterious and dramatic. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Bioluminescent Garden", file: "bioluminescent.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An underwater scene filled with thousands of tiny bioluminescent creatures glowing blue, green, and purple, like an underwater starfield. Glowing plankton and small jellyfish create a magical light show. Cute anime-inspired style, ethereal and dreamy. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sea Turtle Haven", file: "sea_turtle.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A gentle green sea turtle gliding gracefully through the water, with a friendly wise expression. Seagrass and small fish below. Sunlight dapples on the turtle's shell. Cute anime-inspired style, warm and peaceful. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Lost Anchor", file: "lost_anchor.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A massive old rusted ship anchor half-buried in sand, with heavy chains trailing off into darkness. Barnacles, coral, and small sea creatures have colonized it. Cute anime-inspired style with a sense of ancient history. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Stone Guardians", file: "stone_guardians.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Ancient carved stone faces and statues sitting on the seafloor like Easter Island heads but underwater. Covered in coral and moss, their eyes seem to watch you. Small fish swim around them. Cute anime-inspired style, mysterious but not scary. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Jellyfish Ballet", file: "jellyfish_ballet.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Hundreds of beautiful translucent jellyfish floating gracefully, their long tendrils trailing like ribbons. They glow softly in blue and pink bioluminescent light. Ethereal and balletic movement. Cute anime-inspired style, magical and serene. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Cargo Wreck", file: "cargo_wreck.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Scattered old wooden cargo crates, barrels, and boxes half-buried in sand on the ocean floor. Some are broken open with contents spilling out. Crabs crawl over them. Cute anime-inspired underwater style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Reef Shark", file: "reef_shark.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A calm reef shark swimming lazily through the water with schools of colorful small fish parting around it. The shark looks sleek but not aggressive. Coral reef visible below. Cute anime-inspired style showing the beauty of the shark. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Hydrothermal Vent", file: "hydrothermal_vent.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A deep-sea hydrothermal vent with mineral-rich cloudy water billowing upward like smoke. Pale blind shrimp and white crabs cluster around it. Strange tube worms with red tips sway nearby. Dark and otherworldly. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Octopus Garden", file: "octopus_garden.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A clever purple octopus sitting in its den which it has decorated with colorful shells, sea glass, pottery fragments, and shiny stones arranged neatly. It watches with one curious intelligent eye. Cute anime-inspired style, charming and whimsical. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Ghost Ship", file: "ghost_ship.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A perfectly preserved old sailing ship sitting upright on the ocean floor, its tattered sails still raised. An eerie green ghostly glow surrounds it. No visible crew. Fish swim through the rigging. Cute anime-inspired style, spooky but not terrifying. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Mermaid Ruins", file: "mermaid_ruins.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Graceful arches, spiraling towers, and delicate bridges all made of carved coral and pearl, an underwater palace that could belong to merfolk. Soft pink and blue light glows from within. Cute anime-inspired style, magical and beautiful. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Kelp Forest", file: "kelp_forest.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Towering giant kelp stalks swaying in the ocean current like an underwater forest. Shafts of green-filtered sunlight stream through the canopy. Fish swim between the fronds. Cute anime-inspired style, serene and natural. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Pirate's Last Stand", file: "pirate_battle.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Ancient swords, shields, helmets, and cannonballs scattered across the sandy seafloor, remnants of a great pirate battle long ago. Coral grows on the weapons. A treasure chest peeks from behind rocks. Cute anime-inspired style, adventurous. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Atlantean Gateway", file: "atlantean_gateway.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A magnificent ancient stone archway or gateway underwater, carved with mysterious glowing symbols and crowned with a golden trident symbol. The water shimmers with magical energy beyond the gate. Cute anime-inspired style, epic and wondrous. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Pufferfish Cove", file: "pufferfish_cove.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Several chubby adorable pufferfish of different colors bobbing around sea anemones. One is puffed up in surprise, looking startled and cute. Colorful coral surrounds them. Cute anime-inspired style, funny and endearing. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Navigator's Cache", file: "navigator_cache.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A stone chest on the seafloor containing waterlogged old maps, a brass compass, a sextant, and other navigation instruments from centuries ago. Some maps have X marks on them. Cute anime-inspired style, adventurous and historical. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Deep Cold", file: "deep_cold.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An extremely deep, dark, ice-cold section of ocean. Two or three curious seals peer from the shadows with big cute dark eyes. Ice crystals glint in the water. Cold and lonely atmosphere but the seals are adorable. Anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Singing Shells", file: "singing_shells.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Giant conch shells arranged in a perfect circle on the sandy seafloor. Musical notes and visible sound waves float from them as ocean current passes through. Magical sparkles surround them. Cute anime-inspired style, whimsical and musical. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Dolphin Pod", file: "dolphin_pod.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A pod of playful dolphins swimming together joyfully, one doing a corkscrew spin, another blowing bubble rings. They look happy and energetic. Sunlight sparkles around them. Cute anime-inspired style, dynamic and joyful. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sunken Train", file: "sunken_train.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An old steam locomotive and train cars sitting on the ocean floor, a surreal underwater sight. Fish swim out through the windows, coral grows on the smokestack, and sea plants cover the wheels and tracks. Cute anime-inspired style, whimsical and surreal. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Crystal Cave", file: "crystal_cave.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. The entrance to an underwater cave with walls lined with glowing purple and blue crystals. The crystals cast beautiful colored light reflections in the water. Small luminescent fish swim near the entrance. Cute anime-inspired style, magical and inviting. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Giant Clam", file: "giant_clam.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An enormous colorful giant clam on the seafloor, its shell slightly open revealing a large luminous pearl inside. Small curious fish peek at the pearl. The clam's mantle is vibrant blue and purple. Cute anime-inspired style, magical treasure feeling. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Submarine Wreck", file: "submarine_wreck.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An old military submarine broken in half on the ocean floor, rusty and covered in sea growth. One or two interior lights still flicker eerily through portholes. Fish swim in and out of the broken hull. Cute anime-inspired style, mysterious. The subject must float on full transparency. PNG with alpha channel." },
+        // TREASURES
+        { name: "Minor Treasure", file: "treasure_minor.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cracked ancient clay pot on the sandy seafloor with glinting gold coins spilling out and scattering around it. The coins sparkle with golden light. A few small colorful gems mixed in. Cute anime-inspired style, exciting treasure discovery. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Minor Treasure 2", file: "treasure_minor2.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A small weathered wooden treasure chest sitting on sand, lid partially open, with silver coins and a few small colorful gems visible inside. Underwater setting. Cute anime-inspired style, a pleasant find. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Major Treasure", file: "treasure_major.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. An ornate jewel-encrusted treasure chest thrown wide open, overflowing with rubies, sapphires, emeralds, gold necklaces, and diamond tiaras cascading out. Golden magical light radiates from the treasure. Spectacular and dazzling. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Major Treasure 2", file: "treasure_major2.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A golden chalice, jeweled necklaces, gem-studded rings, and a small golden crown arranged beautifully on a velvet-lined ornate box on the seafloor. Each item sparkles and gleams. Cute anime-inspired style, elegant underwater treasure. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "GRAND Treasure", file: "treasure_grand.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A legendary golden crown with a massive glowing blue gem set in the center called the Heart of the Ocean. Brilliant beams of magical light radiate outward in all directions. The crown floats on a stone pedestal surrounded by smaller jewels. Epic and awe-inspiring. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "GRAND Treasure Alt", file: "treasure_grand_alt.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A magnificent golden trident weapon with a large pulsing magical gem embedded in it, resting on an underwater stone altar surrounded by ancient glowing runes. Pure magical power radiates from it. Epic and legendary. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        // DANGERS
+        { name: "Shark Attack!", file: "shark_attack.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A great white shark lunging forward dramatically with jaws wide open showing rows of sharp teeth. The shark looks powerful and fast with motion blur on fins. Water splashing. Dramatic but still in cute anime-inspired style, scary but not gory. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sharks Circling", file: "shark_circling.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Three menacing sharks circling in dark murky water, seen from below. Their silhouettes are ominous against slightly lighter water above. Teeth visible, eyes cold. Cute anime-inspired style, tense and threatening atmosphere. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Jellyfish Swarm", file: "jellyfish_swarm.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A dense dangerous swarm of jellyfish with long electric-looking stinging tendrils, glowing angry red and orange. They fill the entire space menacingly. Electric sparks crackle between their tendrils. Cute anime-inspired style, dangerous yet beautiful. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Giant Jellyfish", file: "jellyfish_giant.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. One enormous jellyfish completely blocking the underwater path, with massive trailing tentacles spreading in every direction. It glows with an eerie purple-red light. Much bigger than a person would be. Imposing and dangerous. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sea Serpent", file: "sea_serpent.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A menacing sea serpent or sea dragon emerging from dark water, with scales in deep green and blue, glowing yellow eyes, long sinuous body, and fins like dragon wings. It looks ancient, powerful and intelligent. Cute anime-inspired style, fantasy creature. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sea Serpent Coiled", file: "sea_serpent_coil.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A sea serpent coiled around ancient underwater stone ruins and columns, watching with intelligent glowing eyes. Its long scaled body wraps around the pillars protectively. Scales shimmer in blue and green. Cute anime-inspired style, mysterious guardian. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Whirlpool", file: "whirlpool.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A powerful underwater whirlpool vortex with water spiraling inward dramatically, pulling in fish, seaweed, and small debris. The center is dark and ominous. Swirling motion lines and bubbles. Cute anime-inspired style, dramatic and dangerous. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Magical Whirlpool", file: "whirlpool_glow.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A magical underwater whirlpool with an eerie green and purple supernatural glow emanating from its center. Ancient mystical symbols swirl in the vortex. Otherworldly and enchanted feeling. Cute anime-inspired style, fantasy magic. The subject must float on full transparency. PNG with alpha channel." },
+        // POWER-UPS
+        { name: "Shield Pickup", file: "shield_pickup.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A magical glowing translucent blue shield bubble floating among ancient underwater warrior statue ruins. The shield pulses with protective energy and tiny sparkles orbit around it. Cute anime-inspired style, mystical power-up item. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Shield Active", file: "shield_active.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cute anime-style girl diver surrounded by a glowing blue protective bubble shield. A shark or danger bounces harmlessly off the shield with a bright flash of light. The diver inside looks relieved and safe. Action scene. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sonar Pickup", file: "sonar_pickup.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A sleek high-tech sonar device sitting on an underwater rock, with visible circular sonar ping waves radiating outward from it. Small LED lights glow green on the device. It looks advanced and useful. Cute anime-inspired style, sci-fi item. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Sonar Active", file: "sonar_active.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Expanding circular sonar pulse rings radiating outward through dark water, revealing hidden outlines of treasure chests, fish, and danger creatures within the rings. Green-tinted sonar display style but cute anime-inspired. The subject must float on full transparency. PNG with alpha channel." },
+        // DIVING BELL & DIVER
+        { name: "Diving Bell", file: "diving_bell.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A beautiful ornate golden diving bell hanging from thick chains underwater, with a warm inviting golden glow inside. Bubbles rise from around it. It looks like safety and salvation, a way back to the surface. Cute anime-inspired style, warm and hopeful. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Diver Descending", file: "diver_descend.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cute anime-style young girl named Yuna, about 10 years old, in a diving suit descending into deep blue water. Shafts of sunlight come from above. She looks brave and excited with a big smile. Air bubbles trail behind her. She has dark hair in pigtails. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Diver Swimming", file: "diver_swim.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cute anime-style girl diver named Yuna swimming forward through the ocean holding a waterproof flashlight. The beam illuminates the dark path ahead. Small colorful fish swim alongside her. She looks determined and adventurous. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Diver Victory", file: "diver_victory.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cute anime-style girl diver named Yuna celebrating underwater, holding up a golden treasure with both hands, huge joyful smile on her face. Colorful fish swim around her in celebration. Sparkles and golden light rays everywhere. The subject must float on full transparency. PNG with alpha channel." },
+        // GAME STATES
+        { name: "Game Start", file: "game_start.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Ocean surface with brilliant sunlight from above, a small wooden boat, and a cute anime girl named Yuna standing on the edge about to dive into the water below. The water is crystal blue fading to deep dark blue. Exciting new adventure beginning feeling. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Game Over", file: "game_over.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cute anime girl diver named Yuna floating upward toward the ocean surface looking tired and disappointed, with her flashlight dimming. Below her in the dark water, ominous shark silhouettes circle. She is okay but sad about having to give up. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Victory Surface", file: "victory_surface.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A cute anime girl named Yuna breaking triumphantly through the ocean surface, holding a treasure chest above her head in celebration. Beautiful sunset sky with orange and pink clouds. A small boat waits nearby. Dolphins jump in the background. Pure joy and triumph. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Danger Nearby", file: "danger_nearby.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. Dark murky underwater scene with an ominous large shadow or silhouette barely visible in the cloudy water ahead. Could be a shark, serpent, or unknown creature lurking. Tense and foreboding atmosphere. Subtle red warning tint. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Shield Block", file: "shield_block.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A magical blue shield shattering into brilliant sparkling crystal fragments as it blocks a shark attack. The impact creates a dramatic flash of bright blue-white light and energy sparks. The diver behind the shield is safe. Action-packed moment. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Map Overview", file: "map_overview.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A stylized old parchment treasure map with hand-drawn ocean features including sea creatures, an ornate compass rose, dotted paths, red X marks, skull and crossbones, ocean waves, and Here be Dragons text. Aged and weathered looking with curled edges. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        // UI
+        { name: "Compass Rose", file: "compass_rose.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A beautiful ornate compass rose with N, S, E, W marked clearly in gold lettering. The compass has an underwater nautical theme with coral and shell decorations around the edges. The needle points north. Golden and bronze metallic look. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+        { name: "Depth Meter", file: "depth_meter.png", prompt: "Digital illustration, 600x400 pixels. TRANSPARENT BACKGROUND with alpha transparency, absolutely NO solid background color. A steampunk-style brass depth gauge with a round dial face, moving needle, pressure markings around the edge, and small bubbles floating around it. Attached to decorative pipes and small gears. Underwater diving equipment aesthetic. Cute anime-inspired style. The subject must float on full transparency. PNG with alpha channel." },
+    ];
+
+    let current = 0;
+    let done = new Set();
+    try { const s = localStorage.getItem('ocean-img-done'); if (s) done = new Set(JSON.parse(s)); } catch(e) {}
+
+    function saveDone() { localStorage.setItem('ocean-img-done', JSON.stringify([...done])); }
+
+    function render() {
+        const img = images[current];
+        document.getElementById('currentNum').textContent = current + 1;
+        document.getElementById('doneCount').textContent = done.size;
+        document.getElementById('progressFill').style.width = (done.size / images.length * 100) + '%';
+        document.getElementById('cardTitle').textContent = `#${current+1}: ${img.name}`;
+        document.getElementById('cardFilename').textContent = `📁 Save as: ocean_images/${img.file}`;
+        document.getElementById('promptText').textContent = img.prompt;
+        document.getElementById('copyHint').textContent = 'Click to copy';
+        document.getElementById('promptBox').classList.remove('copied');
+        const status = document.getElementById('cardStatus');
+        if (done.has(current)) { status.textContent = '✅ Done'; status.className = 'status status-done'; }
+        else { status.textContent = 'Pending'; status.className = 'status status-pending'; }
+
+        // Nav dots
+        const grid = document.getElementById('navGrid');
+        grid.innerHTML = '';
+        images.forEach((_, i) => {
+            const d = document.createElement('button');
+            d.className = 'nav-dot ' + (done.has(i) ? 'done' : 'pending') + (i === current ? ' current' : '');
+            d.textContent = i + 1;
+            d.onclick = () => { current = i; render(); };
+            grid.appendChild(d);
+        });
+    }
+
+    function copyPrompt() {
+        navigator.clipboard.writeText(images[current].prompt).then(() => {
+            document.getElementById('copyHint').textContent = '✅ Copied!';
+            document.getElementById('promptBox').classList.add('copied');
+        });
+    }
+
+    function openBing() {
+        window.open('https://www.bing.com/images/create', '_blank');
+    }
+
+    function markDone() {
+        done.add(current);
+        saveDone();
+        next();
+    }
+
+    function next() {
+        if (current < images.length - 1) current++;
+        render();
+    }
+
+    function prev() {
+        if (current > 0) current--;
+        render();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') next();
+        if (e.key === 'ArrowLeft') prev();
+        if (e.key === 'Enter') markDone();
+    });
+
+    render();
+    </script>
+</body>
+</html>
