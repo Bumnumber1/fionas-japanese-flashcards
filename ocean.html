@@ -205,6 +205,149 @@
             margin-bottom: 4px;
         }
 
+        /* Scene card system */
+        .scene-card {
+            background: linear-gradient(180deg, #001428 0%, #003366 40%, #004d66 100%);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 14px;
+            text-align: center;
+            min-height: 180px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(0,229,255,0.2);
+            box-shadow: 0 0 30px rgba(0,229,255,0.1);
+            display: none;
+        }
+
+        .scene-card.active {
+            display: block;
+            animation: sceneCardIn 0.5s ease forwards;
+        }
+
+        .scene-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 30%;
+            width: 40%;
+            height: 200%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+            transform: rotate(-15deg);
+            pointer-events: none;
+        }
+
+        .scene-card.treasure-glow {
+            border-color: rgba(255,215,0,0.5);
+            box-shadow: 0 0 40px rgba(255,215,0,0.2), 0 0 80px rgba(255,215,0,0.08);
+        }
+
+        .scene-card.danger-glow {
+            border-color: rgba(239,83,80,0.5);
+            box-shadow: 0 0 40px rgba(239,83,80,0.2), 0 0 80px rgba(239,83,80,0.08);
+        }
+
+        .scene-card.powerup-glow {
+            border-color: rgba(100,255,218,0.5);
+            box-shadow: 0 0 40px rgba(100,255,218,0.2), 0 0 80px rgba(100,255,218,0.08);
+        }
+
+        .scene-card.grand-glow {
+            border-color: rgba(255,215,0,0.7);
+            box-shadow: 0 0 60px rgba(255,215,0,0.35), 0 0 120px rgba(255,215,0,0.15);
+            animation: grandPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes grandPulse {
+            0%, 100% { box-shadow: 0 0 60px rgba(255,215,0,0.35), 0 0 120px rgba(255,215,0,0.15); }
+            50% { box-shadow: 0 0 80px rgba(255,215,0,0.5), 0 0 150px rgba(255,215,0,0.25); }
+        }
+
+        .scene-title {
+            font-size: 1.15em;
+            font-weight: 800;
+            color: #00e5ff;
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 0 15px rgba(0,229,255,0.3);
+        }
+
+        .scene-card.treasure-glow .scene-title,
+        .scene-card.grand-glow .scene-title {
+            color: #ffd700;
+            text-shadow: 0 0 15px rgba(255,215,0,0.4);
+        }
+
+        .scene-card.danger-glow .scene-title {
+            color: #ef5350;
+            text-shadow: 0 0 15px rgba(239,83,80,0.4);
+        }
+
+        .scene-card.powerup-glow .scene-title {
+            color: #64ffda;
+            text-shadow: 0 0 15px rgba(100,255,218,0.4);
+        }
+
+        .scene-emoji {
+            font-size: 2.6em;
+            margin: 8px 0;
+            line-height: 1.3;
+            filter: drop-shadow(0 0 10px rgba(0,229,255,0.5));
+            position: relative;
+            z-index: 1;
+            white-space: pre-line;
+        }
+
+        .scene-text {
+            color: #b2ebf2;
+            font-size: 0.98em;
+            font-weight: 600;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .scene-text .highlight {
+            color: #ffd700;
+            font-weight: 800;
+        }
+
+        .scene-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(0,229,255,0.4);
+            border-radius: 50%;
+            animation: float-particle 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float-particle {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+            50% { transform: translateY(-20px) scale(1.5); opacity: 0.8; }
+        }
+
+        .scene-card.treasure-glow .scene-particle,
+        .scene-card.grand-glow .scene-particle {
+            background: rgba(255,215,0,0.5);
+        }
+
+        .scene-card.danger-glow .scene-particle {
+            background: rgba(239,83,80,0.4);
+        }
+
+        .scene-card.powerup-glow .scene-particle {
+            background: rgba(100,255,218,0.5);
+        }
+
+        @keyframes sceneCardIn {
+            0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+
         /* Direction buttons */
         .direction-pad {
             display: grid;
@@ -831,6 +974,23 @@
                 font-size: 0.8em;
                 gap: 10px;
             }
+
+            .scene-card {
+                padding: 14px;
+                min-height: 150px;
+            }
+
+            .scene-emoji {
+                font-size: 2.2em;
+            }
+
+            .scene-text {
+                font-size: 0.9em;
+            }
+
+            .scene-title {
+                font-size: 1.05em;
+            }
         }
 
         /* Intro screen */
@@ -1002,6 +1162,11 @@
             <!-- Left: Game panel -->
             <div class="game-panel">
                 <div class="ocean-panel">
+                    <div class="scene-card" id="sceneCard">
+                        <div class="scene-title" id="sceneTitle"></div>
+                        <div class="scene-emoji" id="sceneEmoji"></div>
+                        <div class="scene-text" id="sceneText"></div>
+                    </div>
                     <div class="ocean-message" id="oceanMessage">
                         <div>
                             <span class="msg-emoji">🤿</span>
@@ -1302,6 +1467,310 @@ const TREASURE_POINTS = {
 
 const EMPTY_OCEAN_EMOJI = ['🐚','🌊','🐠','🐡','🦀','🦑','🐙','🪸','🦐','🐳','🦞','🫧'];
 
+// =========================================================================
+// RICH ENCOUNTER SCENE DATA
+// =========================================================================
+const emptyEncounters = [
+    {
+        emoji: '🐠🐟🐠\n🌊🌊🌊\n🪸🪸🪸',
+        title: 'Coral Reef',
+        text: 'You glide over a vibrant coral reef teeming with tropical fish. Their scales shimmer in the filtered light.',
+    },
+    {
+        emoji: '🚢\n💀⚓💀\n🪸🦀🪸',
+        title: 'Sunken Shipwreck',
+        text: 'The ghostly hull of an ancient ship looms from the darkness. Barnacles cover every surface. Could there be treasure inside?',
+    },
+    {
+        emoji: '🏛️\n🏛️🗿🏛️\n🌿🌿🌿',
+        title: 'Lost Temple',
+        text: 'Ancient stone columns rise from the ocean floor \u2014 a temple from a civilization lost to the waves thousands of years ago.',
+    },
+    {
+        emoji: '🏠🏚️\n🌊🌊🌊\n🐟🦐🐟',
+        title: 'Sunken Village',
+        text: 'Crumbling houses from a village swallowed by the sea. Fish swim in and out of broken windows. What stories do these walls hold?',
+    },
+    {
+        emoji: '🌋\n💨💨💨\n🔴🟠🔴',
+        title: 'Underwater Volcano',
+        text: 'A thermal vent bubbles with superheated water! Strange tube worms and pale crabs thrive in the scorching heat.',
+    },
+    {
+        emoji: '🐋\n🌊🌊🌊\n✨✨✨',
+        title: 'Whale Song',
+        text: 'A magnificent whale passes overhead, its haunting song reverberating through the deep. You feel small but at peace.',
+    },
+    {
+        emoji: '🦑\n🌑🌑🌑\n👀👀',
+        title: 'The Abyss',
+        text: 'The ocean floor drops away into a bottomless trench. Something enormous moves in the darkness far below...',
+    },
+    {
+        emoji: '⭐⭐⭐\n🌊💎🌊\n🪸🪸🪸',
+        title: 'Bioluminescent Garden',
+        text: 'Thousands of tiny creatures light up like stars, creating an underwater galaxy. The water itself seems to glow.',
+    },
+    {
+        emoji: '🐢\n🌊🌊🌊\n🌿🐚🌿',
+        title: 'Sea Turtle Haven',
+        text: 'A gentle sea turtle glides past, ancient and wise. It seems to nod at you as if sharing a secret of the deep.',
+    },
+    {
+        emoji: '⚓⛓️\n🪸🦞🪸\n🌊🌊🌊',
+        title: 'Lost Anchor',
+        text: 'A massive rusted anchor, chains trailing into the gloom. What great ship did this once hold? The metal is covered in sea life.',
+    },
+    {
+        emoji: '🗿\n🗿🗿🗿\n🌿🌿🌿',
+        title: 'Stone Guardians',
+        text: 'Carved stone faces stare from the seafloor \u2014 ancient guardians of a forgotten kingdom. Their eyes seem to follow you.',
+    },
+    {
+        emoji: '🪼🪼🪼\n✨✨✨\n🌊🌊🌊',
+        title: 'Jellyfish Ballet',
+        text: 'Hundreds of translucent jellyfish pulse gracefully through the water, trailing glowing tendrils like living chandeliers.',
+    },
+    {
+        emoji: '📦📦\n⚓🗺️⚓\n🪸🪸🪸',
+        title: 'Cargo Wreck',
+        text: 'Scattered cargo boxes from a merchant ship lie half-buried in sand. Most are rotted away, but some look sealed tight...',
+    },
+    {
+        emoji: '🦈\n🐟🐟🐟\n🌊🌊🌊',
+        title: 'Shark Patrol',
+        text: 'A reef shark patrols lazily overhead, not interested in you today. Schools of fish part around it like a living curtain.',
+    },
+    {
+        emoji: '🫧🫧🫧\n🌋🌋\n🦀🦐🦀',
+        title: 'Hydrothermal Vent',
+        text: 'Mineral-rich water spews from cracks in the earth. Blind white shrimp and strange worms cluster around the warmth.',
+    },
+    {
+        emoji: '🐙\n🏺🏺🏺\n🪸🪸🪸',
+        title: 'Octopus Garden',
+        text: 'A clever octopus has decorated its den with shells, pottery, and colorful stones. It watches you with one curious eye.',
+    },
+    {
+        emoji: '⛵\n🌊🌊🌊\n🐟💀🐟',
+        title: 'Ghost Ship',
+        text: 'A perfectly preserved sailing ship rests upright on the seafloor, sails still raised. Not a soul aboard. An eerie stillness surrounds it.',
+    },
+    {
+        emoji: '🏰\n🧜\u200d♀️🧜\u200d♂️\n🪸🐚🪸',
+        title: 'Mermaid Ruins',
+        text: 'Graceful arches and towers of carved coral \u2014 could this be a palace of the merfolk? Faint music seems to echo from within.',
+    },
+    {
+        emoji: '🌿🌿🌿\n🐊🐢🐊\n🌊🌊🌊',
+        title: 'Kelp Forest',
+        text: 'Towering kelp sways in the current like an underwater forest. Shafts of green light filter through the canopy above.',
+    },
+    {
+        emoji: '💀⚔️\n🗡️🛡️🗡️\n🪸🪸🪸',
+        title: 'Pirate\'s Last Stand',
+        text: 'Ancient weapons and armor scattered on the seafloor \u2014 evidence of a great battle fought here long ago. What were they fighting over?',
+    },
+    {
+        emoji: '🔱\n👑💎👑\n🏛️🏛️🏛️',
+        title: 'Atlantean Gateway',
+        text: 'A magnificent archway carved with symbols and crowned with a golden trident. Beyond it, the water shimmers with ancient power.',
+    },
+    {
+        emoji: '🐡🐡\n🪸🌺🪸\n🦀🐚🦀',
+        title: 'Pufferfish Cove',
+        text: 'Chubby pufferfish bob around a garden of sea anemones. One puffs up in surprise at your arrival \u2014 adorable!',
+    },
+    {
+        emoji: '📜📜\n🗺️🧭🗺️\n⚓⚓⚓',
+        title: 'Navigator\'s Cache',
+        text: 'Waterlogged maps and navigation instruments lie in a stone chest. These ancient charts might have led to legendary treasures.',
+    },
+    {
+        emoji: '🦭🦭\n🧊🧊🧊\n🌊🌊🌊',
+        title: 'Deep Cold',
+        text: 'The water turns ice-cold. Curious seals investigate you from a distance, their dark eyes full of intelligence.',
+    },
+    {
+        emoji: '🎵🎶\n🐚🐚🐚\n🌊✨🌊',
+        title: 'Singing Shells',
+        text: 'Giant conch shells are arranged in a circle on the seafloor. When the current passes through them, they produce an otherworldly melody.',
+    },
+    {
+        emoji: '🦩🦩\n🌴🏝️🌴\n🌊🐟🌊',
+        title: 'Shallow Lagoon',
+        text: 'You drift into the shallow waters of a hidden lagoon. Sunlight dances on the sandy bottom and pink flamingos wade above.',
+    },
+    {
+        emoji: '🧲🧲\n🪨🪨🪨\n⚡⚡⚡',
+        title: 'Magnetic Rocks',
+        text: 'Strange black stones hum with magnetic energy. Your compass spins wildly. Ancient sailors warned of these cursed rocks.',
+    },
+    {
+        emoji: '🌙🌟\n🐟✨🐟\n🌊🌊🌊',
+        title: 'Midnight Waters',
+        text: 'The water is ink-dark here, but bioluminescent fish create a constellation of tiny lights all around you.',
+    },
+    {
+        emoji: '🏺🏺🏺\n🍶🍷🍶\n🪸🪸🪸',
+        title: 'Amphora Field',
+        text: 'Dozens of ancient clay jars litter the seafloor \u2014 cargo from a Roman trading vessel. Some still hold traces of wine and oil.',
+    },
+    {
+        emoji: '🐬🐬\n🌊🌈🌊\n✨✨✨',
+        title: 'Dolphin Dance',
+        text: 'A pod of playful dolphins spirals around you! They click and whistle, inviting you to join their joyful dance through the currents.',
+    },
+];
+
+const treasureScenes = {
+    minor: {
+        emoji: '✨🪙✨\n🏺🏺🏺\n🪸🪸🪸',
+        title: 'Treasure Cache!',
+        text: 'Glinting coins spill from a cracked clay pot! Ancient gold pieces from a long-lost trading ship. <span class="highlight">+50 points!</span>'
+    },
+    major: {
+        emoji: '✨💎✨\n👑💎👑\n🏛️🏛️🏛️',
+        title: 'Royal Treasure!',
+        text: 'A jewel-encrusted chest sits in the ruins of an underwater palace! Rubies, sapphires, and emeralds cascade out as you open it. <span class="highlight">+200 points!</span>'
+    },
+    grand: {
+        emoji: '🌟🏆🌟\n👑💎👑\n✨🔱✨\n🏛️🏛️🏛️',
+        title: '\u26a1 THE GRAND TREASURE! \u26a1',
+        text: 'The legendary Crown of the Deep \u2014 a golden crown set with the Heart of the Ocean, a gem that glows with its own inner light! Legends say it grants the wearer the power to speak with all sea creatures. <span class="highlight">+2000 POINTS!</span>'
+    }
+};
+
+const dangerScenes = {
+    shark: {
+        emoji: '🦈🦈🦈\n🌊💀🌊\n🌊🩸🌊',
+        title: '\u26a0\ufe0f SHARK ATTACK!',
+        text: 'Three great white sharks circle you, their dead eyes fixed on your movements. There\'s nowhere to hide!'
+    },
+    jellyfish: {
+        emoji: '🪼🪼🪼\n⚡🌊⚡\n🪼🪼🪼',
+        title: '\u26a0\ufe0f JELLYFISH SWARM!',
+        text: 'A massive bloom of jellyfish surrounds you! Their glowing tendrils trail venom through the water. The sting is electric!'
+    },
+    serpent: {
+        emoji: '🐉🐉\n🌊🌊🌊\n💀⚡💀',
+        title: '\u26a0\ufe0f SEA SERPENT!',
+        text: 'A monstrous sea serpent erupts from a crevice! Its scales are black as midnight and its eyes burn like embers. It strikes!'
+    },
+    whirlpool: {
+        emoji: '🌀🌀🌀\n🌊🌀🌊\n🌀🌀🌀',
+        title: '\u26a0\ufe0f WHIRLPOOL!',
+        text: 'The water spins into a violent maelstrom! You\'re caught in a crushing whirlpool that pulls you down into the dark!'
+    }
+};
+
+const dangerShieldedScenes = {
+    shark: {
+        emoji: '🛡️✨🛡️\n🦈🌊🦈\n🌊🌊🌊',
+        title: 'Shield Blocked!',
+        text: 'Sharks lunged at you, but your magical shield flared with light and drove them back! <span class="highlight">Shield destroyed.</span>'
+    },
+    jellyfish: {
+        emoji: '🛡️✨🛡️\n🪼🌊🪼\n🌊🌊🌊',
+        title: 'Shield Blocked!',
+        text: 'Jellyfish tendrils wrapped around you, but your shield absorbed the venom in a flash of blue light! <span class="highlight">Shield destroyed.</span>'
+    },
+    serpent: {
+        emoji: '🛡️✨🛡️\n🐉🌊🐉\n🌊🌊🌊',
+        title: 'Shield Blocked!',
+        text: 'The sea serpent struck, but your shield erupted with energy, sending the creature reeling! <span class="highlight">Shield destroyed.</span>'
+    },
+    whirlpool: {
+        emoji: '🛡️✨🛡️\n🌀🌊🌀\n🌊🌊🌊',
+        title: 'Shield Blocked!',
+        text: 'The whirlpool tried to drag you down, but your shield created a bubble of calm water around you! <span class="highlight">Shield destroyed.</span>'
+    }
+};
+
+const powerupScenes = {
+    shield: {
+        emoji: '✨🛡️✨\n🏛️⚔️🏛️\n🪸🪸🪸',
+        title: 'Ancient Shield!',
+        text: 'A glowing magical shield floats among the ruins of a warrior\'s tomb. It pulses with protective energy! <span class="highlight">Shield acquired!</span>'
+    },
+    sonar: {
+        emoji: '📡✨📡\n🔊🌊🔊\n🐟🐟🐟',
+        title: 'Sonar Device!',
+        text: 'An advanced sonar device from a research submarine! It can reveal the area around you. <span class="highlight">Sonar charge acquired!</span>'
+    }
+};
+
+const bellScene = {
+    emoji: '🔔✨🔔\n⛓️🔔⛓️\n🫧🫧🫧',
+    title: 'The Diving Bell!',
+    text: 'A golden diving bell hangs suspended by ancient chains, swaying gently in the current. This is your way back to the surface! <span class="highlight">Board it when you\'re ready to claim your treasure.</span>'
+};
+
+let emptyEncounterIndex = 0;
+let shuffledEmptyEncounters = [];
+
+function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function getNextEmptyEncounter() {
+    if (emptyEncounterIndex >= shuffledEmptyEncounters.length) {
+        shuffledEmptyEncounters = shuffleArray(emptyEncounters);
+        emptyEncounterIndex = 0;
+    }
+    return shuffledEmptyEncounters[emptyEncounterIndex++];
+}
+
+function showScene(scene, glowType) {
+    const card = document.getElementById('sceneCard');
+    const titleEl = document.getElementById('sceneTitle');
+    const emojiEl = document.getElementById('sceneEmoji');
+    const textEl = document.getElementById('sceneText');
+
+    // Remove old glow classes and particles
+    card.className = 'scene-card';
+    card.querySelectorAll('.scene-particle').forEach(p => p.remove());
+
+    // Set content
+    titleEl.textContent = scene.title;
+    emojiEl.textContent = scene.emoji;
+    textEl.innerHTML = scene.text;
+
+    // Add glow class
+    if (glowType) {
+        card.classList.add(glowType);
+    }
+
+    // Add floating particles
+    const particleCount = glowType === 'grand-glow' ? 12 : 6;
+    for (let i = 0; i < particleCount; i++) {
+        const p = document.createElement('div');
+        p.className = 'scene-particle';
+        p.style.left = (10 + Math.random() * 80) + '%';
+        p.style.top = (10 + Math.random() * 80) + '%';
+        p.style.animationDelay = (Math.random() * 3) + 's';
+        p.style.animationDuration = (2 + Math.random() * 2) + 's';
+        card.appendChild(p);
+    }
+
+    // Force reflow so animation replays on consecutive scenes
+    void card.offsetWidth;
+
+    // Show with animation
+    card.classList.add('active');
+}
+
+function hideScene() {
+    const card = document.getElementById('sceneCard');
+    card.classList.remove('active');
+    card.className = 'scene-card';
+}
+
 let grid = [];           // 16x16 grid of cell types
 let visited = [];         // 16x16 boolean of visited cells
 let collected = [];       // 16x16 boolean of collected items
@@ -1388,18 +1857,22 @@ function generateGrid() {
 
     // Place player on random edge cell that's empty
     let edgeCells = [];
-    for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-            if ((r === 0 || r === GRID_SIZE - 1 || c === 0 || c === GRID_SIZE - 1) && grid[r][c] === CELL_TYPES.EMPTY) {
-                edgeCells.push([r, c]);
+    // Start player near center of map (within 3 cells of center)
+    const centerR = Math.floor(GRID_SIZE / 2);
+    const centerC = Math.floor(GRID_SIZE / 2);
+    const centerCells = [];
+    for (let r = centerR - 2; r <= centerR + 2; r++) {
+        for (let c = centerC - 2; c <= centerC + 2; c++) {
+            if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE && grid[r][c] === CELL_TYPES.EMPTY) {
+                centerCells.push([r, c]);
             }
         }
     }
-    if (edgeCells.length === 0) {
-        edgeCells = [[0, 0]];
-        grid[0][0] = CELL_TYPES.EMPTY;
+    if (centerCells.length === 0) {
+        centerCells.push([centerR, centerC]);
+        grid[centerR][centerC] = CELL_TYPES.EMPTY;
     }
-    const start = edgeCells[Math.floor(Math.random() * edgeCells.length)];
+    const start = centerCells[Math.floor(Math.random() * centerCells.length)];
     playerRow = start[0];
     playerCol = start[1];
     visited[playerRow][playerCol] = true;
@@ -1427,6 +1900,9 @@ function startGame() {
     updateAllUI();
     setOceanMessage('🤿', 'You dive into the deep ocean! Choose a direction to explore.');
     hideKanjiPanel();
+    hideScene();
+    shuffledEmptyEncounters = shuffleArray(emptyEncounters);
+    emptyEncounterIndex = 0;
 
     initDrawCanvas();
 }
@@ -1450,6 +1926,9 @@ function restartGame() {
     updateAllUI();
     setOceanMessage('🤿', 'A new dive begins! Choose a direction to explore.');
     hideKanjiPanel();
+    hideScene();
+    shuffledEmptyEncounters = shuffleArray(emptyEncounters);
+    emptyEncounterIndex = 0;
 }
 
 // =========================================================================
@@ -1688,6 +2167,7 @@ function selectDirection(dir) {
 
     selectedDirection = dir;
     updateDirectionButtons();
+    hideScene();
 
     // Present kanji challenge
     currentKanji = gameKanji[Math.floor(Math.random() * gameKanji.length)];
@@ -1758,10 +2238,13 @@ function processEncounter(cellType, r, c) {
         setTimeout(() => panel.classList.remove('treasure-flash'), 800);
 
         if (cellType === CELL_TYPES.GRAND_TREASURE) {
-            setOceanMessage('🏆', `GRAND TREASURE found! +${pts} points! A golden crown gleams in the darkness!`);
+            showScene(treasureScenes.grand, 'grand-glow');
+            setOceanMessage('🏆', `GRAND TREASURE found! +${pts} points!`);
         } else if (cellType === CELL_TYPES.MAJOR_TREASURE) {
-            setOceanMessage('💎', `Gem discovered! +${pts} points! It sparkles with bioluminescent light!`);
+            showScene(treasureScenes.major, 'treasure-glow');
+            setOceanMessage('💎', `Gem discovered! +${pts} points!`);
         } else {
+            showScene(treasureScenes.minor, 'treasure-glow');
             setOceanMessage('🪙', `Ancient coin found! +${pts} points!`);
         }
     } else if (cellType === CELL_TYPES.SHIELD) {
@@ -1771,7 +2254,8 @@ function processEncounter(cellType, r, c) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        setOceanMessage('🛡️', 'Shield acquired! It will protect you from one attack.');
+        showScene(powerupScenes.shield, 'powerup-glow');
+        setOceanMessage('🛡️', 'Shield acquired!');
     } else if (cellType === CELL_TYPES.SONAR) {
         sonarCharges++;
         collected[r][c] = true;
@@ -1779,28 +2263,22 @@ function processEncounter(cellType, r, c) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        setOceanMessage('📡', 'Sonar device found! Use it to scan nearby cells.');
+        showScene(powerupScenes.sonar, 'powerup-glow');
+        setOceanMessage('📡', 'Sonar device found!');
     } else if (cellType === CELL_TYPES.DIVING_BELL) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        setOceanMessage('🔔', 'Diving Bell found! You can surface here to bank your score!');
+        showScene(bellScene, 'powerup-glow');
+        setOceanMessage('🔔', 'Diving Bell found! You can surface here!');
     } else if (DANGER_TYPES.includes(cellType)) {
         // DANGER!
         handleDanger(cellType);
     } else {
-        // Empty ocean
-        const emoji = EMPTY_OCEAN_EMOJI[Math.floor(Math.random() * EMPTY_OCEAN_EMOJI.length)];
-        const messages = [
-            'The water is calm here...',
-            'Nothing but open ocean...',
-            'Quiet depths surround you...',
-            'The sea floor stretches on...',
-            'Soft coral sways in the current...',
-            'Sand shifts beneath you...',
-            'Schools of tiny fish scatter...',
-        ];
-        setOceanMessage(emoji, messages[Math.floor(Math.random() * messages.length)]);
+        // Empty ocean - rich encounter
+        const encounter = getNextEmptyEncounter();
+        showScene(encounter, null);
+        setOceanMessage('🤿', encounter.title + ' \u2014 Choose a direction to continue exploring.');
     }
 }
 
@@ -1809,14 +2287,16 @@ function handleDanger(cellType) {
     panel.classList.add('danger-flash');
     setTimeout(() => panel.classList.remove('danger-flash'), 600);
 
+    const dangerKey = cellType === CELL_TYPES.SHARK ? 'shark' :
+                      cellType === CELL_TYPES.JELLYFISH ? 'jellyfish' :
+                      cellType === CELL_TYPES.SEA_SERPENT ? 'serpent' :
+                      'whirlpool';
+
     if (shields > 0) {
         shields--;
         playSfx('shield');
-        const name = cellType === CELL_TYPES.SHARK ? 'shark' :
-                     cellType === CELL_TYPES.JELLYFISH ? 'jellyfish' :
-                     cellType === CELL_TYPES.SEA_SERPENT ? 'sea serpent' :
-                     'whirlpool';
-        setOceanMessage('🛡️', `Your shield blocked the ${name}! Shield destroyed.`);
+        showScene(dangerShieldedScenes[dangerKey], 'powerup-glow');
+        setOceanMessage('🛡️', 'Your shield saved you! Shield destroyed.');
         updateShields();
         return;
     }
@@ -1831,6 +2311,8 @@ function handleDanger(cellType) {
         h.classList.add('pulse');
         setTimeout(() => h.classList.remove('pulse'), 500);
     });
+
+    showScene(dangerScenes[dangerKey], 'danger-glow');
 
     if (cellType === CELL_TYPES.SHARK) {
         setOceanMessage('🦈', 'A shark attacks! You lose a life! (' + lives + ' remaining)');
