@@ -1898,11 +1898,18 @@ function startGame() {
     kanjiPracticed = new Set();
 
     updateAllUI();
-    setOceanMessage('🤿', 'You dive into the deep ocean! Choose a direction to explore.');
     hideKanjiPanel();
-    hideScene();
     shuffledEmptyEncounters = shuffleArray(emptyEncounters);
     emptyEncounterIndex = 0;
+
+    // Show starting scene with any nearby danger warnings
+    const startWarning = getNearbyDangerWarning();
+    showScene({
+        emoji: '🤿\n🌊🌊🌊\n🐠🐟🐠',
+        title: 'Into the Deep!',
+        text: 'You plunge into the crystal blue water. The ocean stretches endlessly in every direction. Ancient treasures await those brave enough to seek them...' + startWarning
+    }, null);
+    setOceanMessage('🤿', 'You dive into the deep ocean! Choose a direction to explore.');
 
     initDrawCanvas();
 }
@@ -1924,9 +1931,17 @@ function restartGame() {
     kanjiPracticed = new Set();
 
     updateAllUI();
-    setOceanMessage('🤿', 'A new dive begins! Choose a direction to explore.');
     hideKanjiPanel();
-    hideScene();
+    shuffledEmptyEncounters = shuffleArray(emptyEncounters);
+    emptyEncounterIndex = 0;
+
+    const restartWarning = getNearbyDangerWarning();
+    showScene({
+        emoji: '🤿\n🌊🌊🌊\n🐠🐟🐠',
+        title: 'A New Dive!',
+        text: 'You take a deep breath and plunge back into the ocean depths. The hunt continues...' + restartWarning
+    }, null);
+    setOceanMessage('🤿', 'A new dive begins! Choose a direction to explore.');
     shuffledEmptyEncounters = shuffleArray(emptyEncounters);
     emptyEncounterIndex = 0;
 }
@@ -2256,9 +2271,13 @@ function getNearbyDangerWarning() {
 
 function processEncounter(cellType, r, c) {
     const panel = document.querySelector('.ocean-panel');
+    const warning = getNearbyDangerWarning();
+
+    function withWarning(scene, glow) {
+        showScene({emoji: scene.emoji, title: scene.title, text: scene.text + warning}, glow);
+    }
 
     if (TREASURE_TYPES.includes(cellType) && !collected[r][c]) {
-        // Treasure!
         const pts = TREASURE_POINTS[cellType];
         score += pts;
         collected[r][c] = true;
@@ -2268,13 +2287,13 @@ function processEncounter(cellType, r, c) {
         setTimeout(() => panel.classList.remove('treasure-flash'), 800);
 
         if (cellType === CELL_TYPES.GRAND_TREASURE) {
-            showScene(treasureScenes.grand, 'grand-glow');
+            withWarning(treasureScenes.grand, 'grand-glow');
             setOceanMessage('🏆', `GRAND TREASURE found! +${pts} points!`);
         } else if (cellType === CELL_TYPES.MAJOR_TREASURE) {
-            showScene(treasureScenes.major, 'treasure-glow');
+            withWarning(treasureScenes.major, 'treasure-glow');
             setOceanMessage('💎', `Gem discovered! +${pts} points!`);
         } else {
-            showScene(treasureScenes.minor, 'treasure-glow');
+            withWarning(treasureScenes.minor, 'treasure-glow');
             setOceanMessage('🪙', `Ancient coin found! +${pts} points!`);
         }
     } else if (cellType === CELL_TYPES.SHIELD) {
@@ -2284,7 +2303,7 @@ function processEncounter(cellType, r, c) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        showScene(powerupScenes.shield, 'powerup-glow');
+        withWarning(powerupScenes.shield, 'powerup-glow');
         setOceanMessage('🛡️', 'Shield acquired!');
     } else if (cellType === CELL_TYPES.SONAR) {
         sonarCharges++;
@@ -2293,28 +2312,20 @@ function processEncounter(cellType, r, c) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        showScene(powerupScenes.sonar, 'powerup-glow');
+        withWarning(powerupScenes.sonar, 'powerup-glow');
         setOceanMessage('📡', 'Sonar device found!');
     } else if (cellType === CELL_TYPES.DIVING_BELL) {
         playSfx('powerup');
         panel.classList.add('encounter-flash');
         setTimeout(() => panel.classList.remove('encounter-flash'), 600);
-        const warning = getNearbyDangerWarning();
-        showScene({emoji: bellScene.emoji, title: bellScene.title, text: bellScene.text + warning}, 'powerup-glow');
+        withWarning(bellScene, 'powerup-glow');
         setOceanMessage('🔔', 'Diving Bell found! You can surface here!');
     } else if (DANGER_TYPES.includes(cellType)) {
-        // DANGER!
         handleDanger(cellType);
     } else {
-        // Empty ocean - rich encounter with nearby danger warnings
+        // Empty ocean - rich encounter
         const encounter = getNextEmptyEncounter();
-        const warning = getNearbyDangerWarning();
-        const sceneWithWarning = {
-            emoji: encounter.emoji,
-            title: encounter.title,
-            text: encounter.text + warning
-        };
-        showScene(sceneWithWarning, warning ? null : null);
+        withWarning(encounter, null);
         setOceanMessage('🤿', encounter.title + ' \u2014 Choose a direction to continue exploring.');
     }
 }
