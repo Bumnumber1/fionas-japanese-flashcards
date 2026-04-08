@@ -199,23 +199,8 @@
             border: 1px solid rgba(0,229,255,0.1);
         }
 
-        /* Scene image container */
-        .scene-img {
-            width: 100%;
-            max-height: 250px;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .scene-img img {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 12px;
-        }
-
-        .scene-img:empty { display: none; }
+        /* Scene image as card background */
+        .scene-img { display: none; }
 
         .ocean-message {
             font-size: 0.95em;
@@ -243,11 +228,13 @@
         /* Scene card system */
         .scene-card {
             background: linear-gradient(180deg, #001428 0%, #003366 40%, #004d66 100%);
+            background-size: cover;
+            background-position: center;
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 14px;
             text-align: center;
-            min-height: 180px;
+            min-height: 220px;
             position: relative;
             overflow: hidden;
             border: 2px solid rgba(0,229,255,0.2);
@@ -256,20 +243,22 @@
         }
 
         .scene-card.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
             animation: sceneCardIn 0.5s ease forwards;
         }
 
         .scene-card::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: 30%;
-            width: 40%;
-            height: 200%;
-            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
-            transform: rotate(-15deg);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(0,10,20,0.15) 0%, rgba(0,10,20,0.55) 50%, rgba(0,10,20,0.85) 100%);
             pointer-events: none;
+            z-index: 0;
         }
 
         .scene-card.treasure-glow {
@@ -305,7 +294,7 @@
             margin-bottom: 6px;
             position: relative;
             z-index: 1;
-            text-shadow: 0 0 15px rgba(0,229,255,0.3);
+            text-shadow: 0 0 15px rgba(0,229,255,0.3), 0 1px 4px rgba(0,0,0,0.9);
         }
 
         .scene-card.treasure-glow .scene-title,
@@ -335,13 +324,13 @@
         }
 
         .scene-text {
-            color: #b2ebf2;
+            color: #e0f7fa;
             font-size: 0.98em;
             font-weight: 600;
             line-height: 1.5;
             position: relative;
             z-index: 1;
-            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.7);
         }
 
         .scene-text .highlight {
@@ -1813,12 +1802,14 @@ function showScene(scene, glowType) {
     card.className = 'scene-card';
     card.querySelectorAll('.scene-particle').forEach(p => p.remove());
 
-    // Set image if available, otherwise show emoji
+    // Set image as card background if available
     if (scene.image) {
-        imgEl.innerHTML = `<img src="ocean_images/${scene.image}" alt="${scene.title}" onerror="this.parentElement.innerHTML=''">`;
+        const img = new Image();
+        img.onload = () => { card.style.backgroundImage = `url('ocean_images/${scene.image}')`; };
+        img.src = `ocean_images/${scene.image}`;
         emojiEl.style.display = 'none';
     } else {
-        imgEl.innerHTML = '';
+        card.style.backgroundImage = '';
         emojiEl.style.display = 'block';
     }
 
@@ -1855,6 +1846,7 @@ function hideScene() {
     const card = document.getElementById('sceneCard');
     card.classList.remove('active');
     card.className = 'scene-card';
+    card.style.backgroundImage = '';
 }
 
 let grid = [];           // 16x16 grid of cell types
@@ -2360,7 +2352,7 @@ function processEncounter(cellType, r, c) {
     const warning = getNearbyDangerWarning();
 
     function withWarning(scene, glow) {
-        showScene({emoji: scene.emoji, title: scene.title, text: scene.text + warning}, glow);
+        showScene({emoji: scene.emoji, image: scene.image, title: scene.title, text: scene.text + warning}, glow);
     }
 
     if (TREASURE_TYPES.includes(cellType) && !collected[r][c]) {
