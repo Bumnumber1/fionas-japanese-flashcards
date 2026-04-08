@@ -1422,38 +1422,109 @@ const oceanSentences = [
     (k) => `The deep sea reveals ${k.english} to brave divers!`,
 ];
 
-// Special ocean-themed sentences for specific kanji
+// Image-matched descriptions for every kanji
 const specialSentences = {
-    '魚': 'You see a school of fish swim by!',
-    '水': 'Bubbles rise through the deep water...',
-    '強': 'A strong current pushes against you!',
-    '光': 'A beam of light pierces the darkness!',
-    '海': 'The vast ocean stretches in every direction...',
-    '船': 'A ghostly shipwreck looms ahead...',
-    '風': 'An underwater current swirls around you like wind!',
-    '星': 'Bioluminescent creatures shine like stars...',
-    '大': 'A big shadow passes overhead...',
-    '小': 'Tiny seahorses dart between the coral...',
-    '金': 'Gold coins glitter on the ocean floor!',
-    '貝': 'Beautiful shellfish cling to the rocks...',
-    '石': 'Smooth stones line the sea bed...',
-    '青': 'The deep blue surrounds you...',
-    '黒': 'The water grows darker as you descend...',
-    '白': 'White sand stretches below...',
-    '赤': 'Red coral formations glow nearby...',
-    '火': 'A volcanic vent shoots fire underwater!',
-    '雨': 'The surface above ripples with rain...',
-    '雲': 'A cloud of ink disperses nearby...',
-    '夜': 'Night falls on the ocean surface above...',
-    '池': 'You discover a still underwater pool...',
-    '鳥': 'A diving bird plunges from the surface!',
-    '目': 'Huge eyes watch you from the dark...',
-    '心': 'Your heart beats strong in the deep...',
-    '力': 'You summon your power to swim on!',
-    '走': 'You run your hands through the current!',
-    '止': 'The water grows still. Stop and listen...',
-    '入': 'You enter an underwater cave...',
-    '出': 'Light shows the way out!',
+    // --- Numbers ---
+    '一': 'A single golden coin glows softly on the sandy ocean floor.',
+    '二': 'Two ornate amphora vases sit side by side, crusted with coral.',
+    '三': 'Three glowing sea lanterns illuminate the ocean floor.',
+    '四': 'Four colorful starfish rest in a pattern on the sand.',
+    '五': 'Five beautiful seashells of different shapes are scattered among the coral.',
+    '六': 'Six luminous pearls float gently among the coral below.',
+    '七': 'Seven colorful tropical fish swim together in formation.',
+    '八': 'A friendly octopus spreads its eight tentacles wide across the reef.',
+    '九': 'Nine glowing jellyfish drift together in a shimmering cluster.',
+    '十': 'A grand treasure chest overflows with gold coins on the ocean floor.',
+    // --- Nature ---
+    '山': 'A massive underwater mountain rises from the seafloor, covered in coral.',
+    '川': 'A strange current of denser water flows like a river along the ocean floor.',
+    '花': 'Sea anemones bloom in pink and orange like an underwater flower garden.',
+    '雨': 'A girl swims gracefully as particles drift down like underwater rain.',
+    '空': 'A girl gazes upward through crystal blue water toward the bright sky above.',
+    '天': 'Golden pillars of sunlight descend like heaven through the deep water.',
+    '石': 'An ancient carved stone tablet rests on a pedestal among sunken ruins.',
+    '田': 'Neat rows of colorful seagrass sway like an underwater rice field.',
+    // --- People ---
+    '人': 'A graceful statue of a person stands among the coral, covered in sea life.',
+    '子': 'A cute little fairy-like child plays among the coral and sea flowers.',
+    '女': 'An elegant mermaid statue stands on a pedestal, flanked by two others.',
+    '男': 'A warrior statue stands proud on the seafloor, sword in hand.',
+    '王': 'A girl in a royal outfit holds court among the fish and coral — a queen of the sea.',
+    '生': 'Vibrant coral in every color bursts with new life across the reef.',
+    '学': 'Stacks of waterlogged books rest on the ocean floor, pages gently floating.',
+    // --- Body ---
+    '目': 'A glowing mystical eye symbol shines from an ancient underwater temple wall.',
+    '耳': 'A colorful mermaid swims past, her flowing form catching the light.',
+    '口': 'A cavern opens wide like a great mouth in the underwater cliff face.',
+    '手': 'A coral formation reaches upward like an outstretched hand from the seafloor.',
+    '足': 'A smooth stone impression shaped like a footprint sits on the ocean floor.',
+    // --- Concepts ---
+    '力': 'Powerful currents surge around a sunken ship, showing the ocean\'s raw strength.',
+    '上': 'A curious fish looks upward toward the bright sunlit surface above.',
+    '下': 'A diver descends past massive rocks into the dark depths below.',
+    '大': 'An enormous face looms from the seafloor — an ancient giant statue.',
+    '中': 'A tiny creature rests perfectly centered inside a blooming sea flower.',
+    '小': 'A tiny seahorse hides among delicate coral branches.',
+    '入': 'A girl walks toward the golden light of an underwater cave entrance.',
+    '出': 'Fish swim from a dark cave toward the bright open ocean beyond.',
+    // --- Time/Elements ---
+    '日': 'A sea creature basks in warm golden sunlight filtering through the water.',
+    '月': 'Silvery moonlight pierces the dark water, illuminating a lone diver below.',
+    '火': 'A volcanic vent erupts with fiery orange magma on the dark ocean floor.',
+    '水': 'A child plays joyfully among dancing light patterns in crystal-clear water.',
+    '木': 'Branching coral formations rise like underwater trees from the reef.',
+    '金': 'A golden ornate treasure sits gleaming on the ocean floor surrounded by fish.',
+    '土': 'A floating island reveals layers of earth and stone beneath the waterline.',
+    // --- Objects ---
+    '本': 'A girl reads a waterlogged book on the ocean floor, surrounded by stacked tomes.',
+    '犬': 'A cute red dog stands on a rock among the coral, looking loyal and brave.',
+    '貝': 'Giant colorful seashells of every shape cluster together on the reef.',
+    '車': 'An old vintage car sits sunken on the ocean floor, covered in coral and sea life.',
+    '赤': 'Brilliant red coral fans and formations dominate this underwater scene.',
+    '青': 'Deep sapphire blue water and blue fish fill this serene underwater world.',
+    '白': 'A ghostly white creature drifts through pristine white sand and pale coral.',
+    '見': 'An old diving suit peers through a massive brass lens among the kelp.',
+    // --- 2nd Grade ---
+    '海': 'The vast ocean stretches endlessly, sunbeams piercing the deep blue water.',
+    '魚': 'Gorgeous tropical fish swim directly toward you through the colorful reef.',
+    '船': 'A majestic wooden sailing ship floats above the underwater world, sails unfurled.',
+    '光': 'A brilliant golden sea creature trails light through the dark water.',
+    '星': 'A bright orange starfish rests among colorful coral that looks like a constellation.',
+    '風': 'Strong currents sweep a diver and sea life sideways through swirling water.',
+    '雪': 'A pale girl sits in freezing water as ice and snow drift through the deep.',
+    '雲': 'Fluffy white clouds float above a calm ocean, reflected in the water below.',
+    '強': 'A powerful shark bursts through the waves, showing incredible strength.',
+    '弱': 'A tiny translucent shrimp clings to a delicate sea fan, fragile and small.',
+    '走': 'A school of fast fish dart and rush through the water at full speed.',
+    '止': 'Ancient stone walls and archways form a barrier across the underwater passage.',
+    '食': 'Colorful fish gather around a coral feast, ready to eat.',
+    '心': 'A heart-shaped coral formation glows pink and red on the ocean floor.',
+    '友': 'Two dolphins swim side by side, touching fins in friendship.',
+    '父': 'A great whale swims protectively above, watching over the reef below.',
+    '母': 'A mother sea turtle guides her babies through the warm colorful water.',
+    '新': 'Bright new coral polyps bloom in vivid colors across fresh rock.',
+    '古': 'Crumbling ancient ruins sit weathered and old on the dark seafloor.',
+    '長': 'A long golden fish stretches across the scene, weaving through the coral.',
+    '高': 'Towering underwater pillars and rock formations rise high into the water above.',
+    '近': 'A cute little fish swims right up close, curious and friendly.',
+    '遠': 'A whale\'s silhouette fades into the vast blue distance far away.',
+    '多': 'A massive swirling ball of countless fish fills the water — so many!',
+    '少': 'Just a few small creatures drift through a vast, empty ocean.',
+    '色': 'Every color of the rainbow bursts from a vibrant coral reef.',
+    '今': 'Three ornate hourglasses still flow with sand on the ocean floor.',
+    '夜': 'A bioluminescent creature glows eerily in the pitch-dark nighttime ocean.',
+    '朝': 'Golden morning sunlight breaks through the ocean surface at dawn.',
+    '家': 'A charming cottage sits on the seafloor, complete with a red roof and garden.',
+    '道': 'A cobblestone path winds through an underwater cave toward a distant glow.',
+    '鳥': 'Penguins dive and swim gracefully beneath the ocean surface.',
+    '牛': 'A spotted round fish with big eyes bobs among the coral.',
+    '馬': 'Two beautiful seahorses face each other, elegant and graceful.',
+    '黒': 'Dark volcanic rock and deep black caverns stretch into the abyss.',
+    '池': 'A sheltered coral garden forms a calm little pool within the reef.',
+    '広': 'An endless sandy ocean floor stretches wide in every direction under bright light.',
+    '元': 'Primordial coral and sea life cluster around an ancient underwater origin point.',
+    '半': 'A large rock sits cracked and split on the ocean floor.',
+    '方': 'Ornate brass compasses point in every direction on the sandy seafloor.',
 };
 
 // =========================================================================
@@ -2336,14 +2407,7 @@ function selectDirection(dir) {
     currentKanji = gameKanji[Math.floor(Math.random() * gameKanji.length)];
     kanjiPracticed.add(currentKanji.char);
 
-    // Show kanji scene image as background
-    if (currentKanji.image) {
-        showScene({ image: currentKanji.image, title: currentKanji.emoji + ' ' + currentKanji.english, text: '' }, null);
-    } else {
-        hideScene();
-    }
-
-    // Generate ocean sentence
+    // Generate description matching the image
     let sentence;
     if (specialSentences[currentKanji.char]) {
         sentence = specialSentences[currentKanji.char];
@@ -2352,7 +2416,14 @@ function selectDirection(dir) {
         sentence = template(currentKanji);
     }
 
-    setOceanMessage('🌊', sentence);
+    // Show kanji scene image as background with description
+    if (currentKanji.image) {
+        showScene({ image: currentKanji.image, title: currentKanji.emoji + ' ' + currentKanji.english, text: sentence }, null);
+    } else {
+        hideScene();
+    }
+
+    setOceanMessage('✏️', `Write "${currentKanji.char}" (${currentKanji.english}) — ${currentKanji.strokes} strokes`);
     showKanjiPanel(currentKanji);
     clearCanvas();
 
