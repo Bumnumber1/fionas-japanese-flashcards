@@ -234,7 +234,7 @@
             padding: 20px;
             margin-bottom: 14px;
             text-align: center;
-            min-height: 220px;
+            aspect-ratio: 3 / 2;
             position: relative;
             overflow: hidden;
             border: 2px solid rgba(0,229,255,0.2);
@@ -256,7 +256,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(180deg, rgba(0,10,20,0.15) 0%, rgba(0,10,20,0.55) 50%, rgba(0,10,20,0.85) 100%);
+            background: linear-gradient(180deg, transparent 0%, rgba(0,10,20,0.4) 50%, rgba(0,10,20,0.85) 100%);
             pointer-events: none;
             z-index: 0;
         }
@@ -972,7 +972,7 @@
             .scene-panel {
                 flex: none;
                 width: 100%;
-                max-width: 500px;
+                max-width: 600px;
             }
 
             .controls-panel {
@@ -1001,7 +1001,6 @@
 
             .scene-card {
                 padding: 14px;
-                min-height: 150px;
             }
 
             .scene-emoji {
