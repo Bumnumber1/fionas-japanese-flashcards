@@ -2442,7 +2442,7 @@ function getNearbyDangerWarning() {
 }
 
 function processEncounter(cellType, r, c) {
-    const panel = document.querySelector('.scene-panel');
+    const panel = document.querySelector('.scene-panel') || document.body;
     const warning = getNearbyDangerWarning();
 
     function withWarning(scene, glow) {
@@ -2509,7 +2509,7 @@ function processEncounter(cellType, r, c) {
 }
 
 function handleDanger(cellType) {
-    const panel = document.querySelector('.scene-panel');
+    const panel = document.querySelector('.scene-panel') || document.body;
     panel.classList.add('danger-flash');
     setTimeout(() => panel.classList.remove('danger-flash'), 600);
 
@@ -2540,8 +2540,10 @@ function handleDanger(cellType) {
 
     showScene(dangerScenes[dangerKey], 'danger-glow');
 
-    // Enemy disappears after attacking
-    grid[playerRow][playerCol] = CELL_TYPES.EMPTY;
+    // Enemy disappears after attacking (clear if danger is on player's cell)
+    if (DANGER_TYPES.includes(grid[playerRow][playerCol])) {
+        grid[playerRow][playerCol] = CELL_TYPES.EMPTY;
+    }
 
     if (cellType === CELL_TYPES.SHARK) {
         setOceanMessage('🦈', 'A shark attacks! You lose health! (' + lives + ' remaining)');
@@ -2598,7 +2600,17 @@ function moveDanger(r, c, maxSteps) {
         for (const [dr, dc] of directions) {
             const nr = cr + dr;
             const nc = cc + dc;
-            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === CELL_TYPES.EMPTY) {
+            if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
+
+            // Danger moves onto player — deal damage!
+            if (nr === playerRow && nc === playerCol) {
+                grid[cr][cc] = CELL_TYPES.EMPTY;
+                // Don't place danger on player cell, just attack
+                handleDanger(type);
+                return; // Stop moving after attacking
+            }
+
+            if (grid[nr][nc] === CELL_TYPES.EMPTY) {
                 grid[cr][cc] = CELL_TYPES.EMPTY;
                 grid[nr][nc] = type;
                 cr = nr;
