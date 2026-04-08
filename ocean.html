@@ -1023,7 +1023,10 @@
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,5,15,0.97);
+            background: rgba(0,5,15,0.85);
+            background-image: url('ocean_images/intro_title.png');
+            background-size: cover;
+            background-position: center;
             z-index: 400;
             justify-content: center;
             align-items: center;
@@ -1268,11 +1271,13 @@
                 <button class="map-close" onclick="closeMap()">✕</button>
             </div>
             <div class="map-grid" id="mapGrid"></div>
+            <div id="mapCellInfo" style="text-align:center;color:#00e5ff;font-weight:700;min-height:1.5em;margin:8px 0;opacity:0;transition:opacity 0.3s;"></div>
             <div class="map-legend">
                 <span>🤿 You</span>
                 <span>⬛ Unknown</span>
                 <span>🟦 Visited</span>
                 <span>⚠️ Danger Near</span>
+                <span style="font-size:0.85em;color:#80deea;">Tap a visited cell for info</span>
             </div>
         </div>
     </div>
@@ -1856,6 +1861,7 @@ function hideScene() {
 let grid = [];           // 16x16 grid of cell types
 let visited = [];         // 16x16 boolean of visited cells
 let collected = [];       // 16x16 boolean of collected items
+let encounterMap = [];    // 16x16 stores assigned encounter for each cell
 let playerRow = 0;
 let playerCol = 0;
 let lives = 3;
@@ -1865,6 +1871,7 @@ let sonarCharges = 0;
 let depth = 0;            // Move counter
 let selectedDirection = null;
 let currentKanji = null;
+let isMoving = false;     // Guard against double-move
 let gameActive = false;
 let kanjiAttempts = 0;
 let kanjiCorrect = 0;
@@ -1887,14 +1894,17 @@ function generateGrid() {
     grid = [];
     visited = [];
     collected = [];
+    encounterMap = [];
     for (let r = 0; r < GRID_SIZE; r++) {
         grid[r] = [];
         visited[r] = [];
         collected[r] = [];
+        encounterMap[r] = [];
         for (let c = 0; c < GRID_SIZE; c++) {
             grid[r][c] = CELL_TYPES.EMPTY;
             visited[r][c] = false;
             collected[r][c] = false;
+            encounterMap[r][c] = null;
         }
     }
 
@@ -1973,6 +1983,7 @@ function startGame() {
     depth = 0;
     selectedDirection = null;
     currentKanji = null;
+    isMoving = false;
     gameActive = true;
     kanjiAttempts = 0;
     kanjiCorrect = 0;
@@ -1998,7 +2009,9 @@ function startGame() {
 }
 
 function restartGame() {
-    document.getElementById('resultOverlay').classList.remove('active');
+    const resultOv = document.getElementById('resultOverlay');
+    resultOv.classList.remove('active');
+    resultOv.style.backgroundImage = '';
     generateGrid();
     lives = 3;
     score = 0;
@@ -2007,6 +2020,7 @@ function restartGame() {
     depth = 0;
     selectedDirection = null;
     currentKanji = null;
+    isMoving = false;
     gameActive = true;
     kanjiAttempts = 0;
     kanjiCorrect = 0;
@@ -2177,6 +2191,23 @@ function hasDangerAt(r, c) {
 // =========================================================================
 // MAP OVERLAY
 // =========================================================================
+function getCellLabel(r, c) {
+    const cellType = grid[r][c];
+    if (encounterMap[r][c]) return encounterMap[r][c].title;
+    if (cellType === CELL_TYPES.EMPTY) return 'Open Ocean';
+    if (cellType === CELL_TYPES.GRAND_TREASURE) return collected[r][c] ? 'Grand Treasure (collected)' : 'Grand Treasure';
+    if (cellType === CELL_TYPES.MAJOR_TREASURE) return collected[r][c] ? 'Gem (collected)' : 'Major Treasure';
+    if (cellType === CELL_TYPES.MINOR_TREASURE) return collected[r][c] ? 'Coin (collected)' : 'Minor Treasure';
+    if (cellType === CELL_TYPES.DIVING_BELL) return 'Diving Bell';
+    if (cellType === CELL_TYPES.SHARK) return 'Shark';
+    if (cellType === CELL_TYPES.JELLYFISH) return 'Jellyfish';
+    if (cellType === CELL_TYPES.SEA_SERPENT) return 'Sea Serpent';
+    if (cellType === CELL_TYPES.WHIRLPOOL) return 'Whirlpool';
+    if (cellType === CELL_TYPES.SHIELD) return collected[r][c] ? 'Shield (taken)' : 'Shield';
+    if (cellType === CELL_TYPES.SONAR) return collected[r][c] ? 'Sonar (taken)' : 'Sonar';
+    return 'Unknown';
+}
+
 function openMap() {
     const container = document.getElementById('mapGrid');
     let html = '';
@@ -2184,36 +2215,49 @@ function openMap() {
         for (let c = 0; c < GRID_SIZE; c++) {
             let cls = 'map-cell';
             let content = '';
+            let title = '';
 
             if (r === playerRow && c === playerCol) {
                 cls += ' player-map';
                 content = '🤿';
+                title = 'You are here';
             } else if (visited[r][c]) {
                 cls += ' visited-map';
+                title = getCellLabel(r, c);
                 const cellType = grid[r][c];
                 if (cellType === CELL_TYPES.EMPTY || collected[r][c]) {
-                    // Show ocean emoji for visited empty/collected cells
                     content = EMPTY_OCEAN_EMOJI[((r * 7 + c * 13) % EMPTY_OCEAN_EMOJI.length)];
                 } else if (CELL_DISPLAY[cellType]) {
                     content = CELL_DISPLAY[cellType];
                 }
             } else {
-                // Unvisited - check for adjacent danger warning
                 if (isAdjacentToPlayer(r, c) && hasDangerAt(r, c)) {
                     cls += ' warning-map';
+                    title = 'Danger nearby!';
                 }
-                // Check if diving bell is adjacent
                 if (isAdjacentToPlayer(r, c) && grid[r][c] === CELL_TYPES.DIVING_BELL) {
                     cls += ' visited-map';
                     content = '🔔';
+                    title = 'Diving Bell';
                 }
             }
 
-            html += `<div class="${cls}">${content}</div>`;
+            html += `<div class="${cls}" title="${title}" onclick="showMapCellInfo(${r},${c})">${content}</div>`;
         }
     }
     container.innerHTML = html;
     document.getElementById('mapOverlay').classList.add('active');
+}
+
+function showMapCellInfo(r, c) {
+    if (!visited[r][c] && !(r === playerRow && c === playerCol)) return;
+    const label = (r === playerRow && c === playerCol) ? 'You are here' : getCellLabel(r, c);
+    const info = document.getElementById('mapCellInfo');
+    if (info) {
+        info.textContent = label;
+        info.style.opacity = '1';
+        setTimeout(() => { info.style.opacity = '0'; }, 2000);
+    }
 }
 
 function closeMap() {
@@ -2250,6 +2294,7 @@ function useSonar() {
 function selectDirection(dir) {
     if (!gameActive) return;
     if (currentKanji) return; // Already in a challenge
+    if (isMoving) return;     // Already moving
 
     const dirs = {
         'north': { r: -1, c: 0 },
@@ -2263,6 +2308,14 @@ function selectDirection(dir) {
     const nc = playerCol + delta.c;
 
     if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
+
+    // If target cell is already visited (and not a danger), skip kanji and move directly
+    if (visited[nr][nc] && !DANGER_TYPES.includes(grid[nr][nc])) {
+        selectedDirection = dir;
+        isMoving = true;
+        movePlayer();
+        return;
+    }
 
     selectedDirection = dir;
     updateDirectionButtons();
@@ -2312,7 +2365,10 @@ function movePlayer() {
     const nr = playerRow + delta.r;
     const nc = playerCol + delta.c;
 
-    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
+    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) {
+        isMoving = false;
+        return;
+    }
 
     playerRow = nr;
     playerCol = nc;
@@ -2325,6 +2381,7 @@ function movePlayer() {
 
     selectedDirection = null;
     currentKanji = null;
+    isMoving = false;
     hideKanjiPanel();
     updateAllUI();
 }
@@ -2413,8 +2470,14 @@ function processEncounter(cellType, r, c) {
     } else if (DANGER_TYPES.includes(cellType)) {
         handleDanger(cellType);
     } else {
-        // Empty ocean - rich encounter
-        const encounter = getNextEmptyEncounter();
+        // Empty ocean - rich encounter (persist memory of location)
+        let encounter;
+        if (encounterMap[r][c]) {
+            encounter = encounterMap[r][c];
+        } else {
+            encounter = getNextEmptyEncounter();
+            encounterMap[r][c] = encounter;
+        }
         withWarning(encounter, null);
         setOceanMessage('🤿', encounter.title + ' \u2014 Choose a direction to continue exploring.');
     }
@@ -2559,6 +2622,9 @@ function showVictory() {
         <div><span class="stat-label">Writing Accuracy</span><span class="stat-value">${accuracy}%</span></div>
     `;
 
+    overlay.style.backgroundImage = "url('ocean_images/victory_surface.png')";
+    overlay.style.backgroundSize = 'cover';
+    overlay.style.backgroundPosition = 'center';
     overlay.classList.add('active');
 }
 
@@ -2580,6 +2646,9 @@ function showGameOver() {
         <div><span class="stat-label">Writing Accuracy</span><span class="stat-value">${accuracy}%</span></div>
     `;
 
+    overlay.style.backgroundImage = "url('ocean_images/game_over.png')";
+    overlay.style.backgroundSize = 'cover';
+    overlay.style.backgroundPosition = 'center';
     overlay.classList.add('active');
 }
 
@@ -2890,7 +2959,7 @@ function fontProximityScore(canvasW) {
 // CHECK DRAWING
 // =========================================================================
 function checkDrawing() {
-    if (!currentKanji || !gameActive) return;
+    if (!currentKanji || !gameActive || isMoving) return;
 
     const expectedCount = currentKanji.strokes;
     const userCount = userStrokes.length;
@@ -2926,6 +2995,7 @@ function checkDrawing() {
         showFeedback('Correct! (' + Math.round(pixelScore * 100) + '%) +10 pts', 'great');
         playSfx('correct');
         spawnStars();
+        isMoving = true; // Guard against double-trigger
 
         // Move player
         setTimeout(() => {
