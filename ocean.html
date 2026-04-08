@@ -2405,7 +2405,12 @@ function getNearbyDangerWarning() {
         [CELL_TYPES.SHARK]: '🦈 sharks', [CELL_TYPES.JELLYFISH]: '🎐 jellyfish',
         [CELL_TYPES.SEA_SERPENT]: '🐉 a sea serpent', [CELL_TYPES.WHIRLPOOL]: '🌀 a whirlpool'
     };
+    const dangerImages = {
+        [CELL_TYPES.SHARK]: 'shark_circling.png', [CELL_TYPES.JELLYFISH]: 'jellyfish_swarm.png',
+        [CELL_TYPES.SEA_SERPENT]: 'sea_serpent.png', [CELL_TYPES.WHIRLPOOL]: 'whirlpool_glow.png'
+    };
     const warnings = [];
+    let closestDangerImg = null;
     for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
             if (dr === 0 && dc === 0) continue;
@@ -2416,11 +2421,17 @@ function getNearbyDangerWarning() {
                     const name = dangerNames[ct] || 'danger';
                     const dir = dirNames[dr+','+dc] || 'nearby';
                     warnings.push(`You sense ${name} ${dir}!`);
+                    if (!closestDangerImg) closestDangerImg = dangerImages[ct];
                 }
             }
         }
     }
-    return warnings.length > 0 ? '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>' : '';
+    if (warnings.length === 0) return '';
+    let html = '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>';
+    if (closestDangerImg) {
+        html += '<br><img src="ocean_images/' + closestDangerImg + '" style="width:100%;max-width:280px;border-radius:10px;margin-top:8px;opacity:0.85;border:2px solid rgba(239,83,80,0.5);" onerror="this.style.display=\'none\'">';
+    }
+    return html;
 }
 
 function processEncounter(cellType, r, c) {
