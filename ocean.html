@@ -2252,7 +2252,8 @@ function openMap() {
                 }
             }
 
-            html += `<div class="${cls}" title="${title}" onclick="showMapCellInfo(${r},${c})">${content}</div>`;
+            const safeTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            html += `<div class="${cls}" title="${safeTitle}" onclick="showMapCellInfo(${r},${c})">${content}</div>`;
         }
     }
     container.innerHTML = html;
