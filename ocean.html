@@ -1200,6 +1200,9 @@
                         Choose a direction to swim!
                     </div>
                 </div>
+                <div id="dangerImgContainer" style="display:none;text-align:center;margin-top:8px;">
+                    <img id="dangerImg" src="" style="width:100%;max-width:300px;border-radius:12px;border:2px solid rgba(239,83,80,0.5);box-shadow:0 0 20px rgba(239,83,80,0.3);" onerror="this.parentElement.style.display='none'">
+                </div>
             </div>
 
             <!-- Right: Controls + Writing -->
@@ -2426,12 +2429,17 @@ function getNearbyDangerWarning() {
             }
         }
     }
-    if (warnings.length === 0) return '';
-    let html = '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>';
-    if (closestDangerImg) {
-        html += '<br><img src="ocean_images/' + closestDangerImg + '" style="width:100%;max-width:280px;border-radius:10px;margin-top:8px;opacity:0.85;border:2px solid rgba(239,83,80,0.5);" onerror="this.style.display=\'none\'">';
+    const dangerContainer = document.getElementById('dangerImgContainer');
+    const dangerImgEl = document.getElementById('dangerImg');
+    if (warnings.length === 0) {
+        if (dangerContainer) dangerContainer.style.display = 'none';
+        return '';
     }
-    return html;
+    if (closestDangerImg && dangerContainer && dangerImgEl) {
+        dangerImgEl.src = 'ocean_images/' + closestDangerImg;
+        dangerContainer.style.display = 'block';
+    }
+    return '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>';
 }
 
 function processEncounter(cellType, r, c) {
@@ -3004,7 +3012,14 @@ function checkDrawing() {
     }
 
     // Check pixel proximity
-    const pixelScore = fontProximityScore(w);
+    let pixelScore;
+    try {
+        pixelScore = fontProximityScore(w);
+    } catch (e) {
+        console.error('fontProximityScore error:', e);
+        pixelScore = 0;
+    }
+    if (typeof pixelScore !== 'number' || isNaN(pixelScore)) pixelScore = 0;
 
     if (pixelScore >= 0.45) {
         // CORRECT!
