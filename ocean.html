@@ -1862,6 +1862,7 @@ let grid = [];           // 16x16 grid of cell types
 let visited = [];         // 16x16 boolean of visited cells
 let collected = [];       // 16x16 boolean of collected items
 let encounterMap = [];    // 16x16 stores assigned encounter for each cell
+let walked = [];          // 16x16 tracks cells player actually walked through
 let playerRow = 0;
 let playerCol = 0;
 let lives = 3;
@@ -1900,11 +1901,13 @@ function generateGrid() {
         visited[r] = [];
         collected[r] = [];
         encounterMap[r] = [];
+        walked[r] = [];
         for (let c = 0; c < GRID_SIZE; c++) {
             grid[r][c] = CELL_TYPES.EMPTY;
             visited[r][c] = false;
             collected[r][c] = false;
             encounterMap[r][c] = null;
+            walked[r][c] = false;
         }
     }
 
@@ -1968,6 +1971,7 @@ function generateGrid() {
     playerRow = start[0];
     playerCol = start[1];
     visited[playerRow][playerCol] = true;
+    walked[playerRow][playerCol] = true;
 }
 
 // =========================================================================
@@ -2193,8 +2197,7 @@ function hasDangerAt(r, c) {
 // =========================================================================
 function getCellLabel(r, c) {
     const cellType = grid[r][c];
-    if (encounterMap[r][c]) return encounterMap[r][c].title;
-    if (cellType === CELL_TYPES.EMPTY) return 'Open Ocean';
+    // For non-empty cell types, show what's there
     if (cellType === CELL_TYPES.GRAND_TREASURE) return collected[r][c] ? 'Grand Treasure (collected)' : 'Grand Treasure';
     if (cellType === CELL_TYPES.MAJOR_TREASURE) return collected[r][c] ? 'Gem (collected)' : 'Major Treasure';
     if (cellType === CELL_TYPES.MINOR_TREASURE) return collected[r][c] ? 'Coin (collected)' : 'Minor Treasure';
@@ -2205,7 +2208,11 @@ function getCellLabel(r, c) {
     if (cellType === CELL_TYPES.WHIRLPOOL) return 'Whirlpool';
     if (cellType === CELL_TYPES.SHIELD) return collected[r][c] ? 'Shield (taken)' : 'Shield';
     if (cellType === CELL_TYPES.SONAR) return collected[r][c] ? 'Sonar (taken)' : 'Sonar';
-    return 'Unknown';
+    // For empty cells, show the encounter that was discovered there
+    if (encounterMap[r][c]) return encounterMap[r][c].title;
+    // Sonar-revealed but not walked
+    if (visited[r][c] && !walked[r][c]) return 'Unexplored';
+    return 'Open Ocean';
 }
 
 function openMap() {
@@ -2225,7 +2232,10 @@ function openMap() {
                 cls += ' visited-map';
                 title = getCellLabel(r, c);
                 const cellType = grid[r][c];
-                if (cellType === CELL_TYPES.EMPTY || collected[r][c]) {
+                if (DANGER_TYPES.includes(cellType)) {
+                    cls += ' danger-vis';
+                    content = CELL_DISPLAY[cellType];
+                } else if (cellType === CELL_TYPES.EMPTY || collected[r][c]) {
                     content = EMPTY_OCEAN_EMOJI[((r * 7 + c * 13) % EMPTY_OCEAN_EMOJI.length)];
                 } else if (CELL_DISPLAY[cellType]) {
                     content = CELL_DISPLAY[cellType];
@@ -2309,10 +2319,9 @@ function selectDirection(dir) {
 
     if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
 
-    // If target cell is already visited (and not a danger), skip kanji and move directly
-    if (visited[nr][nc] && !DANGER_TYPES.includes(grid[nr][nc])) {
+    // If player has actually walked through this cell before (and no danger there now), skip kanji
+    if (walked[nr][nc] && !DANGER_TYPES.includes(grid[nr][nc])) {
         selectedDirection = dir;
-        isMoving = true;
         movePlayer();
         return;
     }
@@ -2365,14 +2374,12 @@ function movePlayer() {
     const nr = playerRow + delta.r;
     const nc = playerCol + delta.c;
 
-    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) {
-        isMoving = false;
-        return;
-    }
+    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
 
     playerRow = nr;
     playerCol = nc;
     visited[nr][nc] = true;
+    walked[nr][nc] = true;
     depth++;
 
     // Process cell encounter
@@ -2381,7 +2388,6 @@ function movePlayer() {
 
     selectedDirection = null;
     currentKanji = null;
-    isMoving = false;
     hideKanjiPanel();
     updateAllUI();
 }
@@ -2959,7 +2965,7 @@ function fontProximityScore(canvasW) {
 // CHECK DRAWING
 // =========================================================================
 function checkDrawing() {
-    if (!currentKanji || !gameActive || isMoving) return;
+    if (!currentKanji || !gameActive) return;
 
     const expectedCount = currentKanji.strokes;
     const userCount = userStrokes.length;
@@ -2995,10 +3001,14 @@ function checkDrawing() {
         showFeedback('Correct! (' + Math.round(pixelScore * 100) + '%) +10 pts', 'great');
         playSfx('correct');
         spawnStars();
-        isMoving = true; // Guard against double-trigger
 
-        // Move player
+        // Prevent double-trigger by clearing currentKanji immediately
+        const pendingDirection = selectedDirection;
+        currentKanji = null;
+
+        // Move player after brief delay
         setTimeout(() => {
+            selectedDirection = pendingDirection;
             movePlayer();
         }, 600);
     } else if (pixelScore >= 0.3) {
