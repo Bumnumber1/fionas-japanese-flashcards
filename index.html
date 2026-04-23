@@ -172,6 +172,16 @@
             color: white;
         }
 
+        .btn-questions {
+            background: linear-gradient(135deg, #80cbc4, #00897b);
+            color: white;
+        }
+
+        .btn-voice {
+            background: linear-gradient(135deg, #f48fb1, #8e24aa);
+            color: white;
+        }
+
         /* Score display */
         .score-bar {
             display: none;
@@ -406,6 +416,38 @@
         .theme-hiragana .card-english { color: #4e342e; }
         .theme-hiragana .card-type { background: #efebe9; color: #795548; }
 
+        .theme-numbers .flashcard-front { border-top: 4px solid #3f51b5; }
+        .theme-numbers .card-english { color: #283593; }
+        .theme-numbers .card-type { background: #e8eaf6; color: #3f51b5; }
+
+        .theme-questions .flashcard-front { border-top: 4px solid #00acc1; }
+        .theme-questions .card-english { color: #006064; }
+        .theme-questions .card-type { background: #e0f7fa; color: #00acc1; }
+
+        .theme-greetings .flashcard-front { border-top: 4px solid #fdd835; }
+        .theme-greetings .card-english { color: #f57f17; }
+        .theme-greetings .card-type { background: #fff9c4; color: #f57f17; }
+
+        .theme-demonstratives .flashcard-front { border-top: 4px solid #7e57c2; }
+        .theme-demonstratives .card-english { color: #4527a0; }
+        .theme-demonstratives .card-type { background: #d1c4e9; color: #4527a0; }
+
+        .theme-verbs .flashcard-front { border-top: 4px solid #00897b; }
+        .theme-verbs .card-english { color: #004d40; }
+        .theme-verbs .card-type { background: #b2dfdb; color: #00796b; }
+
+        .theme-descriptions .flashcard-front { border-top: 4px solid #ec407a; }
+        .theme-descriptions .card-english { color: #ad1457; }
+        .theme-descriptions .card-type { background: #f8bbd0; color: #ad1457; }
+
+        .theme-counters .flashcard-front { border-top: 4px solid #ff7043; }
+        .theme-counters .card-english { color: #bf360c; }
+        .theme-counters .card-type { background: #ffccbc; color: #bf360c; }
+
+        .theme-shopping .flashcard-front { border-top: 4px solid #66bb6a; }
+        .theme-shopping .card-english { color: #1b5e20; }
+        .theme-shopping .card-type { background: #c8e6c9; color: #1b5e20; }
+
         /* Back side keeps the theme color on top too */
         .theme-days .flashcard-back { border-top: 4px solid #e91e63; }
         .theme-time .flashcard-back { border-top: 4px solid #9c27b0; }
@@ -414,6 +456,14 @@
         .theme-people .flashcard-back { border-top: 4px solid #4caf50; }
         .theme-pronouns .flashcard-back { border-top: 4px solid #ff5722; }
         .theme-hiragana .flashcard-back { border-top: 4px solid #795548; }
+        .theme-numbers .flashcard-back { border-top: 4px solid #3f51b5; }
+        .theme-questions .flashcard-back { border-top: 4px solid #00acc1; }
+        .theme-greetings .flashcard-back { border-top: 4px solid #fdd835; }
+        .theme-demonstratives .flashcard-back { border-top: 4px solid #7e57c2; }
+        .theme-verbs .flashcard-back { border-top: 4px solid #00897b; }
+        .theme-descriptions .flashcard-back { border-top: 4px solid #ec407a; }
+        .theme-counters .flashcard-back { border-top: 4px solid #ff7043; }
+        .theme-shopping .flashcard-back { border-top: 4px solid #66bb6a; }
 
         /* Sparkle animation on flip */
         @keyframes sparkle {
@@ -1199,6 +1249,14 @@
         .print-card-english.theme-people { color: #2e7d32; background: #e8f5e9; }
         .print-card-english.theme-pronouns { color: #d84315; background: #fbe9e7; }
         .print-card-english.theme-hiragana { color: #4e342e; background: #efebe9; }
+        .print-card-english.theme-numbers { color: #283593; background: #e8eaf6; }
+        .print-card-english.theme-questions { color: #006064; background: #e0f7fa; }
+        .print-card-english.theme-greetings { color: #f57f17; background: #fff9c4; }
+        .print-card-english.theme-demonstratives { color: #4527a0; background: #d1c4e9; }
+        .print-card-english.theme-verbs { color: #004d40; background: #b2dfdb; }
+        .print-card-english.theme-descriptions { color: #ad1457; background: #f8bbd0; }
+        .print-card-english.theme-counters { color: #bf360c; background: #ffccbc; }
+        .print-card-english.theme-shopping { color: #1b5e20; background: #c8e6c9; }
 
         .print-card .scissors {
             position: absolute;
@@ -1254,6 +1312,14 @@
             .print-card-english.theme-people { background: #e8f5e9 !important; color: #2e7d32 !important; }
             .print-card-english.theme-pronouns { background: #fbe9e7 !important; color: #d84315 !important; }
             .print-card-english.theme-hiragana { background: #efebe9 !important; color: #4e342e !important; }
+            .print-card-english.theme-numbers { background: #e8eaf6 !important; color: #283593 !important; }
+            .print-card-english.theme-questions { background: #e0f7fa !important; color: #006064 !important; }
+            .print-card-english.theme-greetings { background: #fff9c4 !important; color: #f57f17 !important; }
+            .print-card-english.theme-demonstratives { background: #d1c4e9 !important; color: #4527a0 !important; }
+            .print-card-english.theme-verbs { background: #b2dfdb !important; color: #004d40 !important; }
+            .print-card-english.theme-descriptions { background: #f8bbd0 !important; color: #ad1457 !important; }
+            .print-card-english.theme-counters { background: #ffccbc !important; color: #bf360c !important; }
+            .print-card-english.theme-shopping { background: #c8e6c9 !important; color: #1b5e20 !important; }
 
             .print-category-header {
                 page-break-after: avoid;
@@ -1284,6 +1350,8 @@
             <a href="ebook.html" style="text-decoration:none;"><button class="btn-ebook">Workbook</button></a>
             <a href="writing.html" style="text-decoration:none;"><button class="btn-writing">Writing</button></a>
             <a href="ocean.html" style="text-decoration:none;"><button class="btn-ocean">Ocean Adventure</button></a>
+            <a href="questions.html" style="text-decoration:none;"><button class="btn-questions">Ask &amp; Answer</button></a>
+            <a href="voicepractice.html" style="text-decoration:none;"><button class="btn-voice">Voice Practice</button></a>
         </div>
 
         <div class="score-bar" id="scoreBar">
@@ -1572,6 +1640,145 @@
             { japanese: 'わ', romaji: '', english: 'wa', emoji: '', category: 'Hiragana', theme: 'hiragana' },
             { japanese: 'を', romaji: '', english: 'wo', emoji: '', category: 'Hiragana', theme: 'hiragana' },
             { japanese: 'ん', romaji: '', english: 'n', emoji: '', category: 'Hiragana', theme: 'hiragana' },
+
+            { japanese: 'ゼロ', romaji: 'zero', english: '0 (zero)', emoji: '0&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'いち', romaji: 'ichi', english: '1 (one)', emoji: '1&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'に', romaji: 'ni', english: '2 (two)', emoji: '2&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'さん', romaji: 'san', english: '3 (three)', emoji: '3&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'よん', romaji: 'yon', english: '4 (four)', emoji: '4&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'ご', romaji: 'go', english: '5 (five)', emoji: '5&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'ろく', romaji: 'roku', english: '6 (six)', emoji: '6&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'なな', romaji: 'nana', english: '7 (seven)', emoji: '7&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'はち', romaji: 'hachi', english: '8 (eight)', emoji: '8&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'きゅう', romaji: 'kyuu', english: '9 (nine)', emoji: '9&#xFE0F;&#x20E3;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'じゅう', romaji: 'juu', english: '10 (ten)', emoji: '&#x1F51F;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'ひゃく', romaji: 'hyaku', english: '100 (hundred)', emoji: '&#x1F4AF;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'せん', romaji: 'sen', english: '1,000 (thousand)', emoji: '&#x1F522;', category: 'Numbers', theme: 'numbers' },
+            { japanese: 'まん', romaji: 'man', english: '10,000 (ten thousand)', emoji: '&#x1F9EE;', category: 'Numbers', theme: 'numbers' },
+
+            { japanese: 'なに', romaji: 'nani', english: 'What', emoji: '&#x2753;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'だれ', romaji: 'dare', english: 'Who', emoji: '&#x1F464;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'どこ', romaji: 'doko', english: 'Where', emoji: '&#x1F4CD;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'いつ', romaji: 'itsu', english: 'When', emoji: '&#x1F550;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'なぜ', romaji: 'naze', english: 'Why', emoji: '&#x1F914;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'どうして', romaji: 'doushite', english: 'Why (how come)', emoji: '&#x1F9D0;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'どう', romaji: 'dou', english: 'How', emoji: '&#x1F4AD;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'どれ', romaji: 'dore', english: 'Which one', emoji: '&#x1F446;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'いくら', romaji: 'ikura', english: 'How much', emoji: '&#x1F4B0;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'いくつ', romaji: 'ikutsu', english: 'How many', emoji: '&#x1F522;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'なんじ', romaji: 'nanji', english: 'What time', emoji: '&#x23F0;', category: 'Question Words', theme: 'questions' },
+            { japanese: 'ですか', romaji: 'desu ka', english: 'is it? (question ending)', emoji: '&#x2754;', category: 'Question Words', theme: 'questions' },
+
+            { japanese: 'いま', romaji: 'ima', english: 'Now', emoji: '&#x23F1;&#xFE0F;', category: 'Time Words', theme: 'time' },
+            { japanese: 'たんじょうび', romaji: 'tanjoubi', english: 'Birthday', emoji: '&#x1F382;', category: 'Time Words', theme: 'time' },
+
+            { japanese: 'パン', romaji: 'pan', english: 'Bread', emoji: '&#x1F35E;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'りんご', romaji: 'ringo', english: 'Apple', emoji: '&#x1F34E;', category: 'Food & Drinks', theme: 'food' },
+
+            { japanese: 'トイレ', romaji: 'toire', english: 'Bathroom / Toilet', emoji: '&#x1F6BD;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'しつもん', romaji: 'shitsumon', english: 'Question', emoji: '&#x2753;', category: 'Question Words', theme: 'questions' },
+
+            { japanese: 'パーティー', romaji: 'paatii', english: 'Party', emoji: '&#x1F389;', category: 'People & Animals', theme: 'people' },
+
+            { japanese: 'こんにちは', romaji: 'konnichiwa', english: 'Hello', emoji: '&#x1F31E;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'おはよう', romaji: 'ohayou', english: 'Good morning', emoji: '&#x1F305;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'こんばんは', romaji: 'konbanwa', english: 'Good evening', emoji: '&#x1F319;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'さようなら', romaji: 'sayounara', english: 'Goodbye', emoji: '&#x1F44B;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'はじめまして', romaji: 'hajimemashite', english: 'Nice to meet you', emoji: '&#x1F91D;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'よろしくおねがいします', romaji: 'yoroshiku onegaishimasu', english: 'Please treat me well', emoji: '&#x1F64F;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'ありがとう', romaji: 'arigatou', english: 'Thank you', emoji: '&#x1F496;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'ください', romaji: 'kudasai', english: 'Please (give me)', emoji: '&#x1F64B;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'おねがいします', romaji: 'onegaishimasu', english: 'Please (polite request)', emoji: '&#x1F64F;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'いただきます', romaji: 'itadakimasu', english: 'Before eating (Let\'s eat)', emoji: '&#x1F35A;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'ごちそうさまでした', romaji: 'gochisousama deshita', english: 'After eating (thanks for the meal)', emoji: '&#x1F963;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'いいえ、けっこうです', romaji: 'iie, kekkou desu', english: 'No thank you', emoji: '&#x1F64C;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+
+            { japanese: 'これ', romaji: 'kore', english: 'This (near me)', emoji: '&#x1F449;', category: 'Demonstratives', theme: 'demonstratives' },
+            { japanese: 'それ', romaji: 'sore', english: 'That (near you)', emoji: '&#x1F448;', category: 'Demonstratives', theme: 'demonstratives' },
+            { japanese: 'あれ', romaji: 'are', english: 'That over there', emoji: '&#x1F446;', category: 'Demonstratives', theme: 'demonstratives' },
+            { japanese: 'ここ', romaji: 'koko', english: 'Here', emoji: '&#x1F4CD;', category: 'Demonstratives', theme: 'demonstratives' },
+            { japanese: 'そこ', romaji: 'soko', english: 'There', emoji: '&#x1F4CC;', category: 'Demonstratives', theme: 'demonstratives' },
+            { japanese: 'あそこ', romaji: 'asoko', english: 'Over there', emoji: '&#x1F5FA;&#xFE0F;', category: 'Demonstratives', theme: 'demonstratives' },
+
+            { japanese: 'する', romaji: 'suru', english: 'To do', emoji: '&#x1F4AA;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'たべる', romaji: 'taberu', english: 'To eat', emoji: '&#x1F374;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'のむ', romaji: 'nomu', english: 'To drink', emoji: '&#x1F964;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'みる', romaji: 'miru', english: 'To see / watch', emoji: '&#x1F440;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'よむ', romaji: 'yomu', english: 'To read', emoji: '&#x1F4D6;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'ねる', romaji: 'neru', english: 'To sleep', emoji: '&#x1F634;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'いく', romaji: 'iku', english: 'To go', emoji: '&#x1F6B6;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'くる', romaji: 'kuru', english: 'To come', emoji: '&#x1F44B;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'あそぶ', romaji: 'asobu', english: 'To play', emoji: '&#x26BD;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'べんきょうする', romaji: 'benkyou suru', english: 'To study', emoji: '&#x270F;&#xFE0F;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'かう', romaji: 'kau', english: 'To buy', emoji: '&#x1F4B8;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'ある', romaji: 'aru', english: 'To be / exist (things)', emoji: '&#x1F4E6;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'いる', romaji: 'iru', english: 'To be / exist (people, animals)', emoji: '&#x1F9CD;', category: 'Verbs', theme: 'verbs' },
+
+            { japanese: 'おいしい', romaji: 'oishii', english: 'Delicious', emoji: '&#x1F60B;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'すき', romaji: 'suki', english: 'Like / Love', emoji: '&#x2764;&#xFE0F;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'きらい', romaji: 'kirai', english: 'Dislike', emoji: '&#x1F61E;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'げんき', romaji: 'genki', english: 'Well / Healthy / Energetic', emoji: '&#x1F4AA;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'かなしい', romaji: 'kanashii', english: 'Sad', emoji: '&#x1F622;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'ねむい', romaji: 'nemui', english: 'Sleepy', emoji: '&#x1F62A;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'ほしい', romaji: 'hoshii', english: 'Want', emoji: '&#x1F9E1;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'あおい', romaji: 'aoi', english: 'Blue', emoji: '&#x1F499;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'いろ', romaji: 'iro', english: 'Color', emoji: '&#x1F308;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'てんき', romaji: 'tenki', english: 'Weather', emoji: '&#x26C5;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'そら', romaji: 'sora', english: 'Sky', emoji: '&#x2601;&#xFE0F;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+
+            { japanese: 'ひとつ', romaji: 'hitotsu', english: 'One thing', emoji: '1&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'ふたつ', romaji: 'futatsu', english: 'Two things', emoji: '2&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'みっつ', romaji: 'mittsu', english: 'Three things', emoji: '3&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'よっつ', romaji: 'yottsu', english: 'Four things', emoji: '4&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'いつつ', romaji: 'itsutsu', english: 'Five things', emoji: '5&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'むっつ', romaji: 'muttsu', english: 'Six things', emoji: '6&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'ななつ', romaji: 'nanatsu', english: 'Seven things', emoji: '7&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'やっつ', romaji: 'yattsu', english: 'Eight things', emoji: '8&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'ここのつ', romaji: 'kokonotsu', english: 'Nine things', emoji: '9&#xFE0F;&#x20E3;', category: 'Counters (1-10 things)', theme: 'counters' },
+            { japanese: 'とお', romaji: 'too', english: 'Ten things', emoji: '&#x1F51F;', category: 'Counters (1-10 things)', theme: 'counters' },
+
+            { japanese: 'おかいもの', romaji: 'okaimono', english: 'Shopping', emoji: '&#x1F6CD;&#xFE0F;', category: 'Shopping', theme: 'shopping' },
+            { japanese: 'みせ', romaji: 'mise', english: 'Shop / Store', emoji: '&#x1F3EA;', category: 'Shopping', theme: 'shopping' },
+            { japanese: 'おかね', romaji: 'okane', english: 'Money', emoji: '&#x1F4B4;', category: 'Shopping', theme: 'shopping' },
+            { japanese: 'おつり', romaji: 'otsuri', english: 'Change (money back)', emoji: '&#x1FA99;', category: 'Shopping', theme: 'shopping' },
+            { japanese: 'えん', romaji: 'en', english: 'Yen (&yen;)', emoji: '&#x1F4B4;', category: 'Shopping', theme: 'shopping' },
+
+            { japanese: 'まいにち', romaji: 'mainichi', english: 'Every day', emoji: '&#x1F4C6;', category: 'Time Words', theme: 'time' },
+            { japanese: 'じ', romaji: 'ji', english: "o'clock (hour counter)", emoji: '&#x23F2;&#xFE0F;', category: 'Time Words', theme: 'time' },
+
+            { japanese: 'ごはん', romaji: 'gohan', english: 'Rice / Meal', emoji: '&#x1F35A;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'おにぎり', romaji: 'onigiri', english: 'Rice Ball', emoji: '&#x1F359;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'さしみ', romaji: 'sashimi', english: 'Sashimi', emoji: '&#x1F363;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'いちご', romaji: 'ichigo', english: 'Strawberry', emoji: '&#x1F353;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'ブロッコリー', romaji: 'burokkorii', english: 'Broccoli', emoji: '&#x1F966;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'おちゃ', romaji: 'ocha', english: 'Tea (green tea)', emoji: '&#x1F375;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'コーヒー', romaji: 'koohii', english: 'Coffee', emoji: '&#x2615;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'ジュース', romaji: 'juusu', english: 'Juice', emoji: '&#x1F9C3;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'コーラ', romaji: 'koora', english: 'Cola', emoji: '&#x1F964;', category: 'Food & Drinks', theme: 'food' },
+            { japanese: 'ぎゅうにゅう', romaji: 'gyuunyuu', english: 'Milk', emoji: '&#x1F95B;', category: 'Food & Drinks', theme: 'food' },
+
+            { japanese: 'にほんご', romaji: 'nihongo', english: 'Japanese (language)', emoji: '&#x1F1EF;&#x1F1F5;', category: 'Everyday Objects', theme: 'objects' },
+            { japanese: 'テレビ', romaji: 'terebi', english: 'TV', emoji: '&#x1F4FA;', category: 'Everyday Objects', theme: 'objects' },
+
+            { japanese: 'いぬ', romaji: 'inu', english: 'Dog', emoji: '&#x1F415;', category: 'People & Animals', theme: 'people' },
+            { japanese: 'ひと', romaji: 'hito', english: 'Person', emoji: '&#x1F9CD;', category: 'People & Animals', theme: 'people' },
+
+            { japanese: 'あなたたち', romaji: 'anatatachi', english: 'You (plural)', emoji: '&#x1F46B;', category: 'Pronouns', theme: 'pronouns' },
+
+            { japanese: 'はい', romaji: 'hai', english: 'Yes', emoji: '&#x2705;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'うん', romaji: 'un', english: 'Yeah (casual yes)', emoji: '&#x1F44C;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'ばいばい', romaji: 'baibai', english: 'Bye-bye', emoji: '&#x1F44B;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'すみません', romaji: 'sumimasen', english: 'Excuse me / Sorry', emoji: '&#x1F647;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'だいじょうぶです', romaji: 'daijoubu desu', english: "I'm okay / No thanks", emoji: '&#x1F44C;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'いりません', romaji: 'irimasen', english: "I don't need it", emoji: '&#x1F6AB;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'とってください', romaji: 'totte kudasai', english: 'Please pass it to me', emoji: '&#x1F91D;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'おかわり', romaji: 'okawari', english: 'Seconds / Another helping', emoji: '&#x1F35A;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+
+            { japanese: 'とる', romaji: 'toru', english: 'To take / To pass', emoji: '&#x1F91A;', category: 'Verbs', theme: 'verbs' },
+            { japanese: 'およぐ', romaji: 'oyogu', english: 'To swim', emoji: '&#x1F3CA;', category: 'Verbs', theme: 'verbs' },
+
+            { japanese: 'もっと', romaji: 'motto', english: 'More', emoji: '&#x2795;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            { japanese: 'ぜんぶ', romaji: 'zenbu', english: 'All / Everything', emoji: '&#x1F4AF;', category: 'Descriptions & Feelings', theme: 'descriptions' },
         ];
 
         const categoryEmojis = {
@@ -1581,7 +1788,15 @@
             'Everyday Objects': '&#x1F3D2;',
             'People & Animals': '&#x1F43E;',
             'Pronouns': '&#x1F4AC;',
-            'Hiragana': '&#x1F170;&#xFE0F;'
+            'Hiragana': '&#x1F170;&#xFE0F;',
+            'Numbers': '&#x1F522;',
+            'Question Words': '&#x2753;',
+            'Greetings & Polite Phrases': '&#x1F44B;',
+            'Demonstratives': '&#x1F449;',
+            'Verbs': '&#x1F3C3;',
+            'Descriptions & Feelings': '&#x1F308;',
+            'Counters (1-10 things)': '&#x1F3B2;',
+            'Shopping': '&#x1F6D2;'
         };
 
         function renderCards() {

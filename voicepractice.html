@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Voice Practice">
+    <title>Fiona's Voice Practice — Ask &amp; Answer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fff1f5 0%, #f3e5f5 40%, #e0f7fa 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+            color: #263238;
+            padding-bottom: 40px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 18px 20px 14px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #8e24aa, #3f51b5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .header-links { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .header-links a {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            text-decoration: none;
+            background: linear-gradient(135deg, #fff9c4, #ffe0b2);
+            color: #f57f17;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 20px auto;
+            padding: 0 16px;
+        }
+
+        .progress-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            font-weight: 700;
+            color: #6a1b9a;
+        }
+        .progress-bar {
+            height: 8px;
+            background: rgba(142, 36, 170, 0.15);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f48fb1, #8e24aa);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .scenario-card {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+            margin-bottom: 18px;
+        }
+
+        .scenario-cue {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 8px;
+        }
+
+        .scenario-prompt {
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.15em;
+            color: #37474f;
+            margin-bottom: 4px;
+        }
+
+        .scenario-theme {
+            text-align: center;
+            font-size: 0.8em;
+            font-weight: 700;
+            color: #8e24aa;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+        }
+
+        .step {
+            border: 2px dashed #ce93d8;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 12px;
+            background: #fafafa;
+        }
+
+        .step.done {
+            border-color: #66bb6a;
+            background: #f1f8e9;
+        }
+
+        .step.attempted {
+            border-color: #ffb74d;
+            background: #fff8e1;
+        }
+
+        .step-label {
+            font-weight: 800;
+            color: #6a1b9a;
+            font-size: 0.95em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step.done .step-label { color: #2e7d32; }
+        .step.attempted .step-label { color: #ef6c00; }
+
+        .target-line {
+            font-family: 'Noto Sans JP', 'Nunito', sans-serif;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #4a148c;
+            margin: 4px 0;
+            display: none;
+        }
+        .target-romaji {
+            font-size: 0.9em;
+            font-style: italic;
+            color: #6a1b9a;
+            display: none;
+        }
+        .target-en {
+            font-size: 0.9em;
+            color: #455a64;
+            display: none;
+        }
+        .step.reveal .target-line,
+        .step.reveal .target-romaji,
+        .step.reveal .target-en { display: block; }
+
+        .heard-line {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(142, 36, 170, 0.08);
+            font-family: 'Noto Sans JP', 'Nunito', sans-serif;
+            font-size: 1.05em;
+            color: #4a148c;
+            min-height: 22px;
+            display: none;
+        }
+        .heard-line.show { display: block; }
+
+        .status-msg {
+            margin-top: 6px;
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+        .status-ok { color: #2e7d32; }
+        .status-close { color: #ef6c00; }
+        .status-miss { color: #c62828; }
+        .status-listen { color: #1565c0; }
+
+        .step-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        button.act {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.9em;
+            padding: 9px 14px;
+            border: none;
+            border-radius: 22px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.12s, box-shadow 0.12s;
+        }
+        button.act:active { transform: scale(0.95); }
+        button.act:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-mic { background: linear-gradient(135deg, #f48fb1, #e91e63); }
+        .btn-mic.listening { background: linear-gradient(135deg, #ef5350, #c62828); animation: pulse 1.2s infinite; }
+        .btn-play { background: linear-gradient(135deg, #81d4fa, #0288d1); }
+        .btn-reveal { background: linear-gradient(135deg, #b39ddb, #7e57c2); }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.6); }
+            50% { box-shadow: 0 0 0 10px rgba(239, 83, 80, 0); }
+        }
+
+        .nav-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-prev, .btn-next, .btn-restart {
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 1em;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 26px;
+            cursor: pointer;
+            color: white;
+            flex: 1;
+        }
+        .btn-prev { background: linear-gradient(135deg, #b0bec5, #607d8b); }
+        .btn-next { background: linear-gradient(135deg, #aed581, #558b2f); }
+        .btn-restart { background: linear-gradient(135deg, #ffcc80, #fb8c00); }
+        .btn-prev:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .final-card {
+            display: none;
+            background: linear-gradient(135deg, #fff9c4, #f8bbd0);
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+        }
+        .final-card.show { display: block; }
+        .final-card h2 {
+            color: #ad1457;
+            margin-bottom: 10px;
+        }
+        .final-score {
+            font-size: 2em;
+            font-weight: 800;
+            color: #6a1b9a;
+            margin: 10px 0;
+        }
+
+        .warn-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #5d4037;
+            margin-bottom: 14px;
+            display: none;
+        }
+        .warn-box.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#x1F3A4; Voice Practice &mdash; Ask &amp; Answer</h1>
+        <div class="header-links">
+            <a href="index.html">Back to Flashcards</a>
+            <a href="questions.html">Ask &amp; Answer (written)</a>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="warn-box" id="warnBox">
+            Voice recognition isn&rsquo;t supported in this browser. You can still tap <b>Listen</b> to hear each line and tap <b>Reveal</b> + <b>I said it!</b> to practice aloud.
+        </div>
+
+        <div class="progress-row">
+            <span id="progressLabel">Scenario 1 of 4</span>
+            <span id="scoreLabel">&#x2B50; 0</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div id="scenarioHost"></div>
+
+        <div class="final-card" id="finalCard">
+            <h2>&#x1F389; All done!</h2>
+            <div class="final-score" id="finalScore"></div>
+            <p id="finalMsg"></p>
+            <div class="nav-row" style="margin-top:16px;">
+                <button class="btn-restart" onclick="restart()">Try again</button>
+            </div>
+        </div>
+
+        <div class="nav-row" id="navRow">
+            <button class="btn-prev" id="prevBtn" onclick="prevScenario()">&laquo; Previous</button>
+            <button class="btn-next" id="nextBtn" onclick="nextScenario()">Next &raquo;</button>
+        </div>
+    </div>
+
+    <script>
+        const scenarios = [
+            {
+                theme: 'What (なに)',
+                cue: '&#x1F381;',
+                prompt: 'Ask what the gift is. Then answer that it’s a book.',
+                q: { jp: 'これは なに ですか？', plain: 'これはなにですか', romaji: 'Kore wa nani desu ka?', en: 'What is this?' },
+                a: { jp: 'ほん です。', plain: 'ほんです', romaji: 'Hon desu.', en: 'It’s a book.' }
+            },
+            {
+                theme: 'Where (どこ)',
+                cue: '&#x1F408;',
+                prompt: 'Ask where the cat is. Then answer that it’s right here.',
+                q: { jp: 'ねこは どこ ですか？', plain: 'ねこはどこですか', romaji: 'Neko wa doko desu ka?', en: 'Where is the cat?' },
+                a: { jp: 'ここ です。', plain: 'ここです', romaji: 'Koko desu.', en: 'It’s right here.' }
+            },
+            {
+                theme: 'How (どう)',
+                cue: '&#x1F370;',
+                prompt: 'Ask how the cake tastes. Then answer that it’s delicious.',
+                q: { jp: 'ケーキは どう ですか？', plain: 'ケーキはどうですか', romaji: 'Keeki wa dou desu ka?', en: 'How is the cake?' },
+                a: { jp: 'おいしい です。', plain: 'おいしいです', romaji: 'Oishii desu.', en: 'It’s delicious.' }
+            },
+            {
+                theme: 'What time (なんじ)',
+                cue: '&#x1F3EB;',
+                prompt: 'Ask what time school starts. Then answer that it’s 8 o’clock.',
+                q: { jp: 'がっこうは なんじ ですか？', plain: 'がっこうはなんじですか', romaji: 'Gakkou wa nanji desu ka?', en: 'What time is school?' },
+                a: { jp: 'はちじ です。', plain: 'はちじです', romaji: 'Hachi ji desu.', en: 'It’s eight o’clock.' }
+            }
+        ];
+
+        let current = 0;
+        let attempts = [];
+        let recognizer = null;
+        const speechRecAvailable = ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+
+        function initAttempts() {
+            attempts = scenarios.map(() => ({ q: 'pending', a: 'pending' }));
+        }
+        initAttempts();
+
+        if (!speechRecAvailable) {
+            document.getElementById('warnBox').classList.add('show');
+        }
+
+        function speak(text) {
+            if (!text || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ja-JP';
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        }
+
+        // Normalize for comparison: strip spaces, punctuation, trailing ka, katakana->hiragana, diacritics kept
+        function normalize(raw) {
+            if (!raw) return '';
+            let s = raw
+                .replace(/[\s　]+/g, '')
+                .replace(/[。、．，.!?！？]+/g, '')
+                .replace(/[？?]$/, '');
+            // katakana -> hiragana
+            s = s.replace(/[ァ-ヶ]/g, ch =>
+                String.fromCharCode(ch.charCodeAt(0) - 0x60)
+            );
+            // long vowel mark normalization
+            s = s.replace(/ー/g, '');
+            return s.toLowerCase();
+        }
+
+        function similarity(a, b) {
+            a = normalize(a); b = normalize(b);
+            if (!a || !b) return 0;
+            if (a === b) return 1;
+            // substring match is close
+            if (a.includes(b) || b.includes(a)) return 0.85;
+            // Levenshtein ratio
+            const dp = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(0));
+            for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+            for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    dp[i][j] = a[i-1] === b[j-1]
+                        ? dp[i-1][j-1]
+                        : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+                }
+            }
+            const dist = dp[a.length][b.length];
+            return 1 - dist / Math.max(a.length, b.length);
+        }
+
+        function startListen(kind) {
+            if (!speechRecAvailable) return;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (recognizer) { try { recognizer.stop(); } catch(e){} }
+            const rec = new SR();
+            recognizer = rec;
+            rec.lang = 'ja-JP';
+            rec.interimResults = false;
+            rec.maxAlternatives = 3;
+
+            const micBtn = document.getElementById(kind + '-mic');
+            const heard = document.getElementById(kind + '-heard');
+            const status = document.getElementById(kind + '-status');
+            const step = document.getElementById(kind + '-step');
+
+            micBtn.classList.add('listening');
+            micBtn.textContent = '■ Listening...';
+            status.textContent = 'Listening...';
+            status.className = 'status-msg status-listen';
+            heard.classList.remove('show');
+
+            rec.onresult = (ev) => {
+                let best = '';
+                let bestScore = 0;
+                const target = scenarios[current][kind].jp;
+                for (const result of ev.results) {
+                    for (let i = 0; i < result.length; i++) {
+                        const alt = result[i].transcript;
+                        const s = similarity(alt, target);
+                        if (s > bestScore) { bestScore = s; best = alt; }
+                    }
+                }
+                heard.textContent = 'You said: ' + best;
+                heard.classList.add('show');
+                judge(kind, bestScore);
+            };
+            rec.onerror = (ev) => {
+                status.textContent = 'Mic error: ' + ev.error + '. Try tapping Reveal instead.';
+                status.className = 'status-msg status-miss';
+                stopListenUI(kind);
+            };
+            rec.onend = () => { stopListenUI(kind); };
+
+            try { rec.start(); } catch(e) { stopListenUI(kind); }
+        }
+
+        function stopListenUI(kind) {
+            const micBtn = document.getElementById(kind + '-mic');
+            if (!micBtn) return;
+            micBtn.classList.remove('listening');
+            micBtn.textContent = '\u{1F3A4} Speak ' + (kind === 'q' ? 'question' : 'answer');
+        }
+
+        function judge(kind, score) {
+            const status = document.getElementById(kind + '-status');
+            const step = document.getElementById(kind + '-step');
+            if (score >= 0.78) {
+                status.textContent = '✅ Great! That sounded right.';
+                status.className = 'status-msg status-ok';
+                step.classList.remove('attempted');
+                step.classList.add('done');
+                attempts[current][kind] = 'ok';
+                updateScore();
+            } else if (score >= 0.5) {
+                status.textContent = '\u{1F44D} Close! Try once more or tap Reveal.';
+                status.className = 'status-msg status-close';
+                step.classList.remove('done');
+                step.classList.add('attempted');
+                if (attempts[current][kind] !== 'ok') attempts[current][kind] = 'attempted';
+            } else {
+                status.textContent = '\u{1F914} Didn’t catch that. Tap Listen to hear it, then try again.';
+                status.className = 'status-msg status-miss';
+                step.classList.remove('done');
+                step.classList.add('attempted');
+                if (attempts[current][kind] !== 'ok') attempts[current][kind] = 'attempted';
+            }
+        }
+
+        function revealStep(kind) {
+            const step = document.getElementById(kind + '-step');
+            step.classList.add('reveal');
+        }
+
+        function markSaid(kind) {
+            const step = document.getElementById(kind + '-step');
+            const status = document.getElementById(kind + '-status');
+            step.classList.remove('attempted');
+            step.classList.add('done');
+            status.textContent = '✨ Nice — marked as practiced.';
+            status.className = 'status-msg status-ok';
+            if (attempts[current][kind] !== 'ok') {
+                attempts[current][kind] = 'ok';
+                updateScore();
+            }
+        }
+
+        function updateScore() {
+            let pts = 0;
+            attempts.forEach(a => {
+                if (a.q === 'ok') pts++;
+                if (a.a === 'ok') pts++;
+            });
+            document.getElementById('scoreLabel').textContent = '⭐ ' + pts;
+        }
+
+        function buildStep(kind) {
+            const sc = scenarios[current];
+            const line = sc[kind];
+            const labelText = kind === 'q' ? 'Step 1 — Ask the question' : 'Step 2 — Give the answer';
+            const micSupported = speechRecAvailable;
+            return `
+                <div class="step" id="${kind}-step">
+                    <div class="step-label">${labelText}</div>
+                    <div class="target-line">${line.jp}</div>
+                    <div class="target-romaji">${line.romaji}</div>
+                    <div class="target-en">${line.en}</div>
+                    <div class="heard-line" id="${kind}-heard"></div>
+                    <div class="status-msg" id="${kind}-status">Tap &ldquo;Speak&rdquo; when ready, or Listen first to hear an example.</div>
+                    <div class="step-btns">
+                        <button class="act btn-play" onclick="speak(${JSON.stringify(line.jp)})">&#x1F50A; Listen</button>
+                        ${micSupported
+                            ? `<button class="act btn-mic" id="${kind}-mic" onclick="startListen('${kind}')">&#x1F3A4; Speak ${kind === 'q' ? 'question' : 'answer'}</button>`
+                            : ''}
+                        <button class="act btn-reveal" onclick="revealStep('${kind}')">&#x1F441; Reveal</button>
+                        <button class="act btn-reveal" onclick="markSaid('${kind}')">&#x2705; I said it!</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScenario() {
+            if (current >= scenarios.length) {
+                showFinal();
+                return;
+            }
+            document.getElementById('finalCard').classList.remove('show');
+            document.getElementById('navRow').style.display = 'flex';
+            document.getElementById('scenarioHost').style.display = 'block';
+
+            const sc = scenarios[current];
+            document.getElementById('progressLabel').textContent = `Scenario ${current + 1} of ${scenarios.length}`;
+            document.getElementById('progressFill').style.width = ((current) / scenarios.length * 100) + '%';
+
+            document.getElementById('scenarioHost').innerHTML = `
+                <div class="scenario-card">
+                    <div class="scenario-cue">${sc.cue}</div>
+                    <div class="scenario-theme">${sc.theme}</div>
+                    <div class="scenario-prompt">${sc.prompt}</div>
+                    ${buildStep('q')}
+                    ${buildStep('a')}
+                </div>
+            `;
+
+            document.getElementById('prevBtn').disabled = current === 0;
+            document.getElementById('nextBtn').textContent = current === scenarios.length - 1 ? 'Finish \u{1F389}' : 'Next »';
+            updateScore();
+        }
+
+        function nextScenario() {
+            if (recognizer) { try { recognizer.stop(); } catch(e){} }
+            current++;
+            if (current >= scenarios.length) {
+                showFinal();
+            } else {
+                renderScenario();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function prevScenario() {
+            if (current === 0) return;
+            if (recognizer) { try { recognizer.stop(); } catch(e){} }
+            current--;
+            renderScenario();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showFinal() {
+            document.getElementById('scenarioHost').style.display = 'none';
+            document.getElementById('navRow').style.display = 'none';
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressLabel').textContent = 'Done!';
+
+            let pts = 0;
+            attempts.forEach(a => { if (a.q === 'ok') pts++; if (a.a === 'ok') pts++; });
+            const max = scenarios.length * 2;
+
+            document.getElementById('finalScore').textContent = `${pts} / ${max} lines practiced`;
+            let msg = '';
+            if (pts === max) msg = 'Perfect! \u{1F31F} You asked and answered every one.';
+            else if (pts >= max * 0.75) msg = 'Great work — just a little more and you’ll be a master asker!';
+            else if (pts >= max / 2) msg = 'Nice start! Tap Try again and see if you can get more this round.';
+            else msg = 'Keep practicing — tap Listen, then Reveal, then repeat the sentence out loud.';
+            document.getElementById('finalMsg').textContent = msg;
+            document.getElementById('finalCard').classList.add('show');
+        }
+
+        function restart() {
+            current = 0;
+            initAttempts();
+            renderScenario();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        renderScenario();
+    </script>
+</body>
+</html>

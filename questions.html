@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ask & Answer">
+    <title>Fiona's Ask &amp; Answer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #e0f7fa 0%, #e8eaf6 40%, #fce4ec 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+            padding: 0 0 40px 0;
+            color: #263238;
+        }
+
+        .header {
+            text-align: center;
+            padding: 18px 20px 14px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.6em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00897b, #3f51b5, #e91e63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .header-links { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+        .header-links a {
+            display: inline-block;
+            padding: 5px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .back-link { background: linear-gradient(135deg, #fff9c4, #ffe0b2); color: #f57f17; }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 16px;
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.85);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        }
+
+        .panel h2 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #00695c;
+        }
+
+        /* Question word picker */
+        .qw-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .qw-chip {
+            background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            padding: 10px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+            user-select: none;
+        }
+
+        .qw-chip:active { transform: scale(0.96); }
+
+        .qw-chip.selected {
+            border-color: #00897b;
+            box-shadow: 0 4px 12px rgba(0,137,123,0.35);
+        }
+
+        .qw-emoji { font-size: 1.5em; line-height: 1; }
+        .qw-jp { font-size: 1.3em; font-weight: 800; color: #006064; margin-top: 4px; }
+        .qw-romaji { font-size: 0.8em; color: #546e7a; }
+        .qw-en { font-size: 0.85em; font-weight: 700; color: #37474f; margin-top: 2px; }
+
+        /* Prompt card */
+        .prompt-card {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 12px;
+            border: 2px dashed #ff9800;
+        }
+
+        .prompt-label {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #ef6c00;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .prompt-text {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #4e342e;
+            margin: 6px 0 0;
+        }
+
+        /* Suggestion card */
+        .suggestion {
+            display: none;
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .suggestion.show { display: block; }
+        .suggestion-line { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+        .suggestion-jp { font-size: 1.2em; font-weight: 800; color: #4a148c; }
+        .suggestion-romaji { color: #6a1b9a; font-style: italic; }
+        .suggestion-en { color: #37474f; font-weight: 600; }
+
+        /* Text inputs */
+        .input-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        .input-row label { font-weight: 700; color: #00695c; font-size: 0.95em; }
+        .input-row textarea {
+            font-family: 'Noto Sans JP', 'Nunito', sans-serif;
+            font-size: 1.15em;
+            padding: 10px 12px;
+            border: 2px solid #b2dfdb;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.9);
+            resize: vertical;
+            min-height: 52px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .input-row textarea:focus { border-color: #00897b; }
+
+        /* Buttons */
+        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        button.action {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.95em;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        button.action:active { transform: scale(0.96); }
+        .btn-hint { background: linear-gradient(135deg, #ce93d8, #ab47bc); }
+        .btn-speak { background: linear-gradient(135deg, #90caf9, #42a5f5); }
+        .btn-new { background: linear-gradient(135deg, #ffcc80, #fb8c00); }
+        .btn-save { background: linear-gradient(135deg, #a5d6a7, #43a047); }
+        .btn-clear { background: linear-gradient(135deg, #ef9a9a, #e57373); }
+
+        /* Saved list */
+        .saved-list { display: flex; flex-direction: column; gap: 10px; }
+        .saved-item {
+            background: linear-gradient(135deg, #f1f8e9, #dcedc8);
+            border-radius: 12px;
+            padding: 10px 12px;
+            position: relative;
+        }
+        .saved-q { font-weight: 800; color: #33691e; }
+        .saved-a { color: #1b5e20; margin-top: 3px; }
+        .saved-meta { font-size: 0.75em; color: #558b2f; margin-top: 4px; }
+        .saved-delete {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: transparent;
+            border: none;
+            color: #c62828;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 1.1em;
+        }
+
+        .empty { color: #78909c; font-style: italic; text-align: center; padding: 8px; }
+
+        .speak-inline {
+            background: #fff;
+            border: 1.5px solid #26a69a;
+            color: #00796b;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .speak-inline:active { transform: scale(0.9); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Ask &amp; Answer</h1>
+        <div class="header-links">
+            <a href="index.html" class="back-link">Back to Flashcards</a>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="panel">
+            <h2>1. Pick a question word</h2>
+            <div class="qw-grid" id="qwGrid"></div>
+        </div>
+
+        <div class="panel">
+            <h2>2. Your prompt</h2>
+            <div class="prompt-card">
+                <div class="prompt-label">Try to ask&hellip;</div>
+                <div class="prompt-text" id="promptText">Pick a question word above to get a prompt!</div>
+            </div>
+
+            <div class="suggestion" id="suggestion">
+                <div class="suggestion-line">
+                    <span class="suggestion-jp" id="sugJp"></span>
+                    <button class="speak-inline" onclick="speakText(document.getElementById('sugJp').textContent)" title="Listen">&#x1F50A;</button>
+                </div>
+                <div class="suggestion-line"><span class="suggestion-romaji" id="sugRomaji"></span></div>
+                <div class="suggestion-line"><span class="suggestion-en" id="sugEn"></span></div>
+            </div>
+
+            <div class="btn-row">
+                <button class="action btn-hint" onclick="toggleHint()" id="hintBtn">Show hint</button>
+                <button class="action btn-new" onclick="newPrompt()">New prompt</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>3. Write &amp; answer</h2>
+            <div class="input-row">
+                <label for="qInput">Your question (in hiragana):</label>
+                <textarea id="qInput" placeholder="例: これは なに ですか?" autocomplete="off" autocapitalize="off"></textarea>
+            </div>
+            <div class="input-row">
+                <label for="aInput">Your answer:</label>
+                <textarea id="aInput" placeholder="例: それは ほん です。" autocomplete="off" autocapitalize="off"></textarea>
+            </div>
+            <div class="btn-row">
+                <button class="action btn-speak" onclick="speakInput('qInput')">&#x1F50A; Read question</button>
+                <button class="action btn-speak" onclick="speakInput('aInput')">&#x1F50A; Read answer</button>
+                <button class="action btn-save" onclick="saveExchange()">Save this pair</button>
+                <button class="action btn-clear" onclick="clearInputs()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Saved question &amp; answer pairs</h2>
+            <div class="saved-list" id="savedList"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const questionWords = [
+            { jp: 'なに', romaji: 'nani', en: 'What', emoji: '&#x2753;',
+              prompts: [
+                { en: 'Ask what something is.',
+                  jp: 'これは なに ですか?', romaji: 'Kore wa nani desu ka?', enEx: 'What is this?' },
+                { en: 'Ask what the teacher\'s name is.',
+                  jp: 'せんせいの なまえは なに ですか?', romaji: 'Sensei no namae wa nani desu ka?', enEx: 'What is the teacher\'s name?' },
+                { en: 'Ask what kind of food someone likes.',
+                  jp: 'なにが すき ですか?', romaji: 'Nani ga suki desu ka?', enEx: 'What do you like?' }
+              ] },
+            { jp: 'だれ', romaji: 'dare', en: 'Who', emoji: '&#x1F464;',
+              prompts: [
+                { en: 'Ask who that person is.',
+                  jp: 'あのひとは だれ ですか?', romaji: 'Ano hito wa dare desu ka?', enEx: 'Who is that person?' },
+                { en: 'Ask who your friend is.',
+                  jp: 'あなたの ともだちは だれ ですか?', romaji: 'Anata no tomodachi wa dare desu ka?', enEx: 'Who is your friend?' }
+              ] },
+            { jp: 'どこ', romaji: 'doko', en: 'Where', emoji: '&#x1F4CD;',
+              prompts: [
+                { en: 'Ask where the cat is.',
+                  jp: 'ねこは どこ ですか?', romaji: 'Neko wa doko desu ka?', enEx: 'Where is the cat?' },
+                { en: 'Ask where the school is.',
+                  jp: 'がっこうは どこ ですか?', romaji: 'Gakkou wa doko desu ka?', enEx: 'Where is the school?' },
+                { en: 'Ask where the bathroom is.',
+                  jp: 'トイレは どこ ですか?', romaji: 'Toire wa doko desu ka?', enEx: 'Where is the bathroom?' }
+              ] },
+            { jp: 'いつ', romaji: 'itsu', en: 'When', emoji: '&#x1F550;',
+              prompts: [
+                { en: 'Ask when your friend\'s birthday is.',
+                  jp: 'たんじょうびは いつ ですか?', romaji: 'Tanjoubi wa itsu desu ka?', enEx: 'When is your birthday?' },
+                { en: 'Ask when the party is.',
+                  jp: 'パーティーは いつ ですか?', romaji: 'Paatii wa itsu desu ka?', enEx: 'When is the party?' }
+              ] },
+            { jp: 'なぜ', romaji: 'naze', en: 'Why', emoji: '&#x1F914;',
+              prompts: [
+                { en: 'Ask why the cat is sleeping.',
+                  jp: 'なぜ ねこは ねて いますか?', romaji: 'Naze neko wa nete imasu ka?', enEx: 'Why is the cat sleeping?' }
+              ] },
+            { jp: 'どうして', romaji: 'doushite', en: 'Why (how come)', emoji: '&#x1F9D0;',
+              prompts: [
+                { en: 'Ask why someone is sad.',
+                  jp: 'どうして かなしい ですか?', romaji: 'Doushite kanashii desu ka?', enEx: 'Why are you sad?' },
+                { en: 'Ask why the sky is blue.',
+                  jp: 'どうして そらは あおい ですか?', romaji: 'Doushite sora wa aoi desu ka?', enEx: 'Why is the sky blue?' }
+              ] },
+            { jp: 'どう', romaji: 'dou', en: 'How', emoji: '&#x1F4AD;',
+              prompts: [
+                { en: 'Ask how someone is feeling.',
+                  jp: 'げんきは どう ですか?', romaji: 'Genki wa dou desu ka?', enEx: 'How are you?' },
+                { en: 'Ask how the cake tastes.',
+                  jp: 'ケーキは どう ですか?', romaji: 'Keeki wa dou desu ka?', enEx: 'How is the cake?' }
+              ] },
+            { jp: 'どれ', romaji: 'dore', en: 'Which one', emoji: '&#x1F446;',
+              prompts: [
+                { en: 'Ask which one is your book.',
+                  jp: 'どれが あなたの ほん ですか?', romaji: 'Dore ga anata no hon desu ka?', enEx: 'Which one is your book?' }
+              ] },
+            { jp: 'いくら', romaji: 'ikura', en: 'How much', emoji: '&#x1F4B0;',
+              prompts: [
+                { en: 'Ask how much the ice cream costs.',
+                  jp: 'アイスクリームは いくら ですか?', romaji: 'Aisukuriimu wa ikura desu ka?', enEx: 'How much is the ice cream?' }
+              ] },
+            { jp: 'いくつ', romaji: 'ikutsu', en: 'How many', emoji: '&#x1F522;',
+              prompts: [
+                { en: 'Ask how many cookies there are.',
+                  jp: 'クッキーは いくつ ありますか?', romaji: 'Kukkii wa ikutsu arimasu ka?', enEx: 'How many cookies are there?' }
+              ] },
+            { jp: 'なんじ', romaji: 'nanji', en: 'What time', emoji: '&#x23F0;',
+              prompts: [
+                { en: 'Ask what time school starts.',
+                  jp: 'がっこうは なんじ ですか?', romaji: 'Gakkou wa nanji desu ka?', enEx: 'What time is school?' },
+                { en: 'Ask what time it is now.',
+                  jp: 'いま なんじ ですか?', romaji: 'Ima nanji desu ka?', enEx: 'What time is it now?' }
+              ] }
+        ];
+
+        let selectedWord = null;
+        let currentPrompt = null;
+        let hintShown = false;
+
+        const STORAGE_KEY = 'fiona-qa-saved';
+
+        function renderQwGrid() {
+            const grid = document.getElementById('qwGrid');
+            grid.innerHTML = questionWords.map((w, i) => `
+                <div class="qw-chip" data-index="${i}" onclick="pickWord(${i})">
+                    <div class="qw-emoji">${w.emoji}</div>
+                    <div class="qw-jp">${w.jp}</div>
+                    <div class="qw-romaji">${w.romaji}</div>
+                    <div class="qw-en">${w.en}</div>
+                </div>
+            `).join('');
+        }
+
+        function pickWord(index) {
+            selectedWord = questionWords[index];
+            document.querySelectorAll('.qw-chip').forEach(el => el.classList.remove('selected'));
+            const chip = document.querySelector('.qw-chip[data-index="' + index + '"]');
+            if (chip) chip.classList.add('selected');
+            newPrompt();
+        }
+
+        function newPrompt() {
+            if (!selectedWord) return;
+            const choices = selectedWord.prompts;
+            currentPrompt = choices[Math.floor(Math.random() * choices.length)];
+            document.getElementById('promptText').textContent = currentPrompt.en;
+            hintShown = false;
+            document.getElementById('suggestion').classList.remove('show');
+            document.getElementById('hintBtn').textContent = 'Show hint';
+        }
+
+        function toggleHint() {
+            if (!currentPrompt) return;
+            const box = document.getElementById('suggestion');
+            if (hintShown) {
+                box.classList.remove('show');
+                document.getElementById('hintBtn').textContent = 'Show hint';
+                hintShown = false;
+            } else {
+                document.getElementById('sugJp').textContent = currentPrompt.jp;
+                document.getElementById('sugRomaji').textContent = currentPrompt.romaji;
+                document.getElementById('sugEn').textContent = currentPrompt.enEx;
+                box.classList.add('show');
+                document.getElementById('hintBtn').textContent = 'Hide hint';
+                hintShown = true;
+            }
+        }
+
+        function speakText(text) {
+            if (!text || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ja-JP';
+            u.rate = 0.9;
+            window.speechSynthesis.speak(u);
+        }
+
+        function speakInput(id) {
+            const text = document.getElementById(id).value.trim();
+            if (!text) return;
+            speakText(text);
+        }
+
+        function saveExchange() {
+            const q = document.getElementById('qInput').value.trim();
+            const a = document.getElementById('aInput').value.trim();
+            if (!q && !a) return;
+            const list = loadSaved();
+            list.unshift({
+                q, a,
+                word: selectedWord ? selectedWord.jp : '',
+                prompt: currentPrompt ? currentPrompt.en : '',
+                ts: Date.now()
+            });
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 50))); } catch(e) {}
+            renderSaved();
+            document.getElementById('qInput').value = '';
+            document.getElementById('aInput').value = '';
+        }
+
+        function clearInputs() {
+            document.getElementById('qInput').value = '';
+            document.getElementById('aInput').value = '';
+        }
+
+        function loadSaved() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch(e) { return []; }
+        }
+
+        function deleteSaved(ts) {
+            const list = loadSaved().filter(x => x.ts !== ts);
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {}
+            renderSaved();
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function renderSaved() {
+            const el = document.getElementById('savedList');
+            const list = loadSaved();
+            if (list.length === 0) {
+                el.innerHTML = '<div class="empty">Nothing saved yet. Write a question and answer, then tap <b>Save this pair</b>.</div>';
+                return;
+            }
+            el.innerHTML = list.map(item => `
+                <div class="saved-item">
+                    <button class="saved-delete" onclick="deleteSaved(${item.ts})" title="Delete">&times;</button>
+                    <div class="saved-q">Q: ${escapeHtml(item.q) || '<i>(empty)</i>'}
+                        ${item.q ? `<button class="speak-inline" style="margin-left:6px;" onclick="speakText(${JSON.stringify(item.q)})">&#x1F50A;</button>` : ''}
+                    </div>
+                    <div class="saved-a">A: ${escapeHtml(item.a) || '<i>(empty)</i>'}
+                        ${item.a ? `<button class="speak-inline" style="margin-left:6px;" onclick="speakText(${JSON.stringify(item.a)})">&#x1F50A;</button>` : ''}
+                    </div>
+                    <div class="saved-meta">${item.word ? escapeHtml(item.word) + ' &middot; ' : ''}${escapeHtml(item.prompt)}</div>
+                </div>
+            `).join('');
+        }
+
+        renderQwGrid();
+        renderSaved();
+    </script>
+</body>
+</html>
