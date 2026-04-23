@@ -350,6 +350,8 @@
         let current = 0;
         let attempts = [];
         let recognizer = null;
+        let listeningKind = null;
+        let currentUtter = null;
         const speechRecAvailable = ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
 
         // Speech synthesis - prefer female Japanese voice (matches index.html)
@@ -375,15 +377,41 @@
             document.getElementById('warnBox').classList.add('show');
         }
 
+        function stopAllSpeech() {
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch(e){}
+            }
+            currentUtter = null;
+        }
+
+        function stopListening() {
+            if (recognizer) {
+                try { recognizer.stop(); } catch(e){}
+                try { recognizer.abort && recognizer.abort(); } catch(e){}
+            }
+            if (listeningKind) {
+                stopListenUI(listeningKind);
+            }
+            recognizer = null;
+            listeningKind = null;
+        }
+
         function speak(text) {
             if (!text || !('speechSynthesis' in window)) return;
-            window.speechSynthesis.cancel();
+            // If the same button is pressed again while speaking, just stop
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                stopAllSpeech();
+                return;
+            }
             if (!jaVoice) loadVoice();
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'ja-JP';
             u.rate = 0.85;
             u.pitch = 1.2;
             if (jaVoice) u.voice = jaVoice;
+            u.onend = () => { currentUtter = null; };
+            u.onerror = () => { currentUtter = null; };
+            currentUtter = u;
             window.speechSynthesis.speak(u);
         }
 
@@ -426,10 +454,21 @@
 
         function startListen(kind) {
             if (!speechRecAvailable) return;
+            // If already listening on this kind, tapping again should STOP
+            if (recognizer && listeningKind === kind) {
+                stopListening();
+                return;
+            }
+            // Otherwise switch: stop any active listener/TTS first
+            stopAllSpeech();
+            if (recognizer) {
+                try { recognizer.stop(); } catch(e){}
+                try { recognizer.abort && recognizer.abort(); } catch(e){}
+            }
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (recognizer) { try { recognizer.stop(); } catch(e){} }
             const rec = new SR();
             recognizer = rec;
+            listeningKind = kind;
             rec.lang = 'ja-JP';
             rec.interimResults = false;
             rec.maxAlternatives = 3;
@@ -440,8 +479,8 @@
             const step = document.getElementById(kind + '-step');
 
             micBtn.classList.add('listening');
-            micBtn.textContent = '■ Listening...';
-            status.textContent = 'Listening...';
+            micBtn.textContent = '⏹ Stop';
+            status.textContent = 'Listening... tap Stop when done.';
             status.className = 'status-msg status-listen';
             heard.classList.remove('show');
 
@@ -465,9 +504,13 @@
                 status.className = 'status-msg status-miss';
                 stopListenUI(kind);
             };
-            rec.onend = () => { stopListenUI(kind); };
+            rec.onend = () => {
+                stopListenUI(kind);
+                if (listeningKind === kind) listeningKind = null;
+                recognizer = null;
+            };
 
-            try { rec.start(); } catch(e) { stopListenUI(kind); }
+            try { rec.start(); } catch(e) { stopListenUI(kind); listeningKind = null; recognizer = null; }
         }
 
         function stopListenUI(kind) {
@@ -583,7 +626,8 @@
         }
 
         function nextScenario() {
-            if (recognizer) { try { recognizer.stop(); } catch(e){} }
+            stopListening();
+            stopAllSpeech();
             current++;
             if (current >= scenarios.length) {
                 showFinal();
@@ -595,7 +639,8 @@
 
         function prevScenario() {
             if (current === 0) return;
-            if (recognizer) { try { recognizer.stop(); } catch(e){} }
+            stopListening();
+            stopAllSpeech();
             current--;
             renderScenario();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -622,11 +667,20 @@
         }
 
         function restart() {
+            stopListening();
+            stopAllSpeech();
             current = 0;
             initAttempts();
             renderScenario();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // Stop everything when navigating away or hiding the tab
+        window.addEventListener('pagehide', () => { stopListening(); stopAllSpeech(); });
+        window.addEventListener('beforeunload', () => { stopListening(); stopAllSpeech(); });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { stopListening(); stopAllSpeech(); }
+        });
 
         renderScenario();
     </script>
