@@ -2569,6 +2569,7 @@
                 const div = document.createElement('div');
                 div.className = 'gf-hand-card' + (gfSelectedCard === i ? ' selected' : '') + (gfTurn !== 'player' ? ' gf-disabled' : '');
                 div.innerHTML = `
+                    ${card.emoji ? `<div class="gf-card-emoji">${card.emoji}</div>` : ''}
                     <div class="gf-card-jp">${card.japanese}</div>
                     <div class="gf-card-en">${card.english}</div>
                 `;
@@ -2581,8 +2582,8 @@
             document.getElementById('gfAiScore').textContent = `AI: ${gfAiPairCount} pairs`;
 
             // Pairs display
-            document.getElementById('gfPlayerPairs').innerHTML = gfPlayerPairsList.map(w => `<span class="gf-pair-chip">${w.japanese}</span>`).join('');
-            document.getElementById('gfAiPairs').innerHTML = gfAiPairsList.map(w => `<span class="gf-pair-chip">${w.japanese}</span>`).join('');
+            document.getElementById('gfPlayerPairs').innerHTML = gfPlayerPairsList.map(w => `<span class="gf-pair-chip">${w.emoji || ''} ${w.japanese}</span>`).join('');
+            document.getElementById('gfAiPairs').innerHTML = gfAiPairsList.map(w => `<span class="gf-pair-chip">${w.emoji || ''} ${w.japanese}</span>`).join('');
 
             // Action area visibility
             document.getElementById('gfActionArea').style.display = (gfTurn === 'player' && gfSelectedCard !== null) ? 'flex' : 'none';
