@@ -1390,7 +1390,6 @@
             </div>
             <div id="quizQuestion" style="display:none;">
                 <button class="audio-btn quiz-audio-btn" id="quizAudioBtn" onclick="speakQuiz()" title="Listen">&#x1F50A;</button>
-                <div class="card-emoji" id="quizEmoji"></div>
                 <div class="card-japanese" id="quizJapanese"></div>
                 <div class="card-romaji" id="quizRomaji"></div>
                 <div class="quiz-options" id="quizOptions"></div>
@@ -1966,7 +1965,6 @@
             }
 
             const word = quizWords[quizIndex];
-            document.getElementById('quizEmoji').innerHTML = word.emoji;
             document.getElementById('quizJapanese').textContent = word.japanese;
             document.getElementById('quizRomaji').textContent = word.romaji;
             document.getElementById('quizResult').style.display = 'none';
@@ -2319,13 +2317,10 @@
                 div.className = 'conc-card';
                 div.dataset.idx = idx;
                 div.onclick = () => flipConcCard(idx, div);
-                const emoji = card.word.emoji || '';
-                const emojiHtml = card.type === 'en' && emoji ? `<div style="font-size:1.5em;margin-bottom:2px;">${emoji}</div>` : '';
                 div.innerHTML = `
                     <div class="conc-card-inner">
                         <div class="conc-card-face conc-card-front">&#x2753;</div>
                         <div class="conc-card-face conc-card-back">
-                            ${emojiHtml}
                             <div class="conc-text">${card.text}</div>
                             ${card.sub ? `<div class="conc-sub">${card.sub}</div>` : ''}
                         </div>
@@ -2574,7 +2569,6 @@
                 const div = document.createElement('div');
                 div.className = 'gf-hand-card' + (gfSelectedCard === i ? ' selected' : '') + (gfTurn !== 'player' ? ' gf-disabled' : '');
                 div.innerHTML = `
-                    ${card.emoji ? `<div class="gf-card-emoji">${card.emoji}</div>` : ''}
                     <div class="gf-card-jp">${card.japanese}</div>
                     <div class="gf-card-en">${card.english}</div>
                 `;
@@ -2587,8 +2581,8 @@
             document.getElementById('gfAiScore').textContent = `AI: ${gfAiPairCount} pairs`;
 
             // Pairs display
-            document.getElementById('gfPlayerPairs').innerHTML = gfPlayerPairsList.map(w => `<span class="gf-pair-chip">${w.emoji || ''} ${w.japanese}</span>`).join('');
-            document.getElementById('gfAiPairs').innerHTML = gfAiPairsList.map(w => `<span class="gf-pair-chip">${w.emoji || ''} ${w.japanese}</span>`).join('');
+            document.getElementById('gfPlayerPairs').innerHTML = gfPlayerPairsList.map(w => `<span class="gf-pair-chip">${w.japanese}</span>`).join('');
+            document.getElementById('gfAiPairs').innerHTML = gfAiPairsList.map(w => `<span class="gf-pair-chip">${w.japanese}</span>`).join('');
 
             // Action area visibility
             document.getElementById('gfActionArea').style.display = (gfTurn === 'player' && gfSelectedCard !== null) ? 'flex' : 'none';
