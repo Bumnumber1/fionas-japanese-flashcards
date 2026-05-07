@@ -55,7 +55,7 @@
         }
 
         .container {
-            max-width: 820px;
+            max-width: 940px;
             margin: 22px auto;
             padding: 0 16px;
         }
@@ -64,7 +64,7 @@
             font-size: 1.4em;
             font-weight: 800;
             color: #6a1b9a;
-            margin: 26px 4px 14px;
+            margin: 30px 4px 14px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -75,7 +75,7 @@
             border-radius: 22px;
             padding: 22px 22px 18px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            margin-bottom: 18px;
+            margin-bottom: 12px;
             border: 2px solid rgba(255,255,255,0.6);
         }
         .intro-card h2 {
@@ -94,9 +94,7 @@
             grid-template-columns: 1fr;
             gap: 12px;
         }
-        @media (min-width: 640px) {
-            .practice-grid { grid-template-columns: 1fr 1fr; }
-        }
+        @media (min-width: 640px) { .practice-grid { grid-template-columns: 1fr 1fr; } }
         .tip {
             background: rgba(255,255,255,0.92);
             border-radius: 18px;
@@ -104,29 +102,10 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.06);
             border-left: 6px solid #ce93d8;
         }
-        .tip h3 {
-            font-size: 1.05em;
-            color: #4527a0;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .tip p {
-            color: #37474f;
-            line-height: 1.5;
-            font-weight: 600;
-            font-size: 0.95em;
-        }
-        .tip .examples {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px dashed #e1bee7;
-            font-size: 0.92em;
-            color: #6a1b9a;
-        }
+        .tip h3 { font-size: 1.05em; color: #4527a0; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .tip p { color: #37474f; line-height: 1.5; font-weight: 600; font-size: 0.95em; }
+        .tip .examples { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e1bee7; font-size: 0.92em; color: #6a1b9a; }
         .tip .examples b { color: #ad1457; }
-
         .tip.t1 { border-left-color: #f48fb1; }
         .tip.t2 { border-left-color: #ce93d8; }
         .tip.t3 { border-left-color: #90caf9; }
@@ -136,29 +115,57 @@
         .tip.t7 { border-left-color: #ef9a9a; }
         .tip.t8 { border-left-color: #b39ddb; }
 
-        .start-row {
-            display: flex;
-            justify-content: center;
-            margin: 28px 0 8px;
+        /* Activity hub */
+        .activity-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
         }
-        .start-btn {
-            padding: 14px 32px;
-            border: none;
-            border-radius: 24px;
-            font-family: 'Nunito', sans-serif;
-            font-weight: 800;
-            font-size: 1.15em;
-            color: white;
-            cursor: pointer;
-            background: linear-gradient(135deg, #ec407a, #8e24aa);
-            box-shadow: 0 6px 18px rgba(142,36,170,0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(142,36,170,0.4); }
-        .start-btn:active { transform: translateY(0); }
+        @media (min-width: 540px) { .activity-grid { grid-template-columns: 1fr 1fr; } }
+        @media (min-width: 820px) { .activity-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
-        /* Quiz overlay */
-        .quiz-overlay {
+        .activity-card {
+            background: rgba(255,255,255,0.95);
+            border: 2px solid rgba(255,255,255,0.7);
+            border-radius: 20px;
+            padding: 18px 18px;
+            box-shadow: 0 5px 16px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .activity-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(0,0,0,0.12); }
+        .activity-card .ico { font-size: 2.2em; line-height: 1; }
+        .activity-card .a-title { font-size: 1.1em; font-weight: 800; color: #4527a0; }
+        .activity-card .a-desc { font-size: 0.88em; color: #607d8b; font-weight: 600; line-height: 1.4; }
+        .activity-card .a-tag {
+            font-size: 0.72em;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #f3e5f5;
+            color: #6a1b9a;
+            padding: 3px 10px;
+            border-radius: 10px;
+            display: inline-block;
+            align-self: flex-start;
+            margin-bottom: 4px;
+        }
+        .activity-card.c-pink   { background: linear-gradient(135deg, rgba(252,228,236,0.8), white); }
+        .activity-card.c-purple { background: linear-gradient(135deg, rgba(243,229,245,0.8), white); }
+        .activity-card.c-blue   { background: linear-gradient(135deg, rgba(227,242,253,0.8), white); }
+        .activity-card.c-teal   { background: linear-gradient(135deg, rgba(224,247,250,0.8), white); }
+        .activity-card.c-green  { background: linear-gradient(135deg, rgba(232,245,233,0.8), white); }
+        .activity-card.c-orange { background: linear-gradient(135deg, rgba(255,243,224,0.8), white); }
+        .activity-card.c-red    { background: linear-gradient(135deg, rgba(255,235,238,0.8), white); }
+        .activity-card.c-yellow { background: linear-gradient(135deg, rgba(255,253,231,0.8), white); }
+
+        /* Modal */
+        .modal {
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -166,126 +173,46 @@
             z-index: 1000;
             justify-content: center;
             align-items: flex-start;
-            padding: 30px 16px;
+            padding: 24px 12px;
             overflow-y: auto;
         }
-        .quiz-overlay.active { display: flex; }
-
-        .quiz-card {
+        .modal.active { display: flex; }
+        .modal-card {
             background: white;
             border-radius: 22px;
             padding: 22px 22px 26px;
-            max-width: 560px;
+            max-width: 620px;
             width: 100%;
             position: relative;
             box-shadow: 0 12px 40px rgba(0,0,0,0.25);
         }
-
-        .quiz-close {
+        .modal-close {
             position: absolute;
-            top: 12px;
-            right: 16px;
+            top: 10px;
+            right: 14px;
             font-size: 1.8em;
             cursor: pointer;
             color: #90a4ae;
             line-height: 1;
-        }
-        .quiz-close:hover { color: #e53935; }
-
-        .quiz-tag {
-            display: inline-block;
-            font-size: 0.78em;
-            font-weight: 800;
-            padding: 4px 12px;
-            border-radius: 14px;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-        .quiz-tag.word { background: #fce4ec; color: #c2185b; }
-        .quiz-tag.sentence { background: #e3f2fd; color: #1565c0; }
-
-        .quiz-japanese {
-            font-family: 'Noto Sans JP', sans-serif;
-            font-size: 2em;
-            font-weight: 700;
-            text-align: center;
-            color: #1a237e;
-            margin: 6px 0 4px;
-            line-height: 1.35;
-        }
-        .quiz-romaji {
-            text-align: center;
-            color: #607d8b;
-            font-size: 1em;
-            font-weight: 600;
-            margin-bottom: 16px;
-            font-style: italic;
-        }
-
-        .audio-btn {
-            display: block;
-            margin: 0 auto 14px;
-            background: linear-gradient(135deg, #80cbc4, #26a69a);
-            color: white;
+            background: none;
             border: none;
-            border-radius: 50%;
-            width: 46px;
-            height: 46px;
+        }
+        .modal-close:hover { color: #e53935; }
+
+        .modal-title {
             font-size: 1.3em;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        }
-        .audio-btn:hover { transform: scale(1.05); }
-        .audio-btn.playing { background: linear-gradient(135deg, #ef5350, #c62828); }
-
-        .quiz-options {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 6px;
-        }
-        @media (max-width: 480px) {
-            .quiz-options { grid-template-columns: 1fr; }
-        }
-        .quiz-option {
-            padding: 14px 12px;
-            border: 2px solid #e0e0e0;
-            background: #fafafa;
-            border-radius: 14px;
-            font-family: 'Nunito', sans-serif;
-            font-weight: 700;
-            font-size: 1em;
-            color: #37474f;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-        }
-        .quiz-option:hover { background: #f3e5f5; border-color: #ce93d8; }
-        .quiz-option.correct { background: #c8e6c9 !important; border-color: #43a047 !important; color: #1b5e20 !important; }
-        .quiz-option.wrong { background: #ffcdd2 !important; border-color: #e53935 !important; color: #b71c1c !important; }
-
-        .quiz-result {
-            margin-top: 14px;
-            text-align: center;
-            font-size: 1.05em;
-            font-weight: 700;
-            display: none;
-            line-height: 1.5;
-        }
-        .quiz-next {
-            display: none;
-            margin: 14px auto 0;
-            padding: 11px 28px;
-            border: none;
-            border-radius: 18px;
-            background: linear-gradient(135deg, #8e24aa, #5e35b1);
-            color: white;
-            font-family: 'Nunito', sans-serif;
             font-weight: 800;
-            font-size: 1em;
-            cursor: pointer;
+            color: #6a1b9a;
+            margin-bottom: 4px;
+            text-align: center;
         }
-        .quiz-next:hover { transform: translateY(-2px); }
+        .modal-sub {
+            text-align: center;
+            color: #78909c;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-bottom: 14px;
+        }
 
         .progress-row {
             display: flex;
@@ -293,7 +220,7 @@
             font-size: 0.9em;
             font-weight: 700;
             color: #6a1b9a;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .progress-bar {
             height: 7px;
@@ -309,157 +236,419 @@
             transition: width 0.3s ease;
         }
 
-        .quiz-complete { text-align: center; }
-        .quiz-complete .big-emoji { font-size: 4em; margin-bottom: 8px; }
-        .quiz-complete h2 { color: #6a1b9a; margin-bottom: 10px; }
-        .quiz-complete .final-score { font-size: 1.1em; margin-bottom: 18px; color: #455a64; font-weight: 700; }
-        .quiz-complete .complete-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .qa-tag {
+            display: inline-block;
+            font-size: 0.78em;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        .qa-tag.word { background: #fce4ec; color: #c2185b; }
+        .qa-tag.sentence { background: #e3f2fd; color: #1565c0; }
+        .qa-tag.listen { background: #e0f7fa; color: #00838f; }
+        .qa-tag.reverse { background: #f3e5f5; color: #6a1b9a; }
+        .qa-tag.fill { background: #fff3e0; color: #e65100; }
+        .qa-tag.scenario { background: #ffebee; color: #c62828; }
 
-        .quiz-en-cue {
+        .qa-jp {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.9em;
+            font-weight: 700;
+            text-align: center;
+            color: #1a237e;
+            margin: 6px 0 4px;
+            line-height: 1.35;
+        }
+        .qa-romaji {
+            text-align: center;
+            color: #607d8b;
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        .qa-en-cue {
             text-align: center;
             color: #455a64;
             font-weight: 700;
             font-size: 1.05em;
-            margin-bottom: 12px;
+            margin: 6px 0 12px;
             padding: 10px 14px;
             background: #f3e5f5;
             border-radius: 14px;
         }
+        .qa-en-cue.scenario { background: #fff3e0; color: #bf360c; }
+
+        .audio-btn {
+            display: block;
+            margin: 0 auto 14px;
+            background: linear-gradient(135deg, #80cbc4, #26a69a);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            font-size: 1.4em;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .audio-btn:hover { transform: scale(1.05); }
+        .audio-btn.playing { background: linear-gradient(135deg, #ef5350, #c62828); }
+        .audio-btn.large { width: 86px; height: 86px; font-size: 2.4em; }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+        .option {
+            padding: 14px 12px;
+            border: 2px solid #e0e0e0;
+            background: #fafafa;
+            border-radius: 14px;
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            font-weight: 700;
+            font-size: 1em;
+            color: #37474f;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .option:hover { background: #f3e5f5; border-color: #ce93d8; }
+        .option.correct { background: #c8e6c9 !important; border-color: #43a047 !important; color: #1b5e20 !important; }
+        .option.wrong { background: #ffcdd2 !important; border-color: #e53935 !important; color: #b71c1c !important; }
+        .option.large-jp { font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; }
+
+        .qa-result {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 1.05em;
+            font-weight: 700;
+            display: none;
+            line-height: 1.5;
+        }
+        .qa-next {
+            display: none;
+            margin: 14px auto 0;
+            padding: 11px 28px;
+            border: none;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #8e24aa, #5e35b1);
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .qa-next:hover { transform: translateY(-2px); }
+
+        /* Sentence builder */
+        .sb-target {
+            text-align: center;
+            font-weight: 700;
+            color: #455a64;
+            font-size: 1.05em;
+            padding: 12px 14px;
+            background: #fff3e0;
+            border-radius: 14px;
+            margin-bottom: 14px;
+        }
+        .sb-slots {
+            min-height: 70px;
+            background: #f5f5f5;
+            border: 2px dashed #b39ddb;
+            border-radius: 14px;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .sb-slots:empty::before {
+            content: 'Tap chunks below to build the sentence';
+            color: #9e9e9e;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        .sb-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .sb-chunk {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.15em;
+            padding: 9px 16px;
+            background: linear-gradient(135deg, #b39ddb, #9575cd);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            transition: transform 0.15s;
+        }
+        .sb-chunk:hover { transform: translateY(-2px); }
+        .sb-chunk.placed { opacity: 0.3; pointer-events: none; }
+        .sb-chunk.in-slot { background: linear-gradient(135deg, #4dd0e1, #00897b); }
+        .sb-actions { display: flex; gap: 10px; justify-content: center; }
+        .sb-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+        .sb-btn.check { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; }
+        .sb-btn.clear { background: #eceff1; color: #455a64; }
+        .sb-btn:hover { transform: translateY(-1px); }
+
+        /* Suki/Kirai sorter */
+        .sk-bins {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .sk-bin {
+            background: #fafafa;
+            border: 3px dashed #b39ddb;
+            border-radius: 16px;
+            padding: 12px;
+            min-height: 110px;
+        }
+        .sk-bin.suki { border-color: #ec407a; background: #fce4ec; }
+        .sk-bin.kirai { border-color: #5e35b1; background: #ede7f6; }
+        .sk-bin h4 {
+            font-family: 'Noto Sans JP', sans-serif;
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 6px;
+            color: #4527a0;
+        }
+        .sk-bin.suki h4 { color: #c2185b; }
+        .sk-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+        }
+        .sk-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 14px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 14px;
+        }
+        .sk-card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 1.6em;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 64px;
+            transition: transform 0.15s;
+        }
+        .sk-card:hover { transform: scale(1.05); }
+        .sk-card .lbl {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 0.55em;
+            color: #455a64;
+            margin-top: 2px;
+        }
+
+        .qm-row { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+        .qm-statement {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.7em;
+            font-weight: 700;
+            padding: 14px 20px;
+            border-radius: 16px;
+            background: #e3f2fd;
+            color: #1565c0;
+            text-align: center;
+            min-width: 220px;
+        }
+        .qm-arrow { font-size: 1.6em; color: #8e24aa; }
+        .qm-result-line {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.7em;
+            font-weight: 700;
+            padding: 14px 20px;
+            border-radius: 16px;
+            background: #f3e5f5;
+            color: #6a1b9a;
+            text-align: center;
+            min-width: 220px;
+            min-height: 56px;
+        }
+        .qm-add-btn {
+            padding: 12px 22px;
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.5em;
+            font-weight: 700;
+            border: none;
+            border-radius: 16px;
+            color: white;
+            background: linear-gradient(135deg, #ff7043, #e64a19);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .qm-add-btn:hover { transform: translateY(-2px); }
+
+        .complete { text-align: center; padding-top: 10px; }
+        .complete .big-emoji { font-size: 4em; margin-bottom: 8px; }
+        .complete h2 { color: #6a1b9a; margin-bottom: 10px; }
+        .complete .final-score { font-size: 1.05em; margin-bottom: 16px; color: #455a64; font-weight: 700; }
+        .complete .complete-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+        /* Possession builder same as sentence builder, reused */
+
+        /* Phone number reader */
+        .pn-display {
+            text-align: center;
+            font-size: 2.2em;
+            font-weight: 800;
+            color: #1565c0;
+            background: #e3f2fd;
+            padding: 16px;
+            border-radius: 14px;
+            margin-bottom: 14px;
+            letter-spacing: 4px;
+        }
+        .pn-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+        .pn-digit {
+            background: white;
+            border: 2px solid #90caf9;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            color: #1565c0;
+            font-family: 'Noto Sans JP', sans-serif;
+            cursor: pointer;
+            min-width: 50px;
+            text-align: center;
+        }
+        .pn-digit.revealed { background: #c8e6c9; border-color: #43a047; color: #1b5e20; }
+
+        .all-jp-text { font-family: 'Noto Sans JP', sans-serif; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Quarterly Review</h1>
-        <p>Look back, practice, and quiz yourself!</p>
+        <p>Practice tips + 12 interactive activities</p>
         <div class="header-links">
             <a href="index.html">&larr; Flashcards</a>
             <a href="ebook.html">Workbook</a>
             <a href="voicepractice.html">Voice Practice</a>
             <a href="questions.html">Ask &amp; Answer</a>
+            <a href="ocean.html">Ocean Adventure</a>
         </div>
     </div>
 
     <div class="container">
         <div class="intro-card">
             <h2>Hi Fiona! &#x1F338;</h2>
-            <p>This is your quarterly review. First, read the practice ideas below — they show how to use everything you've learned so far in real life. Then, when you're ready, click <b>Start Quiz</b> to test yourself on words <i>and</i> sentences mixed together.</p>
+            <p>This is your quarterly review &mdash; a place to look back on <i>everything</i> we've covered. Read the practice ideas, then try the activities below. Each activity practices a different concept: words, sentences, listening, asking questions, polite phrases, possession, counting, and more!</p>
         </div>
 
         <h2 class="section-title">&#x1F4DD; How to Practice</h2>
-        <div class="practice-grid" id="practiceGrid">
-            <!-- Rendered by JS -->
-        </div>
+        <div class="practice-grid" id="practiceGrid"></div>
 
-        <div class="start-row">
-            <button class="start-btn" onclick="startQuiz()">&#x1F389; Start Quarterly Review Quiz</button>
-        </div>
+        <h2 class="section-title">&#x1F3AE; Activities</h2>
+        <p style="color:#607d8b;font-weight:600;margin:0 4px 14px;">Tap any card to start. Each activity is short &mdash; do them in any order!</p>
+        <div class="activity-grid" id="activityGrid"></div>
     </div>
 
-    <!-- Quiz overlay -->
-    <div class="quiz-overlay" id="quizOverlay">
-        <div class="quiz-card">
-            <span class="quiz-close" onclick="closeQuiz()">&times;</span>
-
-            <div id="quizQuestion">
-                <div class="progress-row">
-                    <span id="qProgress">Question 1 of 15</span>
-                    <span id="qScore">Correct: 0</span>
-                </div>
-                <div class="progress-bar"><div class="progress-fill" id="qFill"></div></div>
-
-                <div style="text-align:center;">
-                    <span class="quiz-tag" id="quizTag">Word</span>
-                </div>
-                <div class="quiz-en-cue" id="quizEnCue" style="display:none;"></div>
-                <div class="quiz-japanese" id="quizJp"></div>
-                <div class="quiz-romaji" id="quizRomaji"></div>
-                <button class="audio-btn" id="quizAudio" onclick="speakCurrent()" title="Listen">&#x1F50A;</button>
-
-                <div class="quiz-options" id="quizOptions"></div>
-                <div class="quiz-result" id="quizResult"></div>
-                <button class="quiz-next" id="quizNext" onclick="nextQuestion()">Next &rarr;</button>
-            </div>
-
-            <div class="quiz-complete" id="quizComplete" style="display:none;">
-                <div class="big-emoji" id="completeEmoji"></div>
-                <h2 id="completeTitle"></h2>
-                <div class="final-score" id="finalScore"></div>
-                <div class="complete-actions">
-                    <button class="quiz-next" style="display:inline-block;" onclick="closeQuiz()">Done</button>
-                    <button class="quiz-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="startQuiz()">Try Again</button>
-                </div>
-            </div>
+    <!-- Universal modal -->
+    <div class="modal" id="modal">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="modalBody"></div>
         </div>
     </div>
 
     <script>
-        // ---------- Practice tips ----------
+        // ============================================================
+        //  PRACTICE TIPS
+        // ============================================================
         const practiceTips = [
-            {
-                cls: 't1', icon: '&#x1F31E;',
-                title: 'Daily Greetings',
-                body: 'Greet your family in Japanese every morning, evening, and bedtime. Add a polite phrase before and after every meal!',
-                examples: '<b>おはよう</b> (Good morning) &middot; <b>こんにちは</b> (Hello) &middot; <b>こんばんは</b> (Good evening) &middot; <b>いただきます</b> (Before eating) &middot; <b>ごちそうさま でした</b> (After eating)'
-            },
-            {
-                cls: 't2', icon: '&#x2753;',
-                title: 'Ask Questions Around the House',
-                body: 'Pick up an object or look at something and ask a question about it in Japanese. Answer it yourself, too!',
-                examples: '<b>これは なに ですか?</b> (What is this?) &middot; <b>ねこは どこ ですか?</b> (Where is the cat?) &middot; <b>いま なんじ ですか?</b> (What time is it now?)'
-            },
-            {
-                cls: 't3', icon: '&#x1F374;',
-                title: 'Use Mealtime Words',
-                body: 'During breakfast, lunch, and dinner, name your food in Japanese and say how it tastes. Ask politely if you want more.',
-                examples: '<b>おいしい です</b> (It\'s delicious) &middot; <b>みず を ください</b> (Water please) &middot; <b>おかわり</b> (Seconds!) &middot; <b>もう いりません</b> (No more, thanks)'
-            },
-            {
-                cls: 't4', icon: '&#x1F4C5;',
-                title: 'Talk About Your Day',
-                body: 'Use the days of the week and time words when you plan or remember things. What did you do <i>kinou</i>? What will you do <i>ashita</i>?',
-                examples: '<b>きょう は げつようび です</b> (Today is Monday) &middot; <b>あした は がっこう です</b> (Tomorrow is school) &middot; <b>きのう、ケーキ を たべました</b> (Yesterday I ate cake)'
-            },
-            {
-                cls: 't5', icon: '&#x1F308;',
-                title: 'Describe Things',
-                body: 'Pick anything in the room and describe it: how it feels, looks, or what you think of it. Use feeling and color words.',
-                examples: '<b>そら は あおい です</b> (The sky is blue) &middot; <b>いぬ が すき です</b> (I like dogs) &middot; <b>げんき です</b> (I\'m doing well)'
-            },
-            {
-                cls: 't6', icon: '&#x1F522;',
-                title: 'Count Things',
-                body: 'Count your toys, snacks, or steps using the counter words. Try counting things in a basket out loud!',
-                examples: '<b>ひとつ, ふたつ, みっつ...</b> (one thing, two things, three things) &middot; <b>クッキーは いくつ ありますか?</b> (How many cookies?)'
-            },
-            {
-                cls: 't7', icon: '&#x1F6CD;',
-                title: 'Pretend to Shop',
-                body: 'Play store! Pick up a toy and ask how much it is. Practice paying with yen and asking for change.',
-                examples: '<b>これは いくら ですか?</b> (How much is this?) &middot; <b>これを ください</b> (This one please) &middot; <b>おつり、おねがいします</b> (Change please)'
-            },
-            {
-                cls: 't8', icon: '&#x1F399;',
-                title: 'Speak Out Loud',
-                body: 'Don\'t just read silently — say each word and sentence out loud. Listen to the audio buttons and copy how it sounds!',
-                examples: 'Tap any &#x1F50A; speaker icon and repeat it three times. Try the <b>Voice Practice</b> page to practice asking and answering questions.'
-            },
-            {
-                cls: 't1', icon: '&#x1F4D6;',
-                title: 'Read Every Day',
-                body: 'Spend a few minutes in the Workbook or Ocean Adventure pages each day. A little every day beats a lot once a week!',
-                examples: 'Workbook &middot; Ocean Adventure &middot; Flashcards Quiz Me!'
-            },
-            {
-                cls: 't2', icon: '&#x270F;&#xFE0F;',
-                title: 'Make One Sentence Each Day',
-                body: 'Pick one new word and use it in a simple sentence. Even short sentences count!',
-                examples: '<b>わたし は フィオナ です</b> (I am Fiona) &middot; <b>ねこ が すき です</b> (I like cats) &middot; <b>これ は ほん です</b> (This is a book)'
-            }
+            { cls:'t1', icon:'&#x1F31E;', title:'Daily Greetings',
+              body:'Greet your family in Japanese every morning, evening, and bedtime. Say a polite phrase before and after every meal!',
+              examples:'<b>おはよう</b> (Good morning) &middot; <b>こんにちは</b> (Hello) &middot; <b>こんばんは</b> (Good evening) &middot; <b>いただきます</b> &middot; <b>ごちそうさま でした</b>' },
+            { cls:'t2', icon:'&#x1F91D;', title:'Meeting Someone New',
+              body:'When you meet someone, say your name and use the special first-meeting phrase.',
+              examples:'<b>はじめまして</b> &middot; <b>わたしは フィオナ です</b> &middot; <b>よろしく おねがいします</b>' },
+            { cls:'t3', icon:'&#x2753;', title:'Ask Questions Around the House',
+              body:'Pick up something or look around and ask a question in Japanese. Then answer it yourself!',
+              examples:'<b>これは なに ですか?</b> &middot; <b>ねこは どこ ですか?</b> &middot; <b>いま なんじ ですか?</b>' },
+            { cls:'t4', icon:'&#x1F374;', title:'Use Mealtime Words',
+              body:'During meals, name food in Japanese, say how it tastes, and ask politely for more or to pass things.',
+              examples:'<b>おいしい です</b> &middot; <b>みず を ください</b> &middot; <b>おかわり</b> &middot; <b>~を とって ください</b>' },
+            { cls:'t5', icon:'&#x1F64B;', title:'Politely Say No',
+              body:'Sometimes you need to say no. Use a polite refusal so it sounds nice!',
+              examples:'<b>いいえ、けっこう です</b> &middot; <b>だいじょうぶ です</b> &middot; <b>いりません</b> &middot; <b>もう けっこう です</b>' },
+            { cls:'t6', icon:'&#x1F4C5;', title:'Talk About Your Day',
+              body:'Use day-of-the-week and time words to plan or remember things. What did you do <i>kinou</i>? What will you do <i>ashita</i>?',
+              examples:'<b>きょう は げつようび です</b> &middot; <b>あした は がっこう です</b> &middot; <b>きのう、ケーキ を たべました</b>' },
+            { cls:'t7', icon:'&#x1F308;', title:'Describe How You Feel',
+              body:'Pick a feeling or color word and use it about yourself or things around you.',
+              examples:'<b>げんき です</b> &middot; <b>ねむい です</b> &middot; <b>そら は あおい です</b> &middot; <b>かなしい です</b>' },
+            { cls:'t8', icon:'&#x2764;&#xFE0F;', title:'Suki / Kirai Game',
+              body:'Look at things and say if you like them or don\'t like them. Ask others, too!',
+              examples:'<b>いぬ が すき です</b> &middot; <b>くも が きらい です</b> &middot; <b>~が すき ですか?</b>' },
+            { cls:'t1', icon:'&#x1F522;', title:'Count Things',
+              body:'Count toys, snacks, or steps using the counter words. Try saying numbers and counters during snack time!',
+              examples:'<b>ひとつ, ふたつ, みっつ...</b> &middot; <b>クッキーは いくつ ありますか?</b> &middot; <b>ごこ あります</b>' },
+            { cls:'t2', icon:'&#x1F4DE;', title:'Practice Phone Numbers',
+              body:'Read your home phone or a pretend phone number out loud, one digit at a time.',
+              examples:'<b>ぜろ きゅう ぜろ - いち に さん よん - ご ろく なな はち</b>' },
+            { cls:'t3', icon:'&#x1F6CD;', title:'Pretend to Shop',
+              body:'Play store! Pick up a toy and ask how much it costs. Ask for things politely.',
+              examples:'<b>これは いくら ですか?</b> &middot; <b>これを ください</b> &middot; <b>おつり、おねがいします</b>' },
+            { cls:'t4', icon:'&#x1F465;', title:'Use Pronouns &amp; Possession',
+              body:'Use <b>の</b> to show ownership: <i>watashi no hon</i> = my book. Try with people&apos;s names too!',
+              examples:'<b>わたしの ほん</b> &middot; <b>あなたの かばん</b> &middot; <b>かれの くるま</b> &middot; <b>せんせいの なまえ</b>' },
+            { cls:'t5', icon:'&#x1F399;&#xFE0F;', title:'Speak Out Loud',
+              body:'Don\'t just read silently &mdash; say each word and sentence out loud. Tap the &#x1F50A; speaker and copy how it sounds!',
+              examples:'Try the <b>Voice Practice</b> page for asking-and-answering aloud.' },
+            { cls:'t6', icon:'&#x1F4D6;', title:'Read a Little Every Day',
+              body:'Spend 5 minutes in the Workbook or Ocean Adventure each day. Small daily practice beats once-a-week marathons!',
+              examples:'Workbook &middot; Ocean Adventure &middot; Flashcards Quiz Me!' },
+            { cls:'t7', icon:'&#x270F;&#xFE0F;', title:'Make One Sentence Each Day',
+              body:'Pick one new word and use it in a simple sentence. Even short sentences count.',
+              examples:'<b>これ は ねこ です</b> &middot; <b>わたし は がっこうに いきます</b> &middot; <b>ケーキ が すき です</b>' },
+            { cls:'t8', icon:'&#x1F389;', title:'Make It a Question',
+              body:'You can turn ANY sentence into a question by adding <b>か</b> at the end!',
+              examples:'<b>げんき です</b> &rarr; <b>げんき ですか?</b> &middot; <b>ねこ です</b> &rarr; <b>ねこ ですか?</b>' }
         ];
 
         function renderTips() {
-            const grid = document.getElementById('practiceGrid');
-            grid.innerHTML = practiceTips.map(t => `
+            document.getElementById('practiceGrid').innerHTML = practiceTips.map(t => `
                 <div class="tip ${t.cls}">
                     <h3>${t.icon} ${t.title}</h3>
                     <p>${t.body}</p>
@@ -469,177 +658,272 @@
         }
         renderTips();
 
-        // ---------- Quiz pool: words (no Hiragana category) ----------
-        // A trimmed mirror of vocabulary from index.html, with the Hiragana category excluded.
+        // ============================================================
+        //  DATA
+        // ============================================================
+        // Vocabulary (no Hiragana characters)
         const vocab = [
             // Days
-            { jp: 'にちようび', romaji: 'nichiyoubi', en: 'Sunday' },
-            { jp: 'げつようび', romaji: 'getsuyoubi', en: 'Monday' },
-            { jp: 'かようび', romaji: 'kayoubi', en: 'Tuesday' },
-            { jp: 'すいようび', romaji: 'suiyoubi', en: 'Wednesday' },
-            { jp: 'もくようび', romaji: 'mokuyoubi', en: 'Thursday' },
-            { jp: 'きんようび', romaji: 'kinyoubi', en: 'Friday' },
-            { jp: 'どようび', romaji: 'doyoubi', en: 'Saturday' },
+            { jp:'にちようび', romaji:'nichiyoubi', en:'Sunday', cat:'days' },
+            { jp:'げつようび', romaji:'getsuyoubi', en:'Monday', cat:'days' },
+            { jp:'かようび', romaji:'kayoubi', en:'Tuesday', cat:'days' },
+            { jp:'すいようび', romaji:'suiyoubi', en:'Wednesday', cat:'days' },
+            { jp:'もくようび', romaji:'mokuyoubi', en:'Thursday', cat:'days' },
+            { jp:'きんようび', romaji:'kinyoubi', en:'Friday', cat:'days' },
+            { jp:'どようび', romaji:'doyoubi', en:'Saturday', cat:'days' },
             // Time
-            { jp: 'きょう', romaji: 'kyou', en: 'Today' },
-            { jp: 'あした', romaji: 'ashita', en: 'Tomorrow' },
-            { jp: 'きのう', romaji: 'kinou', en: 'Yesterday' },
-            { jp: 'いま', romaji: 'ima', en: 'Now' },
-            { jp: 'たんじょうび', romaji: 'tanjoubi', en: 'Birthday' },
-            { jp: 'まいにち', romaji: 'mainichi', en: 'Every day' },
+            { jp:'きょう', romaji:'kyou', en:'Today', cat:'time' },
+            { jp:'あした', romaji:'ashita', en:'Tomorrow', cat:'time' },
+            { jp:'きのう', romaji:'kinou', en:'Yesterday', cat:'time' },
+            { jp:'いま', romaji:'ima', en:'Now', cat:'time' },
+            { jp:'たんじょうび', romaji:'tanjoubi', en:'Birthday', cat:'time' },
+            { jp:'まいにち', romaji:'mainichi', en:'Every day', cat:'time' },
             // Food & drinks
-            { jp: 'たべもの', romaji: 'tabemono', en: 'Food' },
-            { jp: 'のみもの', romaji: 'nomimono', en: 'Drink' },
-            { jp: 'みず', romaji: 'mizu', en: 'Water' },
-            { jp: 'ごはん', romaji: 'gohan', en: 'Rice / Meal' },
-            { jp: 'ケーキ', romaji: 'keeki', en: 'Cake' },
-            { jp: 'アイスクリーム', romaji: 'aisukuriimu', en: 'Ice Cream' },
-            { jp: 'クッキー', romaji: 'kukkii', en: 'Cookie' },
-            { jp: 'りんご', romaji: 'ringo', en: 'Apple' },
-            { jp: 'いちご', romaji: 'ichigo', en: 'Strawberry' },
-            { jp: 'おちゃ', romaji: 'ocha', en: 'Tea' },
-            { jp: 'ジュース', romaji: 'juusu', en: 'Juice' },
-            { jp: 'ぎゅうにゅう', romaji: 'gyuunyuu', en: 'Milk' },
+            { jp:'たべもの', romaji:'tabemono', en:'Food', cat:'food' },
+            { jp:'のみもの', romaji:'nomimono', en:'Drink', cat:'food' },
+            { jp:'みず', romaji:'mizu', en:'Water', cat:'food' },
+            { jp:'おみず', romaji:'omizu', en:'Water (polite)', cat:'food' },
+            { jp:'ごはん', romaji:'gohan', en:'Rice / Meal', cat:'food' },
+            { jp:'おにぎり', romaji:'onigiri', en:'Rice ball', cat:'food' },
+            { jp:'ケーキ', romaji:'keeki', en:'Cake', cat:'food' },
+            { jp:'アイスクリーム', romaji:'aisukuriimu', en:'Ice cream', cat:'food' },
+            { jp:'クッキー', romaji:'kukkii', en:'Cookie', cat:'food' },
+            { jp:'プリン', romaji:'purin', en:'Pudding', cat:'food' },
+            { jp:'だんご', romaji:'dango', en:'Dango', cat:'food' },
+            { jp:'パン', romaji:'pan', en:'Bread', cat:'food' },
+            { jp:'りんご', romaji:'ringo', en:'Apple', cat:'food' },
+            { jp:'いちご', romaji:'ichigo', en:'Strawberry', cat:'food' },
+            { jp:'おちゃ', romaji:'ocha', en:'Tea', cat:'food' },
+            { jp:'コーヒー', romaji:'koohii', en:'Coffee', cat:'food' },
+            { jp:'ジュース', romaji:'juusu', en:'Juice', cat:'food' },
+            { jp:'コーラ', romaji:'koora', en:'Cola', cat:'food' },
+            { jp:'ぎゅうにゅう', romaji:'gyuunyuu', en:'Milk', cat:'food' },
             // Objects
-            { jp: 'えんぴつ', romaji: 'enpitsu', en: 'Pencil' },
-            { jp: 'ペン', romaji: 'pen', en: 'Pen' },
-            { jp: 'ほん', romaji: 'hon', en: 'Book' },
-            { jp: 'かばん', romaji: 'kaban', en: 'Bag' },
-            { jp: 'でんわ', romaji: 'denwa', en: 'Telephone' },
-            { jp: 'なまえ', romaji: 'namae', en: 'Name' },
-            { jp: 'トイレ', romaji: 'toire', en: 'Bathroom' },
-            { jp: 'にほんご', romaji: 'nihongo', en: 'Japanese (language)' },
+            { jp:'えんぴつ', romaji:'enpitsu', en:'Pencil', cat:'obj' },
+            { jp:'ペン', romaji:'pen', en:'Pen', cat:'obj' },
+            { jp:'ほん', romaji:'hon', en:'Book', cat:'obj' },
+            { jp:'かばん', romaji:'kaban', en:'Bag', cat:'obj' },
+            { jp:'でんわ', romaji:'denwa', en:'Telephone', cat:'obj' },
+            { jp:'でんわばんごう', romaji:'denwa bangou', en:'Phone number', cat:'obj' },
+            { jp:'なまえ', romaji:'namae', en:'Name', cat:'obj' },
+            { jp:'トイレ', romaji:'toire', en:'Bathroom', cat:'obj' },
+            { jp:'にほんご', romaji:'nihongo', en:'Japanese (language)', cat:'obj' },
+            { jp:'テレビ', romaji:'terebi', en:'TV', cat:'obj' },
             // People & animals
-            { jp: 'おかあさん', romaji: 'okaasan', en: 'Mom' },
-            { jp: 'おとうさん', romaji: 'otousan', en: 'Dad' },
-            { jp: 'せんせい', romaji: 'sensei', en: 'Teacher' },
-            { jp: 'ともだち', romaji: 'tomodachi', en: 'Friend' },
-            { jp: 'いぬ', romaji: 'inu', en: 'Dog' },
-            { jp: 'ねこ', romaji: 'neko', en: 'Cat' },
-            { jp: 'がっこう', romaji: 'gakkou', en: 'School' },
-            { jp: 'うち', romaji: 'uchi', en: 'Home' },
-            { jp: 'はな', romaji: 'hana', en: 'Flower' },
-            { jp: 'ひと', romaji: 'hito', en: 'Person' },
+            { jp:'おかあさん', romaji:'okaasan', en:'Mom', cat:'people' },
+            { jp:'おとうさん', romaji:'otousan', en:'Dad', cat:'people' },
+            { jp:'せんせい', romaji:'sensei', en:'Teacher', cat:'people' },
+            { jp:'ともだち', romaji:'tomodachi', en:'Friend', cat:'people' },
+            { jp:'いぬ', romaji:'inu', en:'Dog', cat:'people' },
+            { jp:'ねこ', romaji:'neko', en:'Cat', cat:'people' },
+            { jp:'がっこう', romaji:'gakkou', en:'School', cat:'people' },
+            { jp:'うち', romaji:'uchi', en:'Home', cat:'people' },
+            { jp:'はな', romaji:'hana', en:'Flower', cat:'people' },
+            { jp:'ひと', romaji:'hito', en:'Person', cat:'people' },
+            { jp:'くるま', romaji:'kuruma', en:'Car', cat:'people' },
+            { jp:'へび', romaji:'hebi', en:'Snake', cat:'people' },
+            { jp:'くも', romaji:'kumo', en:'Spider', cat:'people' },
             // Pronouns
-            { jp: 'わたし', romaji: 'watashi', en: 'I / Me' },
-            { jp: 'あなた', romaji: 'anata', en: 'You' },
-            { jp: 'かれ', romaji: 'kare', en: 'He / Him' },
-            { jp: 'かのじょ', romaji: 'kanojo', en: 'She / Her' },
-            { jp: 'みんな', romaji: 'minna', en: 'Everyone' },
+            { jp:'わたし', romaji:'watashi', en:'I / Me', cat:'pron' },
+            { jp:'あなた', romaji:'anata', en:'You', cat:'pron' },
+            { jp:'かれ', romaji:'kare', en:'He / Him', cat:'pron' },
+            { jp:'かのじょ', romaji:'kanojo', en:'She / Her', cat:'pron' },
+            { jp:'わたしたち', romaji:'watashitachi', en:'We / Us', cat:'pron' },
+            { jp:'あなたたち', romaji:'anatatachi', en:'You (plural)', cat:'pron' },
+            { jp:'かれら', romaji:'karera', en:'They / Them', cat:'pron' },
+            { jp:'みんな', romaji:'minna', en:'Everyone', cat:'pron' },
             // Numbers
-            { jp: 'いち', romaji: 'ichi', en: 'One (1)' },
-            { jp: 'に', romaji: 'ni', en: 'Two (2)' },
-            { jp: 'さん', romaji: 'san', en: 'Three (3)' },
-            { jp: 'よん', romaji: 'yon', en: 'Four (4)' },
-            { jp: 'ご', romaji: 'go', en: 'Five (5)' },
-            { jp: 'ろく', romaji: 'roku', en: 'Six (6)' },
-            { jp: 'なな', romaji: 'nana', en: 'Seven (7)' },
-            { jp: 'はち', romaji: 'hachi', en: 'Eight (8)' },
-            { jp: 'きゅう', romaji: 'kyuu', en: 'Nine (9)' },
-            { jp: 'じゅう', romaji: 'juu', en: 'Ten (10)' },
+            { jp:'ゼロ', romaji:'zero', en:'Zero (0)', cat:'num' },
+            { jp:'いち', romaji:'ichi', en:'One (1)', cat:'num' },
+            { jp:'に', romaji:'ni', en:'Two (2)', cat:'num' },
+            { jp:'さん', romaji:'san', en:'Three (3)', cat:'num' },
+            { jp:'よん', romaji:'yon', en:'Four (4)', cat:'num' },
+            { jp:'ご', romaji:'go', en:'Five (5)', cat:'num' },
+            { jp:'ろく', romaji:'roku', en:'Six (6)', cat:'num' },
+            { jp:'なな', romaji:'nana', en:'Seven (7)', cat:'num' },
+            { jp:'はち', romaji:'hachi', en:'Eight (8)', cat:'num' },
+            { jp:'きゅう', romaji:'kyuu', en:'Nine (9)', cat:'num' },
+            { jp:'じゅう', romaji:'juu', en:'Ten (10)', cat:'num' },
+            { jp:'ひゃく', romaji:'hyaku', en:'Hundred (100)', cat:'num' },
+            { jp:'せん', romaji:'sen', en:'Thousand (1,000)', cat:'num' },
+            { jp:'まん', romaji:'man', en:'Ten thousand', cat:'num' },
             // Question words
-            { jp: 'なに', romaji: 'nani', en: 'What' },
-            { jp: 'だれ', romaji: 'dare', en: 'Who' },
-            { jp: 'どこ', romaji: 'doko', en: 'Where' },
-            { jp: 'いつ', romaji: 'itsu', en: 'When' },
-            { jp: 'なぜ', romaji: 'naze', en: 'Why' },
-            { jp: 'どう', romaji: 'dou', en: 'How' },
-            { jp: 'いくら', romaji: 'ikura', en: 'How much' },
-            { jp: 'いくつ', romaji: 'ikutsu', en: 'How many' },
-            { jp: 'なんじ', romaji: 'nanji', en: 'What time' },
+            { jp:'なに', romaji:'nani', en:'What', cat:'q' },
+            { jp:'だれ', romaji:'dare', en:'Who', cat:'q' },
+            { jp:'どこ', romaji:'doko', en:'Where', cat:'q' },
+            { jp:'いつ', romaji:'itsu', en:'When', cat:'q' },
+            { jp:'なぜ', romaji:'naze', en:'Why', cat:'q' },
+            { jp:'どうして', romaji:'doushite', en:'Why (how come)', cat:'q' },
+            { jp:'どう', romaji:'dou', en:'How', cat:'q' },
+            { jp:'どれ', romaji:'dore', en:'Which one', cat:'q' },
+            { jp:'いくら', romaji:'ikura', en:'How much', cat:'q' },
+            { jp:'いくつ', romaji:'ikutsu', en:'How many', cat:'q' },
+            { jp:'なんじ', romaji:'nanji', en:'What time', cat:'q' },
+            { jp:'ですか', romaji:'desu ka', en:'is it? (question ending)', cat:'q' },
             // Greetings
-            { jp: 'こんにちは', romaji: 'konnichiwa', en: 'Hello' },
-            { jp: 'おはよう', romaji: 'ohayou', en: 'Good morning' },
-            { jp: 'こんばんは', romaji: 'konbanwa', en: 'Good evening' },
-            { jp: 'さようなら', romaji: 'sayounara', en: 'Goodbye' },
-            { jp: 'ありがとう', romaji: 'arigatou', en: 'Thank you' },
-            { jp: 'ください', romaji: 'kudasai', en: 'Please give me' },
-            { jp: 'おねがいします', romaji: 'onegaishimasu', en: 'Please (polite)' },
-            { jp: 'いただきます', romaji: 'itadakimasu', en: 'Before eating' },
-            { jp: 'ごちそうさまでした', romaji: 'gochisousama deshita', en: 'After eating' },
-            { jp: 'すみません', romaji: 'sumimasen', en: 'Excuse me / Sorry' },
-            { jp: 'はい', romaji: 'hai', en: 'Yes' },
-            { jp: 'いいえ', romaji: 'iie', en: 'No' },
+            { jp:'こんにちは', romaji:'konnichiwa', en:'Hello', cat:'greet' },
+            { jp:'おはよう', romaji:'ohayou', en:'Good morning', cat:'greet' },
+            { jp:'こんばんは', romaji:'konbanwa', en:'Good evening', cat:'greet' },
+            { jp:'さようなら', romaji:'sayounara', en:'Goodbye', cat:'greet' },
+            { jp:'ばいばい', romaji:'baibai', en:'Bye-bye', cat:'greet' },
+            { jp:'はじめまして', romaji:'hajimemashite', en:'Nice to meet you', cat:'greet' },
+            { jp:'よろしくおねがいします', romaji:'yoroshiku onegaishimasu', en:'Please treat me well', cat:'greet' },
+            { jp:'ありがとう', romaji:'arigatou', en:'Thank you', cat:'greet' },
+            { jp:'ください', romaji:'kudasai', en:'Please give me', cat:'greet' },
+            { jp:'おねがいします', romaji:'onegaishimasu', en:'Please (polite)', cat:'greet' },
+            { jp:'いただきます', romaji:'itadakimasu', en:'Before eating', cat:'greet' },
+            { jp:'ごちそうさまでした', romaji:'gochisousama deshita', en:'After eating', cat:'greet' },
+            { jp:'すみません', romaji:'sumimasen', en:'Excuse me / Sorry', cat:'greet' },
+            { jp:'はい', romaji:'hai', en:'Yes', cat:'greet' },
+            { jp:'うん', romaji:'un', en:'Yeah (casual)', cat:'greet' },
+            { jp:'いいえ', romaji:'iie', en:'No', cat:'greet' },
+            { jp:'いいえ、けっこうです', romaji:'iie, kekkou desu', en:'No, thank you', cat:'greet' },
+            { jp:'だいじょうぶです', romaji:'daijoubu desu', en:'I\'m okay', cat:'greet' },
+            { jp:'いりません', romaji:'irimasen', en:'I don\'t need it', cat:'greet' },
+            { jp:'とってください', romaji:'totte kudasai', en:'Please pass it', cat:'greet' },
+            { jp:'おかわり', romaji:'okawari', en:'Seconds / More please', cat:'greet' },
+            { jp:'もっとください', romaji:'motto kudasai', en:'More, please', cat:'greet' },
             // Demonstratives
-            { jp: 'これ', romaji: 'kore', en: 'This (near me)' },
-            { jp: 'それ', romaji: 'sore', en: 'That (near you)' },
-            { jp: 'あれ', romaji: 'are', en: 'That over there' },
-            { jp: 'ここ', romaji: 'koko', en: 'Here' },
-            { jp: 'そこ', romaji: 'soko', en: 'There' },
+            { jp:'これ', romaji:'kore', en:'This (near me)', cat:'demo' },
+            { jp:'それ', romaji:'sore', en:'That (near you)', cat:'demo' },
+            { jp:'あれ', romaji:'are', en:'That over there', cat:'demo' },
+            { jp:'ここ', romaji:'koko', en:'Here', cat:'demo' },
+            { jp:'そこ', romaji:'soko', en:'There', cat:'demo' },
+            { jp:'あそこ', romaji:'asoko', en:'Over there', cat:'demo' },
             // Verbs
-            { jp: 'たべる', romaji: 'taberu', en: 'To eat' },
-            { jp: 'のむ', romaji: 'nomu', en: 'To drink' },
-            { jp: 'みる', romaji: 'miru', en: 'To see / watch' },
-            { jp: 'よむ', romaji: 'yomu', en: 'To read' },
-            { jp: 'ねる', romaji: 'neru', en: 'To sleep' },
-            { jp: 'いく', romaji: 'iku', en: 'To go' },
-            { jp: 'くる', romaji: 'kuru', en: 'To come' },
-            { jp: 'あそぶ', romaji: 'asobu', en: 'To play' },
-            { jp: 'べんきょうする', romaji: 'benkyou suru', en: 'To study' },
-            { jp: 'かう', romaji: 'kau', en: 'To buy' },
+            { jp:'する', romaji:'suru', en:'To do', cat:'verb' },
+            { jp:'たべる', romaji:'taberu', en:'To eat', cat:'verb' },
+            { jp:'のむ', romaji:'nomu', en:'To drink', cat:'verb' },
+            { jp:'みる', romaji:'miru', en:'To see / watch', cat:'verb' },
+            { jp:'よむ', romaji:'yomu', en:'To read', cat:'verb' },
+            { jp:'ねる', romaji:'neru', en:'To sleep', cat:'verb' },
+            { jp:'いく', romaji:'iku', en:'To go', cat:'verb' },
+            { jp:'くる', romaji:'kuru', en:'To come', cat:'verb' },
+            { jp:'あそぶ', romaji:'asobu', en:'To play', cat:'verb' },
+            { jp:'べんきょうする', romaji:'benkyou suru', en:'To study', cat:'verb' },
+            { jp:'かう', romaji:'kau', en:'To buy', cat:'verb' },
+            { jp:'ある', romaji:'aru', en:'To exist (things)', cat:'verb' },
+            { jp:'いる', romaji:'iru', en:'To exist (people)', cat:'verb' },
+            { jp:'とる', romaji:'toru', en:'To take / pass', cat:'verb' },
+            { jp:'およぐ', romaji:'oyogu', en:'To swim', cat:'verb' },
             // Descriptions
-            { jp: 'おいしい', romaji: 'oishii', en: 'Delicious' },
-            { jp: 'すき', romaji: 'suki', en: 'Like / Love' },
-            { jp: 'きらい', romaji: 'kirai', en: 'Dislike' },
-            { jp: 'げんき', romaji: 'genki', en: 'Well / Energetic' },
-            { jp: 'かなしい', romaji: 'kanashii', en: 'Sad' },
-            { jp: 'ねむい', romaji: 'nemui', en: 'Sleepy' },
-            { jp: 'ほしい', romaji: 'hoshii', en: 'Want' },
-            { jp: 'あおい', romaji: 'aoi', en: 'Blue' },
+            { jp:'おいしい', romaji:'oishii', en:'Delicious', cat:'desc' },
+            { jp:'すき', romaji:'suki', en:'Like / Love', cat:'desc' },
+            { jp:'きらい', romaji:'kirai', en:'Dislike', cat:'desc' },
+            { jp:'げんき', romaji:'genki', en:'Well / Energetic', cat:'desc' },
+            { jp:'かなしい', romaji:'kanashii', en:'Sad', cat:'desc' },
+            { jp:'ねむい', romaji:'nemui', en:'Sleepy', cat:'desc' },
+            { jp:'ほしい', romaji:'hoshii', en:'Want', cat:'desc' },
+            { jp:'あおい', romaji:'aoi', en:'Blue', cat:'desc' },
+            { jp:'いろ', romaji:'iro', en:'Color', cat:'desc' },
+            { jp:'てんき', romaji:'tenki', en:'Weather', cat:'desc' },
+            { jp:'そら', romaji:'sora', en:'Sky', cat:'desc' },
+            { jp:'もっと', romaji:'motto', en:'More', cat:'desc' },
+            { jp:'ぜんぶ', romaji:'zenbu', en:'All / Everything', cat:'desc' },
             // Counters
-            { jp: 'ひとつ', romaji: 'hitotsu', en: 'One thing' },
-            { jp: 'ふたつ', romaji: 'futatsu', en: 'Two things' },
-            { jp: 'みっつ', romaji: 'mittsu', en: 'Three things' },
+            { jp:'ひとつ', romaji:'hitotsu', en:'One thing', cat:'count' },
+            { jp:'ふたつ', romaji:'futatsu', en:'Two things', cat:'count' },
+            { jp:'みっつ', romaji:'mittsu', en:'Three things', cat:'count' },
+            { jp:'よっつ', romaji:'yottsu', en:'Four things', cat:'count' },
+            { jp:'いつつ', romaji:'itsutsu', en:'Five things', cat:'count' },
+            { jp:'むっつ', romaji:'muttsu', en:'Six things', cat:'count' },
+            { jp:'ななつ', romaji:'nanatsu', en:'Seven things', cat:'count' },
+            { jp:'やっつ', romaji:'yattsu', en:'Eight things', cat:'count' },
+            { jp:'ここのつ', romaji:'kokonotsu', en:'Nine things', cat:'count' },
+            { jp:'とお', romaji:'too', en:'Ten things', cat:'count' },
             // Shopping
-            { jp: 'みせ', romaji: 'mise', en: 'Shop / Store' },
-            { jp: 'おかね', romaji: 'okane', en: 'Money' },
-            { jp: 'えん', romaji: 'en', en: 'Yen' }
+            { jp:'おかいもの', romaji:'okaimono', en:'Shopping', cat:'shop' },
+            { jp:'みせ', romaji:'mise', en:'Shop / Store', cat:'shop' },
+            { jp:'おかね', romaji:'okane', en:'Money', cat:'shop' },
+            { jp:'おつり', romaji:'otsuri', en:'Change (money back)', cat:'shop' },
+            { jp:'えん', romaji:'en', en:'Yen (¥)', cat:'shop' }
         ];
 
-        // ---------- Quiz pool: sentences ----------
+        // Sentences from material covered
         const sentences = [
-            { jp: 'これは ほん です。', plain: 'これはほんです', romaji: 'Kore wa hon desu.', en: 'This is a book.' },
-            { jp: 'これは なに ですか?', plain: 'これはなにですか', romaji: 'Kore wa nani desu ka?', en: 'What is this?' },
-            { jp: 'ねこは どこ ですか?', plain: 'ねこはどこですか', romaji: 'Neko wa doko desu ka?', en: 'Where is the cat?' },
-            { jp: 'トイレは どこ ですか?', plain: 'トイレはどこですか', romaji: 'Toire wa doko desu ka?', en: 'Where is the bathroom?' },
-            { jp: 'ケーキは おいしい です。', plain: 'ケーキはおいしいです', romaji: 'Keeki wa oishii desu.', en: 'The cake is delicious.' },
-            { jp: 'げんき ですか?', plain: 'げんきですか', romaji: 'Genki desu ka?', en: 'How are you?' },
-            { jp: 'たんじょうびは いつ ですか?', plain: 'たんじょうびはいつですか', romaji: 'Tanjoubi wa itsu desu ka?', en: 'When is your birthday?' },
-            { jp: 'なまえは なに ですか?', plain: 'なまえはなにですか', romaji: 'Namae wa nani desu ka?', en: 'What is your name?' },
-            { jp: 'いま なんじ ですか?', plain: 'いまなんじですか', romaji: 'Ima nanji desu ka?', en: 'What time is it now?' },
-            { jp: 'アイスクリームは いくら ですか?', plain: 'アイスクリームはいくらですか', romaji: 'Aisukuriimu wa ikura desu ka?', en: 'How much is the ice cream?' },
-            { jp: 'いぬが すき です。', plain: 'いぬがすきです', romaji: 'Inu ga suki desu.', en: 'I like dogs.' },
-            { jp: 'みず を ください。', plain: 'みずをください', romaji: 'Mizu o kudasai.', en: 'Water, please.' },
-            { jp: 'ありがとう ございます。', plain: 'ありがとうございます', romaji: 'Arigatou gozaimasu.', en: 'Thank you very much.' },
-            { jp: 'パーティーは いつ ですか?', plain: 'パーティーはいつですか', romaji: 'Paatii wa itsu desu ka?', en: 'When is the party?' },
-            { jp: 'クッキーは いくつ ありますか?', plain: 'クッキーはいくつありますか', romaji: 'Kukkii wa ikutsu arimasu ka?', en: 'How many cookies are there?' },
-            { jp: 'ともだちは だれ ですか?', plain: 'ともだちはだれですか', romaji: 'Tomodachi wa dare desu ka?', en: 'Who is your friend?' },
-            { jp: 'がっこうは どこ ですか?', plain: 'がっこうはどこですか', romaji: 'Gakkou wa doko desu ka?', en: 'Where is the school?' },
-            { jp: 'わたしは フィオナ です。', plain: 'わたしはフィオナです', romaji: 'Watashi wa Fiona desu.', en: 'I am Fiona.' },
-            { jp: 'これは わたしの ほん です。', plain: 'これはわたしのほんです', romaji: 'Kore wa watashi no hon desu.', en: 'This is my book.' },
-            { jp: 'みず が ほしい です。', plain: 'みずがほしいです', romaji: 'Mizu ga hoshii desu.', en: 'I want water.' },
-            { jp: 'おかあさんは どこ ですか?', plain: 'おかあさんはどこですか', romaji: 'Okaasan wa doko desu ka?', en: 'Where is mom?' },
-            { jp: 'がっこうは なんじ ですか?', plain: 'がっこうはなんじですか', romaji: 'Gakkou wa nanji desu ka?', en: 'What time is school?' },
-            { jp: 'これを ください。', plain: 'これをください', romaji: 'Kore o kudasai.', en: 'This one, please.' },
-            { jp: 'そらは あおい です。', plain: 'そらはあおいです', romaji: 'Sora wa aoi desu.', en: 'The sky is blue.' },
-            { jp: 'いただきます。', plain: 'いただきます', romaji: 'Itadakimasu.', en: 'Let\'s eat (before eating).' },
-            { jp: 'ごちそうさま でした。', plain: 'ごちそうさまでした', romaji: 'Gochisousama deshita.', en: 'Thanks for the meal (after eating).' },
-            { jp: 'きょう は げつようび です。', plain: 'きょうはげつようびです', romaji: 'Kyou wa getsuyoubi desu.', en: 'Today is Monday.' },
-            { jp: 'あした は どようび です。', plain: 'あしたはどようびです', romaji: 'Ashita wa doyoubi desu.', en: 'Tomorrow is Saturday.' },
-            { jp: 'ねこ が ねむい です。', plain: 'ねこがねむいです', romaji: 'Neko ga nemui desu.', en: 'The cat is sleepy.' },
-            { jp: 'ありがとう。', plain: 'ありがとう', romaji: 'Arigatou.', en: 'Thank you.' }
+            { jp:'これは ほん です。', plain:'これはほんです', romaji:'Kore wa hon desu.', en:'This is a book.' },
+            { jp:'これは わたしの かばん です。', plain:'これはわたしのかばんです', romaji:'Kore wa watashi no kaban desu.', en:'This is my bag.' },
+            { jp:'これは なに ですか?', plain:'これはなにですか', romaji:'Kore wa nani desu ka?', en:'What is this?' },
+            { jp:'ねこは どこ ですか?', plain:'ねこはどこですか', romaji:'Neko wa doko desu ka?', en:'Where is the cat?' },
+            { jp:'トイレは どこ ですか?', plain:'トイレはどこですか', romaji:'Toire wa doko desu ka?', en:'Where is the bathroom?' },
+            { jp:'がっこうは どこ ですか?', plain:'がっこうはどこですか', romaji:'Gakkou wa doko desu ka?', en:'Where is the school?' },
+            { jp:'ケーキは おいしい です。', plain:'ケーキはおいしいです', romaji:'Keeki wa oishii desu.', en:'The cake is delicious.' },
+            { jp:'げんき ですか?', plain:'げんきですか', romaji:'Genki desu ka?', en:'How are you?' },
+            { jp:'たんじょうびは いつ ですか?', plain:'たんじょうびはいつですか', romaji:'Tanjoubi wa itsu desu ka?', en:'When is your birthday?' },
+            { jp:'なまえは なに ですか?', plain:'なまえはなにですか', romaji:'Namae wa nani desu ka?', en:'What is your name?' },
+            { jp:'いま なんじ ですか?', plain:'いまなんじですか', romaji:'Ima nanji desu ka?', en:'What time is it now?' },
+            { jp:'アイスクリームは いくら ですか?', plain:'アイスクリームはいくらですか', romaji:'Aisukuriimu wa ikura desu ka?', en:'How much is the ice cream?' },
+            { jp:'これは いくら ですか?', plain:'これはいくらですか', romaji:'Kore wa ikura desu ka?', en:'How much is this?' },
+            { jp:'いぬが すき です。', plain:'いぬがすきです', romaji:'Inu ga suki desu.', en:'I like dogs.' },
+            { jp:'みず を ください。', plain:'みずをください', romaji:'Mizu o kudasai.', en:'Water, please.' },
+            { jp:'おちゃ を ください。', plain:'おちゃをください', romaji:'Ocha o kudasai.', en:'Tea, please.' },
+            { jp:'おにぎり が ほしい です。', plain:'おにぎりがほしいです', romaji:'Onigiri ga hoshii desu.', en:'I want a rice ball.' },
+            { jp:'ありがとう ございます。', plain:'ありがとうございます', romaji:'Arigatou gozaimasu.', en:'Thank you very much.' },
+            { jp:'パーティーは いつ ですか?', plain:'パーティーはいつですか', romaji:'Paatii wa itsu desu ka?', en:'When is the party?' },
+            { jp:'クッキーは いくつ ありますか?', plain:'クッキーはいくつありますか', romaji:'Kukkii wa ikutsu arimasu ka?', en:'How many cookies are there?' },
+            { jp:'ともだちは だれ ですか?', plain:'ともだちはだれですか', romaji:'Tomodachi wa dare desu ka?', en:'Who is your friend?' },
+            { jp:'おかあさんは どこ ですか?', plain:'おかあさんはどこですか', romaji:'Okaasan wa doko desu ka?', en:'Where is mom?' },
+            { jp:'がっこうは なんじ ですか?', plain:'がっこうはなんじですか', romaji:'Gakkou wa nanji desu ka?', en:'What time is school?' },
+            { jp:'これを ください。', plain:'これをください', romaji:'Kore o kudasai.', en:'This one, please.' },
+            { jp:'そらは あおい です。', plain:'そらはあおいです', romaji:'Sora wa aoi desu.', en:'The sky is blue.' },
+            { jp:'いただきます。', plain:'いただきます', romaji:'Itadakimasu.', en:'Let\'s eat.' },
+            { jp:'ごちそうさま でした。', plain:'ごちそうさまでした', romaji:'Gochisousama deshita.', en:'Thanks for the meal.' },
+            { jp:'きょう は げつようび です。', plain:'きょうはげつようびです', romaji:'Kyou wa getsuyoubi desu.', en:'Today is Monday.' },
+            { jp:'あした は どようび です。', plain:'あしたはどようびです', romaji:'Ashita wa doyoubi desu.', en:'Tomorrow is Saturday.' },
+            { jp:'わたしは げつようびに べんきょう します。', plain:'わたしはげつようびにべんきょうします', romaji:'Watashi wa getsuyoubi ni benkyou shimasu.', en:'I study on Monday.' },
+            { jp:'わたしは どようびに あそびます。', plain:'わたしはどようびにあそびます', romaji:'Watashi wa doyoubi ni asobimasu.', en:'I play on Saturday.' },
+            { jp:'はじめまして。', plain:'はじめまして', romaji:'Hajimemashite.', en:'Nice to meet you.' },
+            { jp:'よろしく おねがいします。', plain:'よろしくおねがいします', romaji:'Yoroshiku onegaishimasu.', en:'Please treat me well.' },
+            { jp:'わたしは フィオナ です。', plain:'わたしはフィオナです', romaji:'Watashi wa Fiona desu.', en:'I am Fiona.' },
+            { jp:'おちゃは いい です。', plain:'おちゃはいいです', romaji:'Ocha wa ii desu.', en:'No tea, thanks.' },
+            { jp:'もう けっこう です。', plain:'もうけっこうです', romaji:'Mou kekkou desu.', en:'No more, thank you.' }
         ];
 
-        // ---------- Build the quiz pool ----------
-        function buildPool() {
-            const wordItems = vocab.map(v => ({ kind: 'word', jp: v.jp, plain: v.jp, romaji: v.romaji, en: v.en }));
-            const sentenceItems = sentences.map(s => ({ kind: 'sentence', jp: s.jp, plain: s.plain, romaji: s.romaji, en: s.en }));
-            return { words: wordItems, sentences: sentenceItems };
+        // ============================================================
+        //  SPEECH
+        // ============================================================
+        let jaVoice = null;
+        function loadVoice() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = speechSynthesis.getVoices();
+            jaVoice = voices.find(v => v.lang.startsWith('ja') && /female|woman|kyoko|haruka|o-ren/i.test(v.name))
+                   || voices.find(v => v.lang.startsWith('ja')) || null;
         }
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = loadVoice;
+            loadVoice();
+        }
+        function stopAllSpeech() {
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch(e){}
+            }
+            document.querySelectorAll('.audio-btn.playing').forEach(b => b.classList.remove('playing'));
+        }
+        function speak(text, btn) {
+            if (!('speechSynthesis' in window)) return;
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                stopAllSpeech();
+                return;
+            }
+            if (!jaVoice) loadVoice();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ja-JP';
+            u.rate = 0.85;
+            u.pitch = 1.2;
+            if (jaVoice) u.voice = jaVoice;
+            if (btn) {
+                btn.classList.add('playing');
+                u.onend = () => btn.classList.remove('playing');
+                u.onerror = () => btn.classList.remove('playing');
+            }
+            window.speechSynthesis.speak(u);
+        }
+        window.addEventListener('beforeunload', stopAllSpeech);
+        window.addEventListener('pagehide', stopAllSpeech);
 
-        const QUIZ_LENGTH = 15;       // total questions
-        const SENTENCE_TARGET = 6;    // ~40% sentences
-
+        // ============================================================
+        //  HELPERS
+        // ============================================================
         function shuffle(arr) {
             const a = [...arr];
             for (let i = a.length - 1; i > 0; i--) {
@@ -648,157 +932,833 @@
             }
             return a;
         }
-
-        let quizItems = [];
-        let qIndex = 0;
-        let qCorrect = 0;
-
-        function startQuiz() {
-            const { words, sentences: sents } = buildPool();
-            const pickedSentences = shuffle(sents).slice(0, SENTENCE_TARGET);
-            const pickedWords = shuffle(words).slice(0, QUIZ_LENGTH - pickedSentences.length);
-            quizItems = shuffle([...pickedWords, ...pickedSentences]);
-            qIndex = 0;
-            qCorrect = 0;
-
-            document.getElementById('quizQuestion').style.display = 'block';
-            document.getElementById('quizComplete').style.display = 'none';
-            document.getElementById('quizOverlay').classList.add('active');
-            showQuestion();
+        function pick(arr, n) { return shuffle(arr).slice(0, n); }
+        function uniqEn(arr) {
+            const s = new Set();
+            return arr.filter(x => s.has(x.en) ? false : (s.add(x.en), true));
         }
 
-        function closeQuiz() {
+        // ============================================================
+        //  MODAL ENGINE
+        // ============================================================
+        const modal = document.getElementById('modal');
+        const modalBody = document.getElementById('modalBody');
+        function openModal(html) {
+            modalBody.innerHTML = html;
+            modal.classList.add('active');
+        }
+        function closeModal() {
             stopAllSpeech();
-            document.getElementById('quizOverlay').classList.remove('active');
+            modal.classList.remove('active');
         }
 
-        function showQuestion() {
-            if (qIndex >= quizItems.length) {
-                showComplete();
-                return;
+        // ============================================================
+        //  GENERIC MULTI-CHOICE QUIZ ENGINE
+        // ============================================================
+        // questions: [{ tag, tagClass, jp, romaji, en, audioText, options:[strings], correct:string, prompt(optional) }]
+        // mode: 'show-jp' or 'show-en' or 'show-prompt-only'
+        let mc = { items: [], idx: 0, correct: 0, mode: '', title: '', sub: '' };
+
+        function startMC(title, sub, mode, items) {
+            mc = { items, idx: 0, correct: 0, mode, title, sub };
+            renderMCShell();
+            renderMCQuestion();
+        }
+
+        function renderMCShell() {
+            openModal(`
+                <div class="modal-title">${mc.title}</div>
+                <div class="modal-sub">${mc.sub}</div>
+                <div class="progress-row">
+                    <span id="mcProg">Question 1 of ${mc.items.length}</span>
+                    <span id="mcScore">Correct: 0</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="mcFill"></div></div>
+                <div id="mcStage"></div>
+            `);
+        }
+
+        function renderMCQuestion() {
+            if (mc.idx >= mc.items.length) return showMCComplete();
+            const it = mc.items[mc.idx];
+            const stage = document.getElementById('mcStage');
+            document.getElementById('mcProg').textContent = `Question ${mc.idx+1} of ${mc.items.length}`;
+            document.getElementById('mcScore').textContent = `Correct: ${mc.correct}`;
+            document.getElementById('mcFill').style.width = `${(mc.idx / mc.items.length) * 100}%`;
+
+            let body = `<div style="text-align:center;"><span class="qa-tag ${it.tagClass||''}">${it.tag||'Question'}</span></div>`;
+            if (it.prompt) body += `<div class="qa-en-cue">${it.prompt}</div>`;
+
+            if (mc.mode === 'show-jp') {
+                body += `<div class="qa-jp">${it.jp}</div>`;
+                if (it.romaji) body += `<div class="qa-romaji">${it.romaji}</div>`;
+                body += `<button class="audio-btn" onclick="speak('${(it.audioText||it.jp).replace(/'/g,"\\'")}', this)">&#x1F50A;</button>`;
+            } else if (mc.mode === 'show-en') {
+                body += `<div class="qa-jp" style="color:#c2185b;">${it.en}</div>`;
+            } else if (mc.mode === 'listen') {
+                body += `<div style="text-align:center;color:#607d8b;font-weight:600;margin:8px 0 4px;">Tap to listen, then pick the meaning</div>`;
+                body += `<div style="text-align:center;"><button class="audio-btn large" onclick="speak('${(it.audioText||it.jp).replace(/'/g,"\\'")}', this)">&#x1F50A;</button></div>`;
+            } else if (mc.mode === 'prompt-only') {
+                // prompt is shown above
             }
-            const item = quizItems[qIndex];
-            const tag = document.getElementById('quizTag');
-            tag.textContent = item.kind === 'sentence' ? 'Sentence' : 'Word';
-            tag.className = 'quiz-tag ' + item.kind;
 
-            document.getElementById('quizJp').textContent = item.jp;
-            document.getElementById('quizRomaji').textContent = item.romaji;
-            document.getElementById('quizEnCue').style.display = 'none';
+            body += `<div class="options" id="mcOpts"></div>`;
+            body += `<div class="qa-result" id="mcResult"></div>`;
+            body += `<button class="qa-next" id="mcNext" onclick="nextMC()">Next &rarr;</button>`;
+            stage.innerHTML = body;
 
-            document.getElementById('qProgress').textContent = `Question ${qIndex + 1} of ${quizItems.length}`;
-            document.getElementById('qScore').textContent = `Correct: ${qCorrect}`;
-            document.getElementById('qFill').style.width = `${(qIndex / quizItems.length) * 100}%`;
+            const opts = document.getElementById('mcOpts');
+            it.options.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'option';
+                if (mc.mode === 'show-en') b.classList.add('large-jp');
+                b.textContent = opt;
+                b.onclick = () => mcAnswer(b, opt, it.correct);
+                opts.appendChild(b);
+            });
 
-            document.getElementById('quizResult').style.display = 'none';
-            document.getElementById('quizNext').style.display = 'none';
+            // auto-play for listening mode
+            if (mc.mode === 'listen') {
+                setTimeout(() => {
+                    const btn = document.querySelector('.audio-btn.large');
+                    if (btn) speak(it.audioText || it.jp, btn);
+                }, 300);
+            }
+        }
 
-            // Build 4 multiple choice options drawn from the same kind for plausibility
-            const sourcePool = item.kind === 'sentence' ? sentences : vocab;
-            const distractors = shuffle(sourcePool.filter(x => x.en !== item.en)).slice(0, 3).map(x => x.en);
-            const options = shuffle([item.en, ...distractors]);
+        function mcAnswer(btn, picked, correct) {
+            document.querySelectorAll('#mcOpts .option').forEach(b => b.onclick = null);
+            const r = document.getElementById('mcResult');
+            if (picked === correct) {
+                btn.classList.add('correct');
+                mc.correct++;
+                r.innerHTML = '&#x1F389; Correct!';
+                r.style.color = '#2e7d32';
+            } else {
+                btn.classList.add('wrong');
+                document.querySelectorAll('#mcOpts .option').forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+                r.innerHTML = `&#x1F914; The answer is: <strong>${correct}</strong>`;
+                r.style.color = '#c62828';
+            }
+            r.style.display = 'block';
+            document.getElementById('mcNext').style.display = 'inline-block';
+            document.getElementById('mcScore').textContent = `Correct: ${mc.correct}`;
+        }
 
-            const container = document.getElementById('quizOptions');
-            container.innerHTML = '';
-            options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'quiz-option';
-                btn.textContent = opt;
-                btn.onclick = () => selectAnswer(btn, opt, item.en);
-                container.appendChild(btn);
+        function nextMC() {
+            mc.idx++;
+            renderMCQuestion();
+        }
+
+        function showMCComplete() {
+            const pct = Math.round((mc.correct / mc.items.length) * 100);
+            let emoji, title;
+            if (pct === 100) { emoji='&#x1F3C6;'; title='Perfect Score!'; }
+            else if (pct >= 80) { emoji='&#x1F31F;'; title='Great Job!'; }
+            else if (pct >= 60) { emoji='&#x1F44D;'; title='Good Effort!'; }
+            else { emoji='&#x1F4AA;'; title='Keep Practicing!'; }
+            document.getElementById('mcStage').innerHTML = `
+                <div class="complete">
+                    <div class="big-emoji">${emoji}</div>
+                    <h2>${title}</h2>
+                    <div class="final-score">You got <strong>${mc.correct}</strong> out of <strong>${mc.items.length}</strong> correct (${pct}%)</div>
+                    <div class="complete-actions">
+                        <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
+                        <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="${mc.replay||'closeModal()'}">Try Again</button>
+                    </div>
+                </div>`;
+            document.getElementById('mcFill').style.width = '100%';
+        }
+
+        // ============================================================
+        //  ACTIVITY 1: MIXED QUIZ (J -> E)
+        // ============================================================
+        function actMixedQuiz() {
+            const wordPool = uniqEn(vocab).map(v => ({ ...v, kind:'word' }));
+            const sentPool = sentences.map(s => ({ jp:s.jp, romaji:s.romaji, en:s.en, plain:s.plain, kind:'sentence' }));
+            const sents = pick(sentPool, 6);
+            const words = pick(wordPool, 9);
+            const items = shuffle([...sents, ...words]).map(it => {
+                const sourcePool = it.kind === 'sentence' ? sentPool : wordPool;
+                const distractors = pick(sourcePool.filter(x => x.en !== it.en), 3).map(x => x.en);
+                return {
+                    tag: it.kind === 'sentence' ? 'Sentence' : 'Word',
+                    tagClass: it.kind === 'sentence' ? 'sentence' : 'word',
+                    jp: it.jp, romaji: it.romaji, en: it.en,
+                    audioText: it.plain || it.jp,
+                    options: shuffle([it.en, ...distractors]),
+                    correct: it.en
+                };
+            });
+            mc.replay = 'actMixedQuiz()';
+            startMC('Mixed Quiz', 'Words and sentences &mdash; pick the meaning', 'show-jp', items);
+        }
+
+        // ============================================================
+        //  ACTIVITY 2: REVERSE QUIZ (E -> J)
+        // ============================================================
+        function actReverseQuiz() {
+            const pool = uniqEn(vocab);
+            const picks = pick(pool, 12);
+            const items = picks.map(it => {
+                const distractors = pick(pool.filter(x => x.jp !== it.jp), 3).map(x => x.jp);
+                return {
+                    tag: 'English &rarr; Japanese',
+                    tagClass: 'reverse',
+                    en: it.en,
+                    options: shuffle([it.jp, ...distractors]),
+                    correct: it.jp
+                };
+            });
+            mc.replay = 'actReverseQuiz()';
+            startMC('Reverse Quiz', 'See English &mdash; pick the Japanese', 'show-en', items);
+        }
+
+        // ============================================================
+        //  ACTIVITY 3: LISTENING QUIZ
+        // ============================================================
+        function actListening() {
+            const pool = uniqEn(vocab);
+            const sentPool = sentences;
+            const wordPicks = pick(pool, 7);
+            const sentPicks = pick(sentPool, 3).map(s => ({ jp:s.jp, en:s.en, plain:s.plain, romaji:s.romaji }));
+            const items = shuffle([...wordPicks, ...sentPicks]).map(it => {
+                const sourcePool = it.romaji && it.jp.length > 6 ? sentPool : pool;
+                const distractors = pick(sourcePool.filter(x => x.en !== it.en), 3).map(x => x.en);
+                return {
+                    tag: 'Listen &amp; Pick',
+                    tagClass: 'listen',
+                    jp: it.jp, audioText: it.plain || it.jp, en: it.en,
+                    options: shuffle([it.en, ...distractors]),
+                    correct: it.en
+                };
+            });
+            mc.replay = 'actListening()';
+            startMC('Listening Quiz', 'Listen, then pick the meaning', 'listen', items);
+        }
+
+        // ============================================================
+        //  ACTIVITY 4: SENTENCE BUILDER
+        // ============================================================
+        const sbItems = [
+            { en:'This is a book.', chunks:['これは','ほん','です'], audio:'これはほんです' },
+            { en:'I am Fiona.', chunks:['わたしは','フィオナ','です'], audio:'わたしはフィオナです' },
+            { en:'I like dogs.', chunks:['いぬが','すき','です'], audio:'いぬがすきです' },
+            { en:'What is this?', chunks:['これは','なに','ですか'], audio:'これはなにですか' },
+            { en:'Where is the cat?', chunks:['ねこは','どこ','ですか'], audio:'ねこはどこですか' },
+            { en:'Water, please.', chunks:['みずを','ください'], audio:'みずをください' },
+            { en:'How much is this?', chunks:['これは','いくら','ですか'], audio:'これはいくらですか' },
+            { en:'It\'s delicious.', chunks:['おいしい','です'], audio:'おいしいです' },
+            { en:'I read a book.', chunks:['わたしは','ほんを','よみます'], audio:'わたしはほんをよみます' },
+            { en:'I study on Monday.', chunks:['わたしは','げつようびに','べんきょうします'], audio:'わたしはげつようびにべんきょうします' },
+            { en:'When is your birthday?', chunks:['たんじょうびは','いつ','ですか'], audio:'たんじょうびはいつですか' },
+            { en:'I want a rice ball.', chunks:['おにぎりが','ほしい','です'], audio:'おにぎりがほしいです' }
+        ];
+        let sb = { items: [], idx: 0, correct: 0, slots: [], used: [] };
+
+        function actSentenceBuilder() {
+            sb = { items: pick(sbItems, 8), idx: 0, correct: 0, slots: [], used: [] };
+            renderSB();
+        }
+
+        function renderSB() {
+            if (sb.idx >= sb.items.length) return showSBComplete();
+            const it = sb.items[sb.idx];
+            sb.slots = [];
+            sb.used = new Array(it.chunks.length).fill(false);
+            const bank = shuffle(it.chunks.map((c, i) => ({ c, i })));
+
+            openModal(`
+                <div class="modal-title">Sentence Builder</div>
+                <div class="modal-sub">Tap chunks to build the sentence</div>
+                <div class="progress-row">
+                    <span>Sentence ${sb.idx+1} of ${sb.items.length}</span>
+                    <span>Correct: ${sb.correct}</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${(sb.idx/sb.items.length)*100}%"></div></div>
+                <div class="sb-target"><b>Make:</b> "${it.en}"</div>
+                <div class="sb-slots" id="sbSlots"></div>
+                <div class="sb-bank" id="sbBank"></div>
+                <div class="sb-actions">
+                    <button class="sb-btn clear" onclick="sbClear()">Clear</button>
+                    <button class="sb-btn check" onclick="sbCheck()">Check</button>
+                </div>
+                <div class="qa-result" id="sbResult"></div>
+                <button class="qa-next" id="sbNext" onclick="sbNext()">Next &rarr;</button>
+            `);
+            const bankEl = document.getElementById('sbBank');
+            bank.forEach(({ c, i }) => {
+                const b = document.createElement('button');
+                b.className = 'sb-chunk';
+                b.textContent = c;
+                b.dataset.i = i;
+                b.onclick = () => sbPlace(b, i, c);
+                bankEl.appendChild(b);
             });
         }
 
-        function selectAnswer(btn, picked, correct) {
-            const all = document.querySelectorAll('.quiz-option');
-            all.forEach(b => b.onclick = null);
+        function sbPlace(btn, originalIdx, text) {
+            if (sb.used[originalIdx]) return;
+            sb.used[originalIdx] = true;
+            sb.slots.push({ originalIdx, text });
+            btn.classList.add('placed');
+            renderSBSlots();
+        }
 
-            const result = document.getElementById('quizResult');
-            if (picked === correct) {
-                btn.classList.add('correct');
-                qCorrect++;
-                result.innerHTML = '&#x1F389; Correct! Nice work!';
-                result.style.color = '#2e7d32';
+        function renderSBSlots() {
+            const el = document.getElementById('sbSlots');
+            el.innerHTML = '';
+            sb.slots.forEach((s, slotIdx) => {
+                const b = document.createElement('button');
+                b.className = 'sb-chunk in-slot';
+                b.textContent = s.text;
+                b.onclick = () => sbRemove(slotIdx);
+                el.appendChild(b);
+            });
+        }
+
+        function sbRemove(slotIdx) {
+            const s = sb.slots[slotIdx];
+            sb.used[s.originalIdx] = false;
+            sb.slots.splice(slotIdx, 1);
+            // un-grey the bank button
+            document.querySelectorAll('.sb-bank .sb-chunk').forEach(b => {
+                if (parseInt(b.dataset.i) === s.originalIdx) b.classList.remove('placed');
+            });
+            renderSBSlots();
+        }
+
+        function sbClear() {
+            sb.slots = [];
+            sb.used = sb.used.map(() => false);
+            document.querySelectorAll('.sb-bank .sb-chunk').forEach(b => b.classList.remove('placed'));
+            renderSBSlots();
+            document.getElementById('sbResult').style.display = 'none';
+            document.getElementById('sbNext').style.display = 'none';
+        }
+
+        function sbCheck() {
+            const it = sb.items[sb.idx];
+            const ok = sb.slots.length === it.chunks.length && sb.slots.every((s, i) => s.originalIdx === i);
+            const r = document.getElementById('sbResult');
+            const correctText = it.chunks.join(' ');
+            if (ok) {
+                sb.correct++;
+                r.innerHTML = `&#x1F389; Correct! <strong>${correctText}</strong>`;
+                r.style.color = '#2e7d32';
+                speak(it.audio);
             } else {
-                btn.classList.add('wrong');
-                all.forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
-                result.innerHTML = `&#x1F914; The answer is: <strong>${correct}</strong>`;
-                result.style.color = '#c62828';
+                r.innerHTML = `&#x1F914; Try again. The answer is: <strong>${correctText}</strong>`;
+                r.style.color = '#c62828';
             }
-            result.style.display = 'block';
-            document.getElementById('quizNext').style.display = 'inline-block';
-            document.getElementById('qScore').textContent = `Correct: ${qCorrect}`;
+            r.style.display = 'block';
+            document.getElementById('sbNext').style.display = 'inline-block';
         }
 
-        function nextQuestion() {
-            qIndex++;
-            showQuestion();
+        function sbNext() {
+            sb.idx++;
+            renderSB();
         }
 
-        function showComplete() {
-            document.getElementById('quizQuestion').style.display = 'none';
-            document.getElementById('quizComplete').style.display = 'block';
-            document.getElementById('qFill').style.width = '100%';
-
-            const pct = Math.round((qCorrect / quizItems.length) * 100);
+        function showSBComplete() {
+            const pct = Math.round((sb.correct / sb.items.length) * 100);
             let emoji, title;
-            if (pct === 100) { emoji = '&#x1F3C6;'; title = 'Perfect Score!'; }
-            else if (pct >= 80) { emoji = '&#x1F31F;'; title = 'Great Job!'; }
-            else if (pct >= 60) { emoji = '&#x1F44D;'; title = 'Good Effort!'; }
-            else { emoji = '&#x1F4AA;'; title = 'Keep Practicing!'; }
-
-            document.getElementById('completeEmoji').innerHTML = emoji;
-            document.getElementById('completeTitle').textContent = title;
-            document.getElementById('finalScore').innerHTML =
-                `You got <strong>${qCorrect}</strong> out of <strong>${quizItems.length}</strong> correct (${pct}%)`;
+            if (pct === 100) { emoji='&#x1F3C6;'; title='Perfect!'; }
+            else if (pct >= 70) { emoji='&#x1F31F;'; title='Great Job!'; }
+            else { emoji='&#x1F4AA;'; title='Keep Building!'; }
+            openModal(`
+                <div class="modal-title">Sentence Builder</div>
+                <div class="complete">
+                    <div class="big-emoji">${emoji}</div>
+                    <h2>${title}</h2>
+                    <div class="final-score">You built <strong>${sb.correct}</strong> out of <strong>${sb.items.length}</strong> correctly (${pct}%)</div>
+                    <div class="complete-actions">
+                        <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
+                        <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="actSentenceBuilder()">Try Again</button>
+                    </div>
+                </div>
+            `);
         }
 
-        // ---------- Speech ----------
-        let jaVoice = null;
-        function loadVoice() {
-            if (!('speechSynthesis' in window)) return;
-            const voices = speechSynthesis.getVoices();
-            jaVoice = voices.find(v => v.lang.startsWith('ja') && /female|woman|kyoko|haruka|o-ren/i.test(v.name))
-                   || voices.find(v => v.lang.startsWith('ja'))
-                   || null;
-        }
-        if ('speechSynthesis' in window) {
-            speechSynthesis.onvoiceschanged = loadVoice;
-            loadVoice();
+        // ============================================================
+        //  ACTIVITY 5: FILL IN THE BLANK
+        // ============================================================
+        const fibItems = [
+            { jp:'ねこは ___ ですか?', en:'Where is the cat?', missing:'どこ', distractors:['なに','だれ','いつ'] },
+            { jp:'___ ですか?', en:'How are you?', missing:'げんき', distractors:['ねむい','すき','おいしい'] },
+            { jp:'これは ___ です。', en:'This is a book.', missing:'ほん', distractors:['みず','ねこ','かばん'] },
+            { jp:'わたしは ___ です。', en:'I am Fiona.', missing:'フィオナ', distractors:['せんせい','ねこ','がっこう'] },
+            { jp:'アイスクリームは ___ ですか?', en:'How much is the ice cream?', missing:'いくら', distractors:['いくつ','どこ','どう'] },
+            { jp:'___ ようび ですか?', en:'What day is it?', missing:'なん', distractors:['どこ','だれ','いつ'] },
+            { jp:'クッキーは ___ ありますか?', en:'How many cookies are there?', missing:'いくつ', distractors:['いくら','どう','なに'] },
+            { jp:'これは ___ ですか?', en:'What is this?', missing:'なに', distractors:['どこ','だれ','いつ'] },
+            { jp:'みず を ___。', en:'Water please.', missing:'ください', distractors:['ありがとう','すみません','はい'] },
+            { jp:'いぬ が ___ です。', en:'I like dogs.', missing:'すき', distractors:['きらい','ねむい','あおい'] },
+            { jp:'___ なんじ ですか?', en:'What time is it now?', missing:'いま', distractors:['きょう','あした','きのう'] },
+            { jp:'たんじょうびは ___ ですか?', en:'When is your birthday?', missing:'いつ', distractors:['どこ','なに','どう'] },
+            { jp:'そらは ___ です。', en:'The sky is blue.', missing:'あおい', distractors:['おいしい','ねむい','すき'] },
+            { jp:'___、けっこう です。', en:'No, thank you.', missing:'いいえ', distractors:['はい','ありがとう','すみません'] },
+            { jp:'おにぎり が ___ です。', en:'I want a rice ball.', missing:'ほしい', distractors:['すき','げんき','おいしい'] }
+        ];
+
+        function actFillBlank() {
+            const items = pick(fibItems, 10).map(it => ({
+                tag:'Fill in the Blank', tagClass:'fill',
+                prompt: `<i>"${it.en}"</i>`,
+                jp: it.jp, romaji: '', en: it.en, audioText: it.jp.replace('___', it.missing),
+                options: shuffle([it.missing, ...it.distractors]),
+                correct: it.missing
+            }));
+            mc.replay = 'actFillBlank()';
+            startMC('Fill in the Blank', 'Pick the missing word', 'show-jp', items);
         }
 
-        function stopAllSpeech() {
-            if ('speechSynthesis' in window) {
-                try { window.speechSynthesis.cancel(); } catch (e) {}
+        // ============================================================
+        //  ACTIVITY 6: STATEMENT -> QUESTION (add か)
+        // ============================================================
+        const qmItems = [
+            { stmt:'ねこ です', en_s:'It is a cat.', q:'ねこ ですか?', en_q:'Is it a cat?' },
+            { stmt:'すき です', en_s:'I like it.', q:'すき ですか?', en_q:'Do you like it?' },
+            { stmt:'げんき です', en_s:'I\'m well.', q:'げんき ですか?', en_q:'Are you well?' },
+            { stmt:'あした です', en_s:'It is tomorrow.', q:'あした ですか?', en_q:'Is it tomorrow?' },
+            { stmt:'おいしい です', en_s:'It\'s delicious.', q:'おいしい ですか?', en_q:'Is it delicious?' },
+            { stmt:'ほん です', en_s:'It is a book.', q:'ほん ですか?', en_q:'Is it a book?' },
+            { stmt:'ねむい です', en_s:'I\'m sleepy.', q:'ねむい ですか?', en_q:'Are you sleepy?' },
+            { stmt:'がっこう です', en_s:'It\'s school.', q:'がっこう ですか?', en_q:'Is it school?' }
+        ];
+        let qm = { items:[], idx:0, correct:0, added:false };
+
+        function actMakeQuestion() {
+            qm = { items: pick(qmItems, 6), idx:0, correct:0, added:false };
+            renderQM();
+        }
+
+        function renderQM() {
+            if (qm.idx >= qm.items.length) return showQMComplete();
+            qm.added = false;
+            const it = qm.items[qm.idx];
+            openModal(`
+                <div class="modal-title">Make It a Question!</div>
+                <div class="modal-sub">Add <b>か</b> to turn a statement into a question</div>
+                <div class="progress-row">
+                    <span>Question ${qm.idx+1} of ${qm.items.length}</span>
+                    <span>Correct: ${qm.correct}</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${(qm.idx/qm.items.length)*100}%"></div></div>
+                <div class="qm-row">
+                    <div class="qm-statement">${it.stmt}</div>
+                    <div style="color:#607d8b;font-weight:600;">"${it.en_s}"</div>
+                    <button class="qm-add-btn" id="qmAddBtn" onclick="qmAdd()">+ か</button>
+                    <div class="qm-arrow">&darr;</div>
+                    <div class="qm-result-line" id="qmLine">${it.stmt} ___</div>
+                    <div style="color:#607d8b;font-weight:600;" id="qmEnQ" style="display:none;"></div>
+                </div>
+                <div class="qa-result" id="qmResult"></div>
+                <button class="qa-next" id="qmNext" onclick="qmNext()">Next &rarr;</button>
+            `);
+        }
+
+        function qmAdd() {
+            if (qm.added) return;
+            qm.added = true;
+            const it = qm.items[qm.idx];
+            document.getElementById('qmLine').textContent = it.q;
+            document.getElementById('qmAddBtn').disabled = true;
+            document.getElementById('qmAddBtn').style.opacity = '0.4';
+            qm.correct++;
+            const r = document.getElementById('qmResult');
+            r.innerHTML = `&#x1F389; Now it means: <b>"${it.en_q}"</b>`;
+            r.style.color = '#2e7d32';
+            r.style.display = 'block';
+            speak(it.q.replace('?', ''));
+            document.getElementById('qmNext').style.display = 'inline-block';
+        }
+
+        function qmNext() {
+            qm.idx++;
+            renderQM();
+        }
+
+        function showQMComplete() {
+            openModal(`
+                <div class="modal-title">Make It a Question!</div>
+                <div class="complete">
+                    <div class="big-emoji">&#x1F3C6;</div>
+                    <h2>Question Master!</h2>
+                    <div class="final-score">You turned <strong>${qm.correct}</strong> statements into questions!</div>
+                    <div class="complete-actions">
+                        <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
+                        <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="actMakeQuestion()">Try Again</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        // ============================================================
+        //  ACTIVITY 7: POLITE REFUSAL SCENARIOS
+        // ============================================================
+        const refusalItems = [
+            { scenario:'Someone offers you cake but you\'re full.', correct:'もう けっこう です。', distractors:['ありがとう','おねがいします','こんにちは'] },
+            { scenario:'A friend offers you a snack you don\'t want.', correct:'いいえ、けっこう です。', distractors:['はい','すき です','すみません'] },
+            { scenario:'Mom asks if you need more juice.', correct:'だいじょうぶ です。', distractors:['ください','いただきます','ばいばい'] },
+            { scenario:'Someone offers you a toy you already have.', correct:'いりません。', distractors:['ほしい です','すき です','はい'] },
+            { scenario:'You\'re passed a plate of vegetables you don\'t want.', correct:'いいえ、けっこう です。', distractors:['おいしい です','もっと ください','おかわり'] },
+            { scenario:'Someone offers more rice but you\'re finished.', correct:'もう けっこう です。', distractors:['いただきます','ごちそうさま でした','こんばんは'] }
+        ];
+
+        function actPoliteRefusal() {
+            const items = pick(refusalItems, 6).map(it => ({
+                tag:'Polite Refusal', tagClass:'scenario',
+                prompt: it.scenario,
+                en: '',
+                options: shuffle([it.correct, ...it.distractors]),
+                correct: it.correct,
+                jp: it.correct, audioText: it.correct.replace(/[、。?]/g,'')
+            }));
+            mc.replay = 'actPoliteRefusal()';
+            startMC('Politely Saying No', 'Pick the right polite phrase for each situation', 'prompt-only', items);
+        }
+
+        // ============================================================
+        //  ACTIVITY 8: POSSESSION BUILDER (~の)
+        // ============================================================
+        const possItems = [
+            { en:'my book', chunks:['わたし','の','ほん'], audio:'わたしのほん' },
+            { en:'your bag', chunks:['あなた','の','かばん'], audio:'あなたのかばん' },
+            { en:'his car', chunks:['かれ','の','くるま'], audio:'かれのくるま' },
+            { en:'her phone', chunks:['かのじょ','の','でんわ'], audio:'かのじょのでんわ' },
+            { en:'teacher\'s name', chunks:['せんせい','の','なまえ'], audio:'せんせいのなまえ' },
+            { en:'our school', chunks:['わたしたち','の','がっこう'], audio:'わたしたちのがっこう' },
+            { en:'my friend', chunks:['わたし','の','ともだち'], audio:'わたしのともだち' },
+            { en:'her cat', chunks:['かのじょ','の','ねこ'], audio:'かのじょのねこ' },
+            { en:'mom\'s phone number', chunks:['おかあさん','の','でんわばんごう'], audio:'おかあさんのでんわばんごう' },
+            { en:'dad\'s car', chunks:['おとうさん','の','くるま'], audio:'おとうさんのくるま' }
+        ];
+
+        function actPossession() {
+            sb = { items: pick(possItems, 6), idx:0, correct:0, slots:[], used:[] };
+            renderPossess();
+        }
+
+        function renderPossess() {
+            if (sb.idx >= sb.items.length) return showPossComplete();
+            const it = sb.items[sb.idx];
+            sb.slots = [];
+            sb.used = new Array(it.chunks.length).fill(false);
+            const bank = shuffle(it.chunks.map((c, i) => ({ c, i })));
+            openModal(`
+                <div class="modal-title">Possession Builder &mdash; の</div>
+                <div class="modal-sub">Build it with <b>person + の + thing</b></div>
+                <div class="progress-row">
+                    <span>${sb.idx+1} of ${sb.items.length}</span>
+                    <span>Correct: ${sb.correct}</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${(sb.idx/sb.items.length)*100}%"></div></div>
+                <div class="sb-target"><b>Make:</b> "${it.en}"</div>
+                <div class="sb-slots" id="sbSlots"></div>
+                <div class="sb-bank" id="sbBank"></div>
+                <div class="sb-actions">
+                    <button class="sb-btn clear" onclick="sbClear()">Clear</button>
+                    <button class="sb-btn check" onclick="possCheck()">Check</button>
+                </div>
+                <div class="qa-result" id="sbResult"></div>
+                <button class="qa-next" id="sbNext" onclick="possNext()">Next &rarr;</button>
+            `);
+            const bankEl = document.getElementById('sbBank');
+            bank.forEach(({ c, i }) => {
+                const b = document.createElement('button');
+                b.className = 'sb-chunk';
+                b.textContent = c;
+                b.dataset.i = i;
+                b.onclick = () => sbPlace(b, i, c);
+                bankEl.appendChild(b);
+            });
+        }
+
+        function possCheck() {
+            const it = sb.items[sb.idx];
+            const ok = sb.slots.length === it.chunks.length && sb.slots.every((s, i) => s.originalIdx === i);
+            const r = document.getElementById('sbResult');
+            const correctText = it.chunks.join(' ');
+            if (ok) {
+                sb.correct++;
+                r.innerHTML = `&#x1F389; Correct! <strong>${correctText}</strong>`;
+                r.style.color = '#2e7d32';
+                speak(it.audio);
+            } else {
+                r.innerHTML = `&#x1F914; The answer is: <strong>${correctText}</strong>`;
+                r.style.color = '#c62828';
             }
-            const btn = document.getElementById('quizAudio');
-            if (btn) btn.classList.remove('playing');
+            r.style.display = 'block';
+            document.getElementById('sbNext').style.display = 'inline-block';
         }
 
-        function speakCurrent() {
-            const item = quizItems[qIndex];
-            if (!item) return;
-            const btn = document.getElementById('quizAudio');
-            if (!('speechSynthesis' in window)) return;
-            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-                stopAllSpeech();
-                return;
+        function possNext() {
+            sb.idx++;
+            renderPossess();
+        }
+
+        function showPossComplete() {
+            openModal(`
+                <div class="modal-title">Possession Builder</div>
+                <div class="complete">
+                    <div class="big-emoji">&#x1F3C6;</div>
+                    <h2>Nicely done!</h2>
+                    <div class="final-score">${sb.correct} of ${sb.items.length} correct</div>
+                    <div class="complete-actions">
+                        <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
+                        <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="actPossession()">Try Again</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        // ============================================================
+        //  ACTIVITY 9: COUNTER & DAY SEQUENCE
+        // ============================================================
+        const counters = ['ひとつ','ふたつ','みっつ','よっつ','いつつ','むっつ','ななつ','やっつ','ここのつ','とお'];
+        const counterEn = ['1','2','3','4','5','6','7','8','9','10'];
+        const days = ['にちようび','げつようび','かようび','すいようび','もくようび','きんようび','どようび'];
+        const dayEn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+        function actSequence() {
+            const items = [];
+            // Counter sequence: 5 items
+            for (let i = 0; i < 5; i++) {
+                const start = Math.floor(Math.random() * 8); // 0-7
+                const missingPos = Math.floor(Math.random() * 3); // which of 3 to hide
+                const seq = [counters[start], counters[start+1], counters[start+2]];
+                const seqEn = [counterEn[start], counterEn[start+1], counterEn[start+2]];
+                const correct = seq[missingPos];
+                const display = seq.map((c, idx) => idx === missingPos ? '___' : c).join('  →  ');
+                const distractors = pick(counters.filter(c => c !== correct), 3);
+                items.push({
+                    tag:'Counting Sequence', tagClass:'fill',
+                    prompt: `Counters: ${seqEn.join(' → ')}<br><b>${display}</b>`,
+                    options: shuffle([correct, ...distractors]),
+                    correct: correct, jp: correct, audioText: correct
+                });
             }
-            if (!jaVoice) loadVoice();
-            const u = new SpeechSynthesisUtterance(item.plain || item.jp);
-            u.lang = 'ja-JP';
-            u.rate = 0.85;
-            u.pitch = 1.2;
-            if (jaVoice) u.voice = jaVoice;
-            btn.classList.add('playing');
-            u.onend = () => btn.classList.remove('playing');
-            u.onerror = () => btn.classList.remove('playing');
-            window.speechSynthesis.speak(u);
+            // Day sequence: 5 items
+            for (let i = 0; i < 5; i++) {
+                const start = Math.floor(Math.random() * 5); // 0-4
+                const missingPos = Math.floor(Math.random() * 3);
+                const seq = [days[start], days[start+1], days[start+2]];
+                const seqEn = [dayEn[start], dayEn[start+1], dayEn[start+2]];
+                const correct = seq[missingPos];
+                const display = seq.map((c, idx) => idx === missingPos ? '___' : c).join('  →  ');
+                const distractors = pick(days.filter(c => c !== correct), 3);
+                items.push({
+                    tag:'Days Sequence', tagClass:'fill',
+                    prompt: `Days: ${seqEn.join(' → ')}<br><b>${display}</b>`,
+                    options: shuffle([correct, ...distractors]),
+                    correct: correct, jp: correct, audioText: correct
+                });
+            }
+            mc.replay = 'actSequence()';
+            startMC('Sequences', 'Find the missing counter or day', 'prompt-only', shuffle(items));
         }
 
-        // Stop speech if user navigates away
-        window.addEventListener('beforeunload', stopAllSpeech);
-        window.addEventListener('pagehide', stopAllSpeech);
+        // ============================================================
+        //  ACTIVITY 10: SUKI / KIRAI SORTER
+        // ============================================================
+        const skItems = [
+            { emoji:'🐶', label:'いぬ' },
+            { emoji:'🐱', label:'ねこ' },
+            { emoji:'🐍', label:'へび' },
+            { emoji:'🕷️', label:'くも' },
+            { emoji:'🍓', label:'いちご' },
+            { emoji:'🍰', label:'ケーキ' },
+            { emoji:'🥦', label:'ブロッコリー' },
+            { emoji:'🍎', label:'りんご' },
+            { emoji:'🍪', label:'クッキー' },
+            { emoji:'🦴', label:'ほね' }
+        ];
+        let skState = { remaining: [], suki: [], kirai: [] };
+
+        function actSukiKirai() {
+            skState = { remaining: shuffle(skItems), suki: [], kirai: [] };
+            renderSK();
+        }
+
+        function renderSK() {
+            openModal(`
+                <div class="modal-title">すき / きらい Sorter</div>
+                <div class="modal-sub">Tap a card, then tap the bin where it belongs!</div>
+                <div class="sk-bins">
+                    <div class="sk-bin suki" onclick="skMove('suki')">
+                        <h4>すき &#x2764;&#xFE0F;<br><span style="font-size:0.7em;color:#78909c;font-weight:600;">Like</span></h4>
+                        <div class="sk-items" id="sukiItems"></div>
+                    </div>
+                    <div class="sk-bin kirai" onclick="skMove('kirai')">
+                        <h4>きらい &#x1F614;<br><span style="font-size:0.7em;color:#78909c;font-weight:600;">Don't like</span></h4>
+                        <div class="sk-items" id="kiraiItems"></div>
+                    </div>
+                </div>
+                <div style="text-align:center;color:#607d8b;font-weight:600;margin-bottom:6px;" id="skPrompt"></div>
+                <div class="sk-bank" id="skBank"></div>
+                <button class="qa-next" id="skDone" style="display:none;" onclick="closeModal()">All Done!</button>
+            `);
+            renderSKLists();
+        }
+
+        function renderSKLists() {
+            const bank = document.getElementById('skBank');
+            bank.innerHTML = '';
+            const prompt = document.getElementById('skPrompt');
+            if (skState.remaining.length === 0) {
+                prompt.innerHTML = `&#x1F389; Great sorting! You said:<br>
+                    <b>すき (like):</b> ${skState.suki.map(i => i.label).join('、') || '(none)'}<br>
+                    <b>きらい (don\'t like):</b> ${skState.kirai.map(i => i.label).join('、') || '(none)'}`;
+                document.getElementById('skDone').style.display = 'inline-block';
+            } else {
+                prompt.innerHTML = `Tap a card, then drop it into すき or きらい. <b>${skState.remaining.length} left</b>`;
+                skState.remaining.forEach((it, idx) => {
+                    const c = document.createElement('button');
+                    c.className = 'sk-card';
+                    c.innerHTML = `${it.emoji}<span class="lbl">${it.label}</span>`;
+                    c.dataset.idx = idx;
+                    c.onclick = () => { skSelected = idx; document.querySelectorAll('.sk-card').forEach(x => x.style.borderColor='#ddd'); c.style.borderColor='#8e24aa'; speak(it.label); };
+                    bank.appendChild(c);
+                });
+            }
+            renderSKBins();
+        }
+
+        let skSelected = null;
+
+        function renderSKBins() {
+            const renderBin = (id, list) => {
+                const el = document.getElementById(id);
+                el.innerHTML = list.map(it => `<span style="font-size:1.5em;">${it.emoji}<span style="font-family:'Noto Sans JP', sans-serif;font-size:0.5em;display:block;text-align:center;color:#455a64;">${it.label}</span></span>`).join('');
+            };
+            renderBin('sukiItems', skState.suki);
+            renderBin('kiraiItems', skState.kirai);
+        }
+
+        function skMove(bin) {
+            if (skSelected === null) return;
+            const it = skState.remaining.splice(skSelected, 1)[0];
+            skState[bin].push(it);
+            const utterance = bin === 'suki' ? `${it.label} が すき です` : `${it.label} が きらい です`;
+            speak(utterance);
+            skSelected = null;
+            renderSKLists();
+        }
+
+        // ============================================================
+        //  ACTIVITY 11: PHONE NUMBER READER
+        // ============================================================
+        const numToJp = { '0':'ぜろ','1':'いち','2':'に','3':'さん','4':'よん','5':'ご','6':'ろく','7':'なな','8':'はち','9':'きゅう' };
+        const numToRomaji = { '0':'zero','1':'ichi','2':'ni','3':'san','4':'yon','5':'go','6':'roku','7':'nana','8':'hachi','9':'kyuu' };
+        let pn = { digits:[], revealed:[] };
+
+        function randomPhone() {
+            const d = [];
+            for (let i = 0; i < 10; i++) d.push(Math.floor(Math.random() * 10));
+            return d;
+        }
+
+        function actPhoneNumber() {
+            pn.digits = randomPhone();
+            pn.revealed = pn.digits.map(() => false);
+            renderPN();
+        }
+
+        function renderPN() {
+            const formatted = `${pn.digits.slice(0,3).join('')} - ${pn.digits.slice(3,6).join('')} - ${pn.digits.slice(6).join('')}`;
+            const allRevealed = pn.revealed.every(r => r);
+            openModal(`
+                <div class="modal-title">Phone Number Reader</div>
+                <div class="modal-sub">Read each digit out loud, then tap to reveal!</div>
+                <div class="pn-display">${formatted}</div>
+                <div class="pn-list" id="pnList"></div>
+                <div style="text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <button class="qa-next" style="display:inline-block" onclick="speakPhone()">&#x1F50A; Hear it</button>
+                    <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #43a047, #2e7d32);" onclick="actPhoneNumber()">New Number</button>
+                    ${allRevealed ? '<button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="closeModal()">Done</button>' : ''}
+                </div>
+            `);
+            const list = document.getElementById('pnList');
+            pn.digits.forEach((d, i) => {
+                const el = document.createElement('button');
+                el.className = 'pn-digit';
+                if (pn.revealed[i]) {
+                    el.classList.add('revealed');
+                    el.innerHTML = `<div style="font-size:1.4em;">${d}</div><div style="font-size:0.85em;">${numToJp[d]}</div>`;
+                } else {
+                    el.innerHTML = `<div style="font-size:1.4em;">${d}</div><div style="font-size:0.85em;color:#bbb;">?</div>`;
+                }
+                el.onclick = () => { pn.revealed[i] = true; speak(numToJp[d]); renderPN(); };
+                list.appendChild(el);
+            });
+        }
+
+        function speakPhone() {
+            const text = pn.digits.map(d => numToJp[d]).join(' ');
+            speak(text);
+        }
+
+        // ============================================================
+        //  ACTIVITY 12: GREETING SCENARIOS
+        // ============================================================
+        const greetingItems = [
+            { scenario:'You\'re meeting someone for the very first time.', correct:'はじめまして', distractors:['さようなら','おやすみ','ばいばい'] },
+            { scenario:'It\'s morning when you see Mom.', correct:'おはよう', distractors:['こんばんは','こんにちは','ばいばい'] },
+            { scenario:'You sit down to dinner.', correct:'いただきます', distractors:['ごちそうさま でした','ありがとう','すみません'] },
+            { scenario:'You finished a yummy meal.', correct:'ごちそうさま でした', distractors:['いただきます','おねがいします','すみません'] },
+            { scenario:'You\'re leaving school for the day.', correct:'さようなら', distractors:['こんにちは','おはよう','はじめまして'] },
+            { scenario:'You bumped into someone &mdash; oops!', correct:'すみません', distractors:['ありがとう','はい','いいえ'] },
+            { scenario:'It\'s evening and you greet your dad.', correct:'こんばんは', distractors:['おはよう','こんにちは','さようなら'] },
+            { scenario:'Someone gives you a present.', correct:'ありがとう', distractors:['すみません','おはよう','こんにちは'] }
+        ];
+
+        function actGreetings() {
+            const items = pick(greetingItems, 8).map(it => ({
+                tag:'Greeting', tagClass:'scenario',
+                prompt: it.scenario,
+                options: shuffle([it.correct, ...it.distractors]),
+                correct: it.correct, jp: it.correct, audioText: it.correct
+            }));
+            mc.replay = 'actGreetings()';
+            startMC('Greeting Scenarios', 'Pick the right greeting for the situation', 'prompt-only', items);
+        }
+
+        // ============================================================
+        //  ACTIVITY HUB
+        // ============================================================
+        const activities = [
+            { color:'pink',   icon:'&#x1F4DA;', tag:'Quiz',     title:'Mixed Quiz', desc:'Words and sentences mixed together. Pick the meaning.', fn:'actMixedQuiz' },
+            { color:'purple', icon:'&#x1F504;', tag:'Quiz',     title:'Reverse Quiz', desc:'See the English &mdash; pick the Japanese.', fn:'actReverseQuiz' },
+            { color:'teal',   icon:'&#x1F50A;', tag:'Listening',title:'Listening Quiz', desc:'Listen to Japanese, pick what it means.', fn:'actListening' },
+            { color:'blue',   icon:'&#x1F9E9;', tag:'Build',    title:'Sentence Builder', desc:'Tap chunks in order to build the sentence.', fn:'actSentenceBuilder' },
+            { color:'orange', icon:'&#x1F4DD;', tag:'Build',    title:'Fill in the Blank', desc:'Pick the missing word in each sentence.', fn:'actFillBlank' },
+            { color:'red',    icon:'&#x2753;',  tag:'Grammar',  title:'Make It a Question', desc:'Add か at the end to turn statements into questions.', fn:'actMakeQuestion' },
+            { color:'yellow', icon:'&#x1F64B;', tag:'Phrases',  title:'Politely Saying No', desc:'Pick the right polite refusal for each situation.', fn:'actPoliteRefusal' },
+            { color:'green',  icon:'&#x1F465;', tag:'Grammar',  title:'Possession (の)', desc:'Build phrases like "my book" using person + の + thing.', fn:'actPossession' },
+            { color:'pink',   icon:'&#x1F522;', tag:'Sequences',title:'Counters &amp; Days', desc:'Find the missing counter or day in a sequence.', fn:'actSequence' },
+            { color:'purple', icon:'&#x1F49C;', tag:'Game',     title:'すき / きらい Sorter', desc:'Sort cards into the like and don\'t-like bins.', fn:'actSukiKirai' },
+            { color:'blue',   icon:'&#x1F4DE;', tag:'Numbers',  title:'Phone Number Reader', desc:'Read a phone number out loud, one digit at a time.', fn:'actPhoneNumber' },
+            { color:'teal',   icon:'&#x1F44B;', tag:'Phrases',  title:'Greeting Scenarios', desc:'Pick the right greeting for the moment.', fn:'actGreetings' }
+        ];
+
+        function renderActivities() {
+            const grid = document.getElementById('activityGrid');
+            grid.innerHTML = activities.map(a => `
+                <div class="activity-card c-${a.color}" onclick="${a.fn}()">
+                    <div class="ico">${a.icon}</div>
+                    <span class="a-tag">${a.tag}</span>
+                    <div class="a-title">${a.title}</div>
+                    <div class="a-desc">${a.desc}</div>
+                </div>
+            `).join('');
+        }
+        renderActivities();
+
+        // Close modal on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
     </script>
 </body>
 </html>
