@@ -598,8 +598,8 @@
         // ============================================================
         const practiceTips = [
             { cls:'t1', icon:'&#x1F31E;', title:'Daily Greetings',
-              body:'Greet your family in Japanese every morning, evening, and bedtime. Say a polite phrase before and after every meal!',
-              examples:'<b>おはよう</b> (Good morning) &middot; <b>こんにちは</b> (Hello) &middot; <b>こんばんは</b> (Good evening) &middot; <b>いただきます</b> &middot; <b>ごちそうさま でした</b>' },
+              body:'Greet people in Japanese during the day and when you\'re leaving. Say a polite phrase before and after every meal!',
+              examples:'<b>こんにちは</b> (Hello) &middot; <b>ばいばい</b> (Bye-bye) &middot; <b>いただきます</b> (Before eating) &middot; <b>ごちそうさま でした</b> (After eating)' },
             { cls:'t2', icon:'&#x1F91D;', title:'Meeting Someone New',
               body:'When you meet someone, say your name and use the special first-meeting phrase.',
               examples:'<b>はじめまして</b> &middot; <b>わたしは フィオナ です</b> &middot; <b>よろしく おねがいします</b>' },
@@ -613,8 +613,8 @@
               body:'Sometimes you need to say no. Use a polite refusal so it sounds nice!',
               examples:'<b>いいえ、けっこう です</b> &middot; <b>だいじょうぶ です</b> &middot; <b>いりません</b> &middot; <b>もう けっこう です</b>' },
             { cls:'t6', icon:'&#x1F4C5;', title:'Talk About Your Day',
-              body:'Use day-of-the-week and time words to plan or remember things. What did you do <i>kinou</i>? What will you do <i>ashita</i>?',
-              examples:'<b>きょう は げつようび です</b> &middot; <b>あした は がっこう です</b> &middot; <b>きのう、ケーキ を たべました</b>' },
+              body:'Use day-of-the-week and time words. Try the <i>watashi wa [day] ni [verb]</i> pattern from the workbook!',
+              examples:'<b>きょう は げつようび です</b> &middot; <b>わたしは げつようびに べんきょう します</b> &middot; <b>わたしは どようびに あそびます</b>' },
             { cls:'t7', icon:'&#x1F308;', title:'Describe How You Feel',
               body:'Pick a feeling or color word and use it about yourself or things around you.',
               examples:'<b>げんき です</b> &middot; <b>ねむい です</b> &middot; <b>そら は あおい です</b> &middot; <b>かなしい です</b>' },
@@ -622,8 +622,8 @@
               body:'Look at things and say if you like them or don\'t like them. Ask others, too!',
               examples:'<b>いぬ が すき です</b> &middot; <b>くも が きらい です</b> &middot; <b>~が すき ですか?</b>' },
             { cls:'t1', icon:'&#x1F522;', title:'Count Things',
-              body:'Count toys, snacks, or steps using the counter words. Try saying numbers and counters during snack time!',
-              examples:'<b>ひとつ, ふたつ, みっつ...</b> &middot; <b>クッキーは いくつ ありますか?</b> &middot; <b>ごこ あります</b>' },
+              body:'Count toys, snacks, or steps using the counter words. Try saying counters during snack time!',
+              examples:'<b>ひとつ, ふたつ, みっつ...</b> &middot; <b>クッキーは いくつ ありますか?</b> &middot; <b>いつつ です!</b> (Five!)' },
             { cls:'t2', icon:'&#x1F4DE;', title:'Practice Phone Numbers',
               body:'Read your home phone or a pretend phone number out loud, one digit at a time.',
               examples:'<b>ぜろ きゅう ぜろ - いち に さん よん - ご ろく なな はち</b>' },
@@ -641,7 +641,7 @@
               examples:'Workbook &middot; Ocean Adventure &middot; Flashcards Quiz Me!' },
             { cls:'t7', icon:'&#x270F;&#xFE0F;', title:'Make One Sentence Each Day',
               body:'Pick one new word and use it in a simple sentence. Even short sentences count.',
-              examples:'<b>これ は ねこ です</b> &middot; <b>わたし は がっこうに いきます</b> &middot; <b>ケーキ が すき です</b>' },
+              examples:'<b>これ は ねこ です</b> &middot; <b>わたしは どようびに あそびます</b> &middot; <b>ケーキ が すき です</b>' },
             { cls:'t8', icon:'&#x1F389;', title:'Make It a Question',
               body:'You can turn ANY sentence into a question by adding <b>か</b> at the end!',
               examples:'<b>げんき です</b> &rarr; <b>げんき ですか?</b> &middot; <b>ねこ です</b> &rarr; <b>ねこ ですか?</b>' }
@@ -677,10 +677,8 @@
             { jp:'きのう', romaji:'kinou', en:'Yesterday', cat:'time' },
             { jp:'いま', romaji:'ima', en:'Now', cat:'time' },
             { jp:'たんじょうび', romaji:'tanjoubi', en:'Birthday', cat:'time' },
-            { jp:'まいにち', romaji:'mainichi', en:'Every day', cat:'time' },
             // Food & drinks
             { jp:'たべもの', romaji:'tabemono', en:'Food', cat:'food' },
-            { jp:'のみもの', romaji:'nomimono', en:'Drink', cat:'food' },
             { jp:'みず', romaji:'mizu', en:'Water', cat:'food' },
             { jp:'おみず', romaji:'omizu', en:'Water (polite)', cat:'food' },
             { jp:'ごはん', romaji:'gohan', en:'Rice / Meal', cat:'food' },
@@ -698,6 +696,7 @@
             { jp:'ジュース', romaji:'juusu', en:'Juice', cat:'food' },
             { jp:'コーラ', romaji:'koora', en:'Cola', cat:'food' },
             { jp:'ぎゅうにゅう', romaji:'gyuunyuu', en:'Milk', cat:'food' },
+            { jp:'ブロッコリー', romaji:'burokkorii', en:'Broccoli', cat:'food' },
             // Objects
             { jp:'えんぴつ', romaji:'enpitsu', en:'Pencil', cat:'obj' },
             { jp:'ペン', romaji:'pen', en:'Pen', cat:'obj' },
@@ -708,17 +707,11 @@
             { jp:'なまえ', romaji:'namae', en:'Name', cat:'obj' },
             { jp:'トイレ', romaji:'toire', en:'Bathroom', cat:'obj' },
             { jp:'にほんご', romaji:'nihongo', en:'Japanese (language)', cat:'obj' },
-            { jp:'テレビ', romaji:'terebi', en:'TV', cat:'obj' },
             // People & animals
-            { jp:'おかあさん', romaji:'okaasan', en:'Mom', cat:'people' },
-            { jp:'おとうさん', romaji:'otousan', en:'Dad', cat:'people' },
             { jp:'せんせい', romaji:'sensei', en:'Teacher', cat:'people' },
-            { jp:'ともだち', romaji:'tomodachi', en:'Friend', cat:'people' },
             { jp:'いぬ', romaji:'inu', en:'Dog', cat:'people' },
             { jp:'ねこ', romaji:'neko', en:'Cat', cat:'people' },
             { jp:'がっこう', romaji:'gakkou', en:'School', cat:'people' },
-            { jp:'うち', romaji:'uchi', en:'Home', cat:'people' },
-            { jp:'はな', romaji:'hana', en:'Flower', cat:'people' },
             { jp:'ひと', romaji:'hito', en:'Person', cat:'people' },
             { jp:'くるま', romaji:'kuruma', en:'Car', cat:'people' },
             { jp:'へび', romaji:'hebi', en:'Snake', cat:'people' },
@@ -731,7 +724,6 @@
             { jp:'わたしたち', romaji:'watashitachi', en:'We / Us', cat:'pron' },
             { jp:'あなたたち', romaji:'anatatachi', en:'You (plural)', cat:'pron' },
             { jp:'かれら', romaji:'karera', en:'They / Them', cat:'pron' },
-            { jp:'みんな', romaji:'minna', en:'Everyone', cat:'pron' },
             // Numbers
             { jp:'ゼロ', romaji:'zero', en:'Zero (0)', cat:'num' },
             { jp:'いち', romaji:'ichi', en:'One (1)', cat:'num' },
@@ -743,10 +735,7 @@
             { jp:'なな', romaji:'nana', en:'Seven (7)', cat:'num' },
             { jp:'はち', romaji:'hachi', en:'Eight (8)', cat:'num' },
             { jp:'きゅう', romaji:'kyuu', en:'Nine (9)', cat:'num' },
-            { jp:'じゅう', romaji:'juu', en:'Ten (10)', cat:'num' },
             { jp:'ひゃく', romaji:'hyaku', en:'Hundred (100)', cat:'num' },
-            { jp:'せん', romaji:'sen', en:'Thousand (1,000)', cat:'num' },
-            { jp:'まん', romaji:'man', en:'Ten thousand', cat:'num' },
             // Question words
             { jp:'なに', romaji:'nani', en:'What', cat:'q' },
             { jp:'だれ', romaji:'dare', en:'Who', cat:'q' },
@@ -762,9 +751,6 @@
             { jp:'ですか', romaji:'desu ka', en:'is it? (question ending)', cat:'q' },
             // Greetings
             { jp:'こんにちは', romaji:'konnichiwa', en:'Hello', cat:'greet' },
-            { jp:'おはよう', romaji:'ohayou', en:'Good morning', cat:'greet' },
-            { jp:'こんばんは', romaji:'konbanwa', en:'Good evening', cat:'greet' },
-            { jp:'さようなら', romaji:'sayounara', en:'Goodbye', cat:'greet' },
             { jp:'ばいばい', romaji:'baibai', en:'Bye-bye', cat:'greet' },
             { jp:'はじめまして', romaji:'hajimemashite', en:'Nice to meet you', cat:'greet' },
             { jp:'よろしくおねがいします', romaji:'yoroshiku onegaishimasu', en:'Please treat me well', cat:'greet' },
@@ -783,17 +769,15 @@
             { jp:'とってください', romaji:'totte kudasai', en:'Please pass it', cat:'greet' },
             { jp:'おかわり', romaji:'okawari', en:'Seconds / More please', cat:'greet' },
             { jp:'もっとください', romaji:'motto kudasai', en:'More, please', cat:'greet' },
+            { jp:'もうけっこうです', romaji:'mou kekkou desu', en:'No more, thank you', cat:'greet' },
             // Demonstratives
             { jp:'これ', romaji:'kore', en:'This (near me)', cat:'demo' },
             { jp:'それ', romaji:'sore', en:'That (near you)', cat:'demo' },
             { jp:'あれ', romaji:'are', en:'That over there', cat:'demo' },
             { jp:'ここ', romaji:'koko', en:'Here', cat:'demo' },
-            { jp:'そこ', romaji:'soko', en:'There', cat:'demo' },
-            { jp:'あそこ', romaji:'asoko', en:'Over there', cat:'demo' },
-            // Verbs
+            // Verbs (the 8 from the workbook verb list, plus ones used in workbook patterns)
             { jp:'する', romaji:'suru', en:'To do', cat:'verb' },
             { jp:'たべる', romaji:'taberu', en:'To eat', cat:'verb' },
-            { jp:'のむ', romaji:'nomu', en:'To drink', cat:'verb' },
             { jp:'みる', romaji:'miru', en:'To see / watch', cat:'verb' },
             { jp:'よむ', romaji:'yomu', en:'To read', cat:'verb' },
             { jp:'ねる', romaji:'neru', en:'To sleep', cat:'verb' },
@@ -805,7 +789,6 @@
             { jp:'ある', romaji:'aru', en:'To exist (things)', cat:'verb' },
             { jp:'いる', romaji:'iru', en:'To exist (people)', cat:'verb' },
             { jp:'とる', romaji:'toru', en:'To take / pass', cat:'verb' },
-            { jp:'およぐ', romaji:'oyogu', en:'To swim', cat:'verb' },
             // Descriptions
             { jp:'おいしい', romaji:'oishii', en:'Delicious', cat:'desc' },
             { jp:'すき', romaji:'suki', en:'Like / Love', cat:'desc' },
@@ -858,11 +841,11 @@
             { jp:'みず を ください。', plain:'みずをください', romaji:'Mizu o kudasai.', en:'Water, please.' },
             { jp:'おちゃ を ください。', plain:'おちゃをください', romaji:'Ocha o kudasai.', en:'Tea, please.' },
             { jp:'おにぎり が ほしい です。', plain:'おにぎりがほしいです', romaji:'Onigiri ga hoshii desu.', en:'I want a rice ball.' },
-            { jp:'ありがとう ございます。', plain:'ありがとうございます', romaji:'Arigatou gozaimasu.', en:'Thank you very much.' },
+            { jp:'ありがとう。', plain:'ありがとう', romaji:'Arigatou.', en:'Thank you.' },
             { jp:'パーティーは いつ ですか?', plain:'パーティーはいつですか', romaji:'Paatii wa itsu desu ka?', en:'When is the party?' },
             { jp:'クッキーは いくつ ありますか?', plain:'クッキーはいくつありますか', romaji:'Kukkii wa ikutsu arimasu ka?', en:'How many cookies are there?' },
-            { jp:'ともだちは だれ ですか?', plain:'ともだちはだれですか', romaji:'Tomodachi wa dare desu ka?', en:'Who is your friend?' },
-            { jp:'おかあさんは どこ ですか?', plain:'おかあさんはどこですか', romaji:'Okaasan wa doko desu ka?', en:'Where is mom?' },
+            { jp:'せんせいは だれ ですか?', plain:'せんせいはだれですか', romaji:'Sensei wa dare desu ka?', en:'Who is the teacher?' },
+            { jp:'あのひとは だれ ですか?', plain:'あのひとはだれですか', romaji:'Ano hito wa dare desu ka?', en:'Who is that person?' },
             { jp:'がっこうは なんじ ですか?', plain:'がっこうはなんじですか', romaji:'Gakkou wa nanji desu ka?', en:'What time is school?' },
             { jp:'これを ください。', plain:'これをください', romaji:'Kore o kudasai.', en:'This one, please.' },
             { jp:'そらは あおい です。', plain:'そらはあおいです', romaji:'Sora wa aoi desu.', en:'The sky is blue.' },
@@ -1289,7 +1272,7 @@
             { jp:'これは ___ です。', en:'This is a book.', missing:'ほん', distractors:['みず','ねこ','かばん'] },
             { jp:'わたしは ___ です。', en:'I am Fiona.', missing:'フィオナ', distractors:['せんせい','ねこ','がっこう'] },
             { jp:'アイスクリームは ___ ですか?', en:'How much is the ice cream?', missing:'いくら', distractors:['いくつ','どこ','どう'] },
-            { jp:'___ ようび ですか?', en:'What day is it?', missing:'なん', distractors:['どこ','だれ','いつ'] },
+            { jp:'あのひとは ___ ですか?', en:'Who is that person?', missing:'だれ', distractors:['どこ','なに','いつ'] },
             { jp:'クッキーは ___ ありますか?', en:'How many cookies are there?', missing:'いくつ', distractors:['いくら','どう','なに'] },
             { jp:'これは ___ ですか?', en:'What is this?', missing:'なに', distractors:['どこ','だれ','いつ'] },
             { jp:'みず を ___。', en:'Water please.', missing:'ください', distractors:['ありがとう','すみません','はい'] },
@@ -1403,7 +1386,7 @@
             { scenario:'Mom asks if you need more juice.', correct:'だいじょうぶ です。', distractors:['ください','いただきます','ばいばい'] },
             { scenario:'Someone offers you a toy you already have.', correct:'いりません。', distractors:['ほしい です','すき です','はい'] },
             { scenario:'You\'re passed a plate of vegetables you don\'t want.', correct:'いいえ、けっこう です。', distractors:['おいしい です','もっと ください','おかわり'] },
-            { scenario:'Someone offers more rice but you\'re finished.', correct:'もう けっこう です。', distractors:['いただきます','ごちそうさま でした','こんばんは'] }
+            { scenario:'Someone offers more rice but you\'re finished.', correct:'もう けっこう です。', distractors:['いただきます','ごちそうさま でした','ありがとう'] }
         ];
 
         function actPoliteRefusal() {
@@ -1429,10 +1412,12 @@
             { en:'her phone', chunks:['かのじょ','の','でんわ'], audio:'かのじょのでんわ' },
             { en:'teacher\'s name', chunks:['せんせい','の','なまえ'], audio:'せんせいのなまえ' },
             { en:'our school', chunks:['わたしたち','の','がっこう'], audio:'わたしたちのがっこう' },
-            { en:'my friend', chunks:['わたし','の','ともだち'], audio:'わたしのともだち' },
             { en:'her cat', chunks:['かのじょ','の','ねこ'], audio:'かのじょのねこ' },
-            { en:'mom\'s phone number', chunks:['おかあさん','の','でんわばんごう'], audio:'おかあさんのでんわばんごう' },
-            { en:'dad\'s car', chunks:['おとうさん','の','くるま'], audio:'おとうさんのくるま' }
+            { en:'her book', chunks:['かのじょ','の','ほん'], audio:'かのじょのほん' },
+            { en:'his pen', chunks:['かれ','の','ペン'], audio:'かれのペン' },
+            { en:'your pencil', chunks:['あなた','の','えんぴつ'], audio:'あなたのえんぴつ' },
+            { en:'their book', chunks:['かれら','の','ほん'], audio:'かれらのほん' },
+            { en:'my phone number', chunks:['わたし','の','でんわばんごう'], audio:'わたしのでんわばんごう' }
         ];
 
         function actPossession() {
@@ -1572,7 +1557,9 @@
             { emoji:'🥦', label:'ブロッコリー' },
             { emoji:'🍎', label:'りんご' },
             { emoji:'🍪', label:'クッキー' },
-            { emoji:'🦴', label:'ほね' }
+            { emoji:'🍵', label:'おちゃ' },
+            { emoji:'🍮', label:'プリン' },
+            { emoji:'🥛', label:'ぎゅうにゅう' }
         ];
         let skState = { remaining: [], suki: [], kirai: [] };
 
@@ -1703,14 +1690,14 @@
         //  ACTIVITY 12: GREETING SCENARIOS
         // ============================================================
         const greetingItems = [
-            { scenario:'You\'re meeting someone for the very first time.', correct:'はじめまして', distractors:['さようなら','おやすみ','ばいばい'] },
-            { scenario:'It\'s morning when you see Mom.', correct:'おはよう', distractors:['こんばんは','こんにちは','ばいばい'] },
-            { scenario:'You sit down to dinner.', correct:'いただきます', distractors:['ごちそうさま でした','ありがとう','すみません'] },
-            { scenario:'You finished a yummy meal.', correct:'ごちそうさま でした', distractors:['いただきます','おねがいします','すみません'] },
-            { scenario:'You\'re leaving school for the day.', correct:'さようなら', distractors:['こんにちは','おはよう','はじめまして'] },
+            { scenario:'You\'re meeting someone for the very first time.', correct:'はじめまして', distractors:['ばいばい','こんにちは','ありがとう'] },
+            { scenario:'You see your friend during the day.', correct:'こんにちは', distractors:['はじめまして','ばいばい','すみません'] },
+            { scenario:'You sit down to dinner.', correct:'いただきます', distractors:['ごちそうさまでした','ありがとう','すみません'] },
+            { scenario:'You finished a yummy meal.', correct:'ごちそうさまでした', distractors:['いただきます','おねがいします','すみません'] },
+            { scenario:'You\'re heading home from school.', correct:'ばいばい', distractors:['こんにちは','はじめまして','いただきます'] },
             { scenario:'You bumped into someone &mdash; oops!', correct:'すみません', distractors:['ありがとう','はい','いいえ'] },
-            { scenario:'It\'s evening and you greet your dad.', correct:'こんばんは', distractors:['おはよう','こんにちは','さようなら'] },
-            { scenario:'Someone gives you a present.', correct:'ありがとう', distractors:['すみません','おはよう','こんにちは'] }
+            { scenario:'Someone gives you a present.', correct:'ありがとう', distractors:['すみません','こんにちは','いただきます'] },
+            { scenario:'After saying your name to someone new.', correct:'よろしくおねがいします', distractors:['はじめまして','ばいばい','すみません'] }
         ];
 
         function actGreetings() {
