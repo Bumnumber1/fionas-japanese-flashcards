@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Sentence Builder">
+    <title>Fiona's Sentence Builder &mdash; Adjectives</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #e0f7fa 0%, #f3e5f5 50%, #fff3e0 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+            color: #263238;
+            padding-bottom: 50px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 18px 20px 14px;
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00897b, #8e24aa, #ff8f00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+        .header-links { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .header-links a {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            text-decoration: none;
+            background: linear-gradient(135deg, #b2ebf2, #c8e6c9);
+            color: #00695c;
+        }
+
+        .container { max-width: 760px; margin: 18px auto; padding: 0 16px; }
+
+        /* Mode tabs */
+        .mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+        .mode-tab {
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 0.95em;
+            padding: 10px 18px;
+            border: 2px solid transparent;
+            border-radius: 22px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.7);
+            color: #607d8b;
+            transition: all 0.2s;
+        }
+        .mode-tab.active.iadj   { background: linear-gradient(135deg, #80cbc4, #26a69a); color: white; }
+        .mode-tab.active.naadj  { background: linear-gradient(135deg, #ce93d8, #ab47bc); color: white; }
+        .mode-tab.active.colors { background: linear-gradient(135deg, #ffe082, #ffb300); color: #5d4037; }
+
+        /* Tip box */
+        .tip-box {
+            background: rgba(255,255,255,0.9);
+            border-left: 5px solid #26a69a;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.92em;
+            line-height: 1.5;
+            color: #37474f;
+            margin-bottom: 18px;
+        }
+        .tip-box.iadj   { border-left-color: #26a69a; }
+        .tip-box.naadj  { border-left-color: #ab47bc; }
+        .tip-box.colors { border-left-color: #ffb300; }
+        .tip-box b { color: #00695c; }
+        .tip-box .jp { font-family: 'Noto Sans JP','Nunito',sans-serif; font-weight: 700; }
+
+        /* Sentence stage */
+        .stage {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 22px 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            margin-bottom: 8px;
+        }
+        .stage-label {
+            text-align: center;
+            font-size: 0.78em;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #90a4ae;
+            margin-bottom: 4px;
+        }
+        .order-hint {
+            text-align: center;
+            font-size: 0.8em;
+            color: #78909c;
+            margin-bottom: 14px;
+        }
+
+        .token-row {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .token {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 76px;
+            padding: 12px 10px;
+            border-radius: 14px;
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+        }
+        .token .t-emoji { font-size: 1.4em; line-height: 1; margin-bottom: 3px; min-height: 1.1em; }
+        .token .t-jp {
+            font-family: 'Noto Sans JP','Nunito',sans-serif;
+            font-size: 1.5em;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+        .token .t-romaji { font-size: 0.72em; font-style: italic; color: #78909c; margin-top: 2px; }
+        .token .t-en { font-size: 0.78em; font-weight: 700; color: #455a64; margin-top: 5px; }
+
+        .token.subject { background: #e3f2fd; border-color: #90caf9; }
+        .token.subject .t-jp { color: #1565c0; }
+        .token.particle { background: #eceff1; border-color: #cfd8dc; }
+        .token.particle .t-jp { color: #607d8b; }
+        .token.desu { background: #e8f5e9; border-color: #a5d6a7; }
+        .token.desu .t-jp { color: #2e7d32; }
+        .token.describer.iadj   { background: #e0f2f1; border-color: #80cbc4; }
+        .token.describer.iadj .t-jp { color: #00897b; }
+        .token.describer.naadj  { background: #f3e5f5; border-color: #ce93d8; }
+        .token.describer.naadj .t-jp { color: #8e24aa; }
+        .token.describer.colors { background: #fff8e1; border-color: #ffe082; }
+        .token.describer.colors .t-jp { color: #ff8f00; }
+
+        .full-en {
+            text-align: center;
+            font-size: 1.15em;
+            font-weight: 800;
+            color: #37474f;
+            margin-top: 18px;
+        }
+        .full-romaji {
+            text-align: center;
+            font-size: 0.9em;
+            font-style: italic;
+            color: #78909c;
+            margin-top: 2px;
+        }
+
+        .listen-btn {
+            display: block;
+            margin: 16px auto 0;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 1em;
+            padding: 12px 26px;
+            border: none;
+            border-radius: 26px;
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(135deg, #4dd0e1, #00acc1);
+            transition: transform 0.12s;
+        }
+        .listen-btn:active { transform: scale(0.95); }
+
+        /* Pickers */
+        .picker { margin-top: 22px; }
+        .picker-title {
+            font-weight: 800;
+            font-size: 0.95em;
+            color: #455a64;
+            margin-bottom: 8px;
+        }
+        .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.95em;
+            padding: 8px 13px;
+            border-radius: 18px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .chip .c-jp { font-family: 'Noto Sans JP','Nunito',sans-serif; }
+        .chip .c-en { font-size: 0.82em; color: #90a4ae; font-weight: 700; }
+        .chip:active { transform: scale(0.96); }
+        .chip.sel-subject { border-color: #2196f3; background: #e3f2fd; color: #1565c0; }
+        .chip.sel-desc-iadj   { border-color: #26a69a; background: #e0f2f1; color: #00897b; }
+        .chip.sel-desc-naadj  { border-color: #ab47bc; background: #f3e5f5; color: #8e24aa; }
+        .chip.sel-desc-colors { border-color: #ffb300; background: #fff8e1; color: #ff8f00; }
+
+        @media (max-width: 600px) {
+            .token { min-width: 64px; padding: 10px 7px; }
+            .token .t-jp { font-size: 1.25em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#x1F9F1; Sentence Builder</h1>
+        <div class="header-links">
+            <a href="index.html">Back to Flashcards</a>
+            <a href="voicepractice.html">Voice Practice</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="mode-tabs" id="modeTabs">
+            <button class="mode-tab iadj active" onclick="setMode('iadj')">&#x1F31F; い-Adjectives</button>
+            <button class="mode-tab naadj" onclick="setMode('naadj')">&#x1F338; な-Adjectives</button>
+            <button class="mode-tab colors" onclick="setMode('colors')">&#x1F3A8; Colors</button>
+        </div>
+
+        <div class="tip-box iadj" id="tipBox"></div>
+
+        <div class="stage">
+            <div class="stage-label">Your sentence</div>
+            <div class="order-hint">Read left &rarr; right, just like Japanese: thing &rarr; は &rarr; describer &rarr; です</div>
+            <div class="token-row" id="tokenRow"></div>
+            <div class="full-en" id="fullEn"></div>
+            <div class="full-romaji" id="fullRomaji"></div>
+            <button class="listen-btn" onclick="speakSentence()">&#x1F50A; Listen</button>
+        </div>
+
+        <div class="picker">
+            <div class="picker-title">1. Pick a thing</div>
+            <div class="chip-grid" id="subjectGrid"></div>
+        </div>
+
+        <div class="picker">
+            <div class="picker-title" id="descTitle">2. Pick a describer</div>
+            <div class="chip-grid" id="descGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Shared subjects. glo = per-token gloss; en = lowercase sentence form (with article).
+        const subjects = [
+            { jp: 'これ',   romaji: 'kore',   glo: 'this',   en: 'this',       emoji: '&#x1F449;' },
+            { jp: 'それ',   romaji: 'sore',   glo: 'that',   en: 'that',       emoji: '&#x1F448;' },
+            { jp: 'ねこ',   romaji: 'neko',   glo: 'cat',    en: 'the cat',    emoji: '&#x1F431;' },
+            { jp: 'いぬ',   romaji: 'inu',    glo: 'dog',    en: 'the dog',    emoji: '&#x1F436;' },
+            { jp: 'ケーキ', romaji: 'keeki',  glo: 'cake',   en: 'the cake',   emoji: '&#x1F370;' },
+            { jp: 'そら',   romaji: 'sora',   glo: 'sky',    en: 'the sky',    emoji: '&#x2601;&#xFE0F;' },
+            { jp: 'はな',   romaji: 'hana',   glo: 'flower', en: 'the flower', emoji: '&#x1F338;' },
+            { jp: 'くるま', romaji: 'kuruma', glo: 'car',    en: 'the car',    emoji: '&#x1F697;' },
+            { jp: 'りんご', romaji: 'ringo',  glo: 'apple',  en: 'the apple',  emoji: '&#x1F34E;' }
+        ];
+
+        // describers per mode. en = token gloss; full = predicate that follows the subject in English.
+        const describers = {
+            iadj: [
+                { jp: 'おおきい',   romaji: 'ookii',    en: 'big',       full: 'is big',       emoji: '&#x1F418;' },
+                { jp: 'ちいさい',   romaji: 'chiisai',  en: 'small',     full: 'is small',     emoji: '&#x1F42D;' },
+                { jp: 'おいしい',   romaji: 'oishii',   en: 'delicious', full: 'is delicious', emoji: '&#x1F60B;' },
+                { jp: 'まずい',     romaji: 'mazui',    en: 'yucky',     full: 'is yucky',     emoji: '&#x1F922;' },
+                { jp: 'うれしい',   romaji: 'ureshii',  en: 'happy',     full: 'is happy',     emoji: '&#x1F60A;' },
+                { jp: 'かなしい',   romaji: 'kanashii', en: 'sad',       full: 'is sad',       emoji: '&#x1F622;' },
+                { jp: 'ねむい',     romaji: 'nemui',    en: 'sleepy',    full: 'is sleepy',    emoji: '&#x1F62A;' },
+                { jp: 'ひろい',     romaji: 'hiroi',    en: 'wide',      full: 'is wide',      emoji: '&#x2194;&#xFE0F;' },
+                { jp: 'せまい',     romaji: 'semai',    en: 'narrow',    full: 'is narrow',    emoji: '&#x1F90F;' },
+                { jp: 'かるい',     romaji: 'karui',    en: 'light',     full: 'is light',     emoji: '&#x1FAB6;' },
+                { jp: 'おもい',     romaji: 'omoi',     en: 'heavy',     full: 'is heavy',     emoji: '&#x1FAA8;' },
+                { jp: 'あかい',     romaji: 'akai',     en: 'red',       full: 'is red',       emoji: '&#x1F534;' },
+                { jp: 'あおい',     romaji: 'aoi',      en: 'blue',      full: 'is blue',      emoji: '&#x1F535;' },
+                { jp: 'きいろい',   romaji: 'kiiroi',   en: 'yellow',    full: 'is yellow',    emoji: '&#x1F7E1;' },
+                { jp: 'しろい',     romaji: 'shiroi',   en: 'white',     full: 'is white',     emoji: '&#x26AA;' },
+                { jp: 'くろい',     romaji: 'kuroi',    en: 'black',     full: 'is black',     emoji: '&#x26AB;' }
+            ],
+            naadj: [
+                { jp: 'すき',   romaji: 'suki',  en: 'liked',   full: 'is my favorite', emoji: '&#x2764;&#xFE0F;' },
+                { jp: 'きらい', romaji: 'kirai', en: 'disliked', full: 'is yucky to me', emoji: '&#x1F61E;' },
+                { jp: 'げんき', romaji: 'genki', en: 'healthy',  full: 'is healthy',     emoji: '&#x1F4AA;' },
+                { jp: 'きれい', romaji: 'kirei', en: 'pretty',   full: 'is pretty',      emoji: '&#x1F338;' }
+            ],
+            colors: [
+                { jp: 'みどり',   romaji: 'midori',    en: 'green',  full: 'is green',  emoji: '&#x1F7E2;' },
+                { jp: 'むらさき', romaji: 'murasaki',  en: 'purple', full: 'is purple', emoji: '&#x1F7E3;' },
+                { jp: 'ピンク',   romaji: 'pinku',     en: 'pink',   full: 'is pink',   emoji: '&#x1FA77;' },
+                { jp: 'オレンジ', romaji: 'orenji',    en: 'orange', full: 'is orange', emoji: '&#x1F7E0;' },
+                { jp: 'はいいろ', romaji: 'haiiro',    en: 'gray',   full: 'is gray',   emoji: '&#x1FA76;' }
+            ]
+        };
+
+        const tips = {
+            iadj: 'These are <b>い-adjectives</b> &mdash; they all end in <span class="jp">い</span>. To say "X is ___", just put the adjective before <span class="jp">です</span>: <span class="jp">いぬは おおきい です</span> = "The dog is big." To describe a noun directly, attach it straight on: <span class="jp">おおきい いぬ</span> = "a big dog."',
+            naadj: 'These are <b>な-adjectives</b>. To say "X is ___", put the word before <span class="jp">です</span> with <b>no</b> <span class="jp">な</span>: <span class="jp">はなは きれい です</span> = "The flower is pretty." But to describe a noun directly you add <span class="jp">な</span>: <span class="jp">きれいな はな</span> = "a pretty flower." (Watch out: <span class="jp">きれい</span> ends in い but is still a な-adjective!)',
+            colors: 'These colors are <b>nouns</b>, not adjectives. To say "X is ___", just use <span class="jp">です</span>: <span class="jp">くるまは みどり です</span> = "The car is green." To describe a noun directly you add <span class="jp">の</span>: <span class="jp">みどりの くるま</span> = "a green car."'
+        };
+
+        const descTitles = {
+            iadj: '2. Pick an い-adjective',
+            naadj: '2. Pick a な-adjective',
+            colors: '2. Pick a color'
+        };
+
+        let mode = 'iadj';
+        let subjectIdx = 0;
+        const descIdx = { iadj: 0, naadj: 0, colors: 0 };
+
+        // --- Japanese voice (matches index.html / voicepractice.html) ---
+        let jaVoice = null;
+        function loadVoice() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = speechSynthesis.getVoices();
+            jaVoice = voices.find(v => v.lang.startsWith('ja') && /female|woman|kyoko|haruka|o-ren/i.test(v.name))
+                   || voices.find(v => v.lang.startsWith('ja'))
+                   || null;
+        }
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = loadVoice;
+            loadVoice();
+        }
+        function speak(text) {
+            if (!text || !('speechSynthesis' in window)) return;
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                window.speechSynthesis.cancel();
+                return;
+            }
+            if (!jaVoice) loadVoice();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ja-JP';
+            u.rate = 0.8;
+            u.pitch = 1.2;
+            if (jaVoice) u.voice = jaVoice;
+            window.speechSynthesis.speak(u);
+        }
+
+        function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.mode-tab.' + m).classList.add('active');
+            const tip = document.getElementById('tipBox');
+            tip.className = 'tip-box ' + m;
+            tip.innerHTML = tips[m];
+            document.getElementById('descTitle').textContent = descTitles[m];
+            renderDescGrid();
+            render();
+        }
+
+        function renderSubjectGrid() {
+            const grid = document.getElementById('subjectGrid');
+            grid.innerHTML = '';
+            subjects.forEach((s, i) => {
+                const b = document.createElement('button');
+                b.className = 'chip' + (i === subjectIdx ? ' sel-subject' : '');
+                b.innerHTML = `<span class="t-emoji">${s.emoji}</span><span class="c-jp">${s.jp}</span><span class="c-en">${s.glo}</span>`;
+                b.onclick = () => { subjectIdx = i; renderSubjectGrid(); render(); };
+                grid.appendChild(b);
+            });
+        }
+
+        function renderDescGrid() {
+            const grid = document.getElementById('descGrid');
+            grid.innerHTML = '';
+            describers[mode].forEach((d, i) => {
+                const b = document.createElement('button');
+                b.className = 'chip' + (i === descIdx[mode] ? ' sel-desc-' + mode : '');
+                b.innerHTML = `<span class="t-emoji">${d.emoji}</span><span class="c-jp">${d.jp}</span><span class="c-en">${d.en}</span>`;
+                b.onclick = () => { descIdx[mode] = i; renderDescGrid(); render(); };
+                grid.appendChild(b);
+            });
+        }
+
+        function currentParts() {
+            const s = subjects[subjectIdx];
+            const d = describers[mode][descIdx[mode]];
+            return { s, d };
+        }
+
+        function render() {
+            const { s, d } = currentParts();
+            const row = document.getElementById('tokenRow');
+            row.innerHTML = `
+                <div class="token subject">
+                    <div class="t-emoji">${s.emoji}</div>
+                    <div class="t-jp">${s.jp}</div>
+                    <div class="t-romaji">${s.romaji}</div>
+                    <div class="t-en">${s.glo}</div>
+                </div>
+                <div class="token particle">
+                    <div class="t-emoji">&#x1F4CC;</div>
+                    <div class="t-jp">は</div>
+                    <div class="t-romaji">wa</div>
+                    <div class="t-en">(topic)</div>
+                </div>
+                <div class="token describer ${mode}">
+                    <div class="t-emoji">${d.emoji}</div>
+                    <div class="t-jp">${d.jp}</div>
+                    <div class="t-romaji">${d.romaji}</div>
+                    <div class="t-en">${d.en}</div>
+                </div>
+                <div class="token desu">
+                    <div class="t-emoji">&#x2705;</div>
+                    <div class="t-jp">です</div>
+                    <div class="t-romaji">desu</div>
+                    <div class="t-en">is</div>
+                </div>
+            `;
+            document.getElementById('fullEn').textContent = cap(s.en) + ' ' + d.full + '.';
+            document.getElementById('fullRomaji').textContent = `${s.romaji} wa ${d.romaji} desu.`;
+        }
+
+        function speakSentence() {
+            const { s, d } = currentParts();
+            speak(`${s.jp}は${d.jp}です`);
+        }
+
+        window.addEventListener('pagehide', () => { try { speechSynthesis.cancel(); } catch(e){} });
+
+        // init
+        renderSubjectGrid();
+        setMode('iadj');
+    </script>
+</body>
+</html>

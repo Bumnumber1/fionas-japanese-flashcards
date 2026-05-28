@@ -353,6 +353,31 @@
             margin-bottom: 4px;
         }
 
+        .toc-section {
+            list-style: none;
+            margin: 16px 4px 6px;
+            font-size: 0.72em;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: #9575cd;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toc-section:first-child {
+            margin-top: 4px;
+        }
+
+        .toc-section::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(149, 117, 205, 0.45), rgba(149, 117, 205, 0));
+            border-radius: 2px;
+        }
+
         .toc-list button {
             width: 100%;
             text-align: left;
@@ -537,46 +562,54 @@
     <script>
         // Page data: ordered by lesson progression
         const pages = [
-            { file: '26_MeetingSomeone_FirstTime.png', title: 'Meeting Someone for the First Time' },
-            { file: '25_GreetingPractice.png', title: 'Greeting Practice' },
-            { file: '22_JapanesePronouns.png', title: 'Japanese Pronouns' },
-            { file: '19_Possession_No.png', title: 'Possession with \u306e (no)' },
-            { file: '23_PleaseAndThankYou.png', title: 'Please and Thank You' },
-            { file: '06_PolitelySayingNo.png', title: 'Politely Saying No' },
-            { file: '17_DaysOfTheWeek.png', title: 'Days of the Week' },
-            { file: '16_TodayTomorrowYesterday.png', title: 'Today, Tomorrow, Yesterday' },
-            { file: '12_DoThingsOnDays.png', title: 'Do Things on Days' },
-            { file: '21_TelephoneNumbers.png', title: 'Telephone Numbers' },
-            { file: '18_EverydayObjects.png', title: 'Everyday Objects' },
-            { file: '15_Verbs_Vocabulary.png', title: 'Verbs Vocabulary' },
-            { file: '01_Shopping_VocabAndMatching.png', title: 'Shopping - Vocab and Matching' },
-            { file: '04_Shopping_SimpleVersion.png', title: 'Shopping - Simple Version' },
-            { file: '07_TastyWords_Desserts.png', title: 'Tasty Words / Desserts' },
-            { file: '11_BeforeAndAfterEating.png', title: 'Before and After Eating' },
-            { file: '08_AskingForFood_AtTable.png', title: 'Asking for Food at the Table' },
-            { file: '09_AskingForDrinks.png', title: 'Asking for Drinks' },
-            { file: '10_AskingAtTheTable.png', title: 'Asking at the Table' },
-            { file: '30_Flashcards_AnimalsAndMore.png', title: 'Flashcards - Animals and More' },
-            { file: '29_LetsPlay_SukiKirai.png', title: "Let's Play - Suki / Kirai" },
-            { file: '20_Practice_FillInBlanks.png', title: 'Practice - Fill in the Blanks' },
+            { file: '26_MeetingSomeone_FirstTime.png', title: 'Meeting Someone for the First Time', section: 'Greetings & Introductions' },
+            { file: '25_GreetingPractice.png', title: 'Greeting Practice', section: 'Greetings & Introductions' },
+            { file: '22_JapanesePronouns.png', title: 'Japanese Pronouns', section: 'Greetings & Introductions' },
+            { file: '19_Possession_No.png', title: 'Possession with \u306e (no)', section: 'Greetings & Introductions' },
+            { file: '23_PleaseAndThankYou.png', title: 'Please and Thank You', section: 'Greetings & Introductions' },
+            { file: '06_PolitelySayingNo.png', title: 'Politely Saying No', section: 'Greetings & Introductions' },
 
-            { file: '31_QuestionWords_Overview.png', title: 'Question Words - Overview' },
-            { file: '32_QuestionWord_Nani.png', title: 'What - なに (Nani)' },
-            { file: '33_QuestionWord_Dare.png', title: 'Who - だれ (Dare)' },
-            { file: '34_QuestionWord_Doko.png', title: 'Where - どこ (Doko)' },
-            { file: '35_QuestionWord_Itsu.png', title: 'When - いつ (Itsu)' },
-            { file: '36_QuestionWord_Naze_Doushite.png', title: 'Why - なぜ / どうして' },
-            { file: '37_QuestionWord_Dou.png', title: 'How - どう (Dou)' },
-            { file: '38_QuestionWord_Dore.png', title: 'Which - どれ (Dore)' },
-            { file: '39_QuestionWord_Ikura.png', title: 'How Much - いくら (Ikura)' },
-            { file: '40_QuestionWord_Ikutsu.png', title: 'How Many - いくつ (Ikutsu)' },
-            { file: '41_QuestionWord_Nanji.png', title: 'What Time - なんじ (Nanji)' },
-            { file: '42_MakingQuestions_DesuKa.png', title: 'Making Questions - ですか' },
-            { file: '43_QuestionWords_Practice.png', title: 'Question Words - Practice' },
-            { file: '44_Counting_Kazu.png', title: 'Counting Things 1-10 - かず (Kazu)' },
+            { file: '46 everyday phrases.png', title: 'Everyday Phrases at Home - まいにちの ことば', section: 'Everyday Phrases' },
+            { file: '47_EverydayPhrases.png', title: 'Everyday Phrases - Practice', section: 'Everyday Phrases' },
 
-            { file: '46 everyday phrases.png', title: 'Everyday Phrases at Home - まいにちの ことば' },
-            { file: '47_EverydayPhrases.png', title: 'Everyday Phrases - Practice' }
+            { file: '17_DaysOfTheWeek.png', title: 'Days of the Week', section: 'Days, Time & Numbers' },
+            { file: '16_TodayTomorrowYesterday.png', title: 'Today, Tomorrow, Yesterday', section: 'Days, Time & Numbers' },
+            { file: '12_DoThingsOnDays.png', title: 'Do Things on Days', section: 'Days, Time & Numbers' },
+            { file: '21_TelephoneNumbers.png', title: 'Telephone Numbers', section: 'Days, Time & Numbers' },
+
+            { file: '18_EverydayObjects.png', title: 'Everyday Objects', section: 'Objects & Verbs' },
+            { file: '15_Verbs_Vocabulary.png', title: 'Verbs Vocabulary', section: 'Objects & Verbs' },
+
+            { file: '01_Shopping_VocabAndMatching.png', title: 'Shopping - Vocab and Matching', section: 'Shopping & Food' },
+            { file: '04_Shopping_SimpleVersion.png', title: 'Shopping - Simple Version', section: 'Shopping & Food' },
+            { file: '07_TastyWords_Desserts.png', title: 'Tasty Words / Desserts', section: 'Shopping & Food' },
+            { file: '11_BeforeAndAfterEating.png', title: 'Before and After Eating', section: 'Shopping & Food' },
+            { file: '08_AskingForFood_AtTable.png', title: 'Asking for Food at the Table', section: 'Shopping & Food' },
+            { file: '09_AskingForDrinks.png', title: 'Asking for Drinks', section: 'Shopping & Food' },
+            { file: '10_AskingAtTheTable.png', title: 'Asking at the Table', section: 'Shopping & Food' },
+
+            { file: '30_Flashcards_AnimalsAndMore.png', title: 'Flashcards - Animals and More', section: 'Animals, Likes & Review' },
+            { file: '29_LetsPlay_SukiKirai.png', title: "Let's Play - Suki / Kirai", section: 'Animals, Likes & Review' },
+            { file: '20_Practice_FillInBlanks.png', title: 'Practice - Fill in the Blanks', section: 'Animals, Likes & Review' },
+
+            { file: '31_QuestionWords_Overview.png', title: 'Question Words - Overview', section: 'Question Words & Counting' },
+            { file: '32_QuestionWord_Nani.png', title: 'What - なに (Nani)', section: 'Question Words & Counting' },
+            { file: '33_QuestionWord_Dare.png', title: 'Who - だれ (Dare)', section: 'Question Words & Counting' },
+            { file: '34_QuestionWord_Doko.png', title: 'Where - どこ (Doko)', section: 'Question Words & Counting' },
+            { file: '35_QuestionWord_Itsu.png', title: 'When - いつ (Itsu)', section: 'Question Words & Counting' },
+            { file: '36_QuestionWord_Naze_Doushite.png', title: 'Why - なぜ / どうして', section: 'Question Words & Counting' },
+            { file: '37_QuestionWord_Dou.png', title: 'How - どう (Dou)', section: 'Question Words & Counting' },
+            { file: '38_QuestionWord_Dore.png', title: 'Which - どれ (Dore)', section: 'Question Words & Counting' },
+            { file: '39_QuestionWord_Ikura.png', title: 'How Much - いくら (Ikura)', section: 'Question Words & Counting' },
+            { file: '40_QuestionWord_Ikutsu.png', title: 'How Many - いくつ (Ikutsu)', section: 'Question Words & Counting' },
+            { file: '41_QuestionWord_Nanji.png', title: 'What Time - なんじ (Nanji)', section: 'Question Words & Counting' },
+            { file: '42_MakingQuestions_DesuKa.png', title: 'Making Questions - ですか', section: 'Question Words & Counting' },
+            { file: '43_QuestionWords_Practice.png', title: 'Question Words - Practice', section: 'Question Words & Counting' },
+            { file: '44_Counting_Kazu.png', title: 'Counting Things 1-10 - かず (Kazu)', section: 'Question Words & Counting' },
+
+            { file: '48.png', title: 'い-Adjectives in a Sentence', section: 'Adjectives & Colors' },
+            { file: '49.png', title: 'な-Adjectives in a Sentence', section: 'Adjectives & Colors' },
+            { file: '50.png', title: 'Colors - いろ (Iro)', section: 'Adjectives & Colors' }
         ];
 
         const IMAGE_BASE = 'WorkbookPages_Correct/';
@@ -745,7 +778,15 @@
 
         // Table of Contents
         function buildToc() {
+            let lastSection = null;
             pages.forEach((page, i) => {
+                if (page.section && page.section !== lastSection) {
+                    const sec = document.createElement('li');
+                    sec.className = 'toc-section';
+                    sec.textContent = page.section;
+                    tocList.appendChild(sec);
+                    lastSection = page.section;
+                }
                 const li = document.createElement('li');
                 const btn = document.createElement('button');
                 btn.innerHTML = `<span class="toc-num">${i + 1}</span><span>${page.title}</span>`;

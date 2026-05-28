@@ -182,6 +182,11 @@
             color: white;
         }
 
+        .btn-sentence {
+            background: linear-gradient(135deg, #80deea, #26a69a);
+            color: white;
+        }
+
         .btn-review {
             background: linear-gradient(135deg, #ec407a, #5e35b1);
             color: white;
@@ -445,6 +450,18 @@
         .theme-descriptions .card-english { color: #ad1457; }
         .theme-descriptions .card-type { background: #f8bbd0; color: #ad1457; }
 
+        .theme-iadj .flashcard-front { border-top: 4px solid #26a69a; }
+        .theme-iadj .card-english { color: #00695c; }
+        .theme-iadj .card-type { background: #b2dfdb; color: #00695c; }
+
+        .theme-naadj .flashcard-front { border-top: 4px solid #ab47bc; }
+        .theme-naadj .card-english { color: #6a1b9a; }
+        .theme-naadj .card-type { background: #e1bee7; color: #6a1b9a; }
+
+        .theme-colors .flashcard-front { border-top: 4px solid #ffb300; }
+        .theme-colors .card-english { color: #ff8f00; }
+        .theme-colors .card-type { background: #ffecb3; color: #ff8f00; }
+
         .theme-counters .flashcard-front { border-top: 4px solid #ff7043; }
         .theme-counters .card-english { color: #bf360c; }
         .theme-counters .card-type { background: #ffccbc; color: #bf360c; }
@@ -467,6 +484,9 @@
         .theme-demonstratives .flashcard-back { border-top: 4px solid #7e57c2; }
         .theme-verbs .flashcard-back { border-top: 4px solid #00897b; }
         .theme-descriptions .flashcard-back { border-top: 4px solid #ec407a; }
+        .theme-iadj .flashcard-back { border-top: 4px solid #26a69a; }
+        .theme-naadj .flashcard-back { border-top: 4px solid #ab47bc; }
+        .theme-colors .flashcard-back { border-top: 4px solid #ffb300; }
         .theme-counters .flashcard-back { border-top: 4px solid #ff7043; }
         .theme-shopping .flashcard-back { border-top: 4px solid #66bb6a; }
 
@@ -1260,6 +1280,9 @@
         .print-card-english.theme-demonstratives { color: #4527a0; background: #d1c4e9; }
         .print-card-english.theme-verbs { color: #004d40; background: #b2dfdb; }
         .print-card-english.theme-descriptions { color: #ad1457; background: #f8bbd0; }
+        .print-card-english.theme-iadj { color: #00695c; background: #b2dfdb; }
+        .print-card-english.theme-naadj { color: #6a1b9a; background: #e1bee7; }
+        .print-card-english.theme-colors { color: #ff8f00; background: #ffecb3; }
         .print-card-english.theme-counters { color: #bf360c; background: #ffccbc; }
         .print-card-english.theme-shopping { color: #1b5e20; background: #c8e6c9; }
 
@@ -1323,6 +1346,9 @@
             .print-card-english.theme-demonstratives { background: #d1c4e9 !important; color: #4527a0 !important; }
             .print-card-english.theme-verbs { background: #b2dfdb !important; color: #004d40 !important; }
             .print-card-english.theme-descriptions { background: #f8bbd0 !important; color: #ad1457 !important; }
+            .print-card-english.theme-iadj { background: #b2dfdb !important; color: #00695c !important; }
+            .print-card-english.theme-naadj { background: #e1bee7 !important; color: #6a1b9a !important; }
+            .print-card-english.theme-colors { background: #ffecb3 !important; color: #ff8f00 !important; }
             .print-card-english.theme-counters { background: #ffccbc !important; color: #bf360c !important; }
             .print-card-english.theme-shopping { background: #c8e6c9 !important; color: #1b5e20 !important; }
 
@@ -1357,6 +1383,7 @@
             <a href="ocean.html" style="text-decoration:none;"><button class="btn-ocean">Ocean Adventure</button></a>
             <a href="questions.html" style="text-decoration:none;"><button class="btn-questions">Ask &amp; Answer</button></a>
             <a href="voicepractice.html" style="text-decoration:none;"><button class="btn-voice">Voice Practice</button></a>
+            <a href="sentencebuilder.html" style="text-decoration:none;"><button class="btn-sentence">Sentence Builder</button></a>
             <a href="review.html" style="text-decoration:none;"><button class="btn-review">Quarterly Review</button></a>
         </div>
 
@@ -1719,15 +1746,41 @@
             { japanese: 'ある', romaji: 'aru', english: 'To be / exist (things)', emoji: '&#x1F4E6;', category: 'Verbs', theme: 'verbs' },
             { japanese: 'いる', romaji: 'iru', english: 'To be / exist (people, animals)', emoji: '&#x1F9CD;', category: 'Verbs', theme: 'verbs' },
 
-            { japanese: 'おいしい', romaji: 'oishii', english: 'Delicious', emoji: '&#x1F60B;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'すき', romaji: 'suki', english: 'Like / Love', emoji: '&#x2764;&#xFE0F;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'きらい', romaji: 'kirai', english: 'Dislike', emoji: '&#x1F61E;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'げんき', romaji: 'genki', english: 'Well / Healthy / Energetic', emoji: '&#x1F4AA;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'かなしい', romaji: 'kanashii', english: 'Sad', emoji: '&#x1F622;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'ねむい', romaji: 'nemui', english: 'Sleepy', emoji: '&#x1F62A;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'ほしい', romaji: 'hoshii', english: 'Want', emoji: '&#x1F9E1;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'あおい', romaji: 'aoi', english: 'Blue', emoji: '&#x1F499;', category: 'Descriptions & Feelings', theme: 'descriptions' },
-            { japanese: 'いろ', romaji: 'iro', english: 'Color', emoji: '&#x1F308;', category: 'Descriptions & Feelings', theme: 'descriptions' },
+            // い-Adjectives (feelings, taste, size)
+            { japanese: 'おいしい', romaji: 'oishii', english: 'Delicious', emoji: '&#x1F60B;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'まずい', romaji: 'mazui', english: 'Nasty / Yucky (bad taste)', emoji: '&#x1F922;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'うれしい', romaji: 'ureshii', english: 'Happy / Glad', emoji: '&#x1F60A;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'かなしい', romaji: 'kanashii', english: 'Sad', emoji: '&#x1F622;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'ねむい', romaji: 'nemui', english: 'Sleepy', emoji: '&#x1F62A;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'ほしい', romaji: 'hoshii', english: 'Want', emoji: '&#x1F9E1;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'おおきい', romaji: 'ookii', english: 'Big', emoji: '&#x1F418;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'ちいさい', romaji: 'chiisai', english: 'Small', emoji: '&#x1F42D;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'ひろい', romaji: 'hiroi', english: 'Wide / Spacious', emoji: '&#x2194;&#xFE0F;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'せまい', romaji: 'semai', english: 'Narrow / Cramped', emoji: '&#x1F90F;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'かるい', romaji: 'karui', english: 'Light (weight)', emoji: '&#x1FAB6;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'おもい', romaji: 'omoi', english: 'Heavy', emoji: '&#x1FAA8;', category: 'い-Adjectives', theme: 'iadj' },
+            // い-Adjective colors
+            { japanese: 'あかい', romaji: 'akai', english: 'Red', emoji: '&#x1F534;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'あおい', romaji: 'aoi', english: 'Blue', emoji: '&#x1F535;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'きいろい', romaji: 'kiiroi', english: 'Yellow', emoji: '&#x1F7E1;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'しろい', romaji: 'shiroi', english: 'White', emoji: '&#x26AA;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'くろい', romaji: 'kuroi', english: 'Black', emoji: '&#x26AB;', category: 'い-Adjectives', theme: 'iadj' },
+            { japanese: 'ちゃいろい', romaji: 'chairoi', english: 'Brown', emoji: '&#x1F7E4;', category: 'い-Adjectives', theme: 'iadj' },
+
+            // な-Adjectives
+            { japanese: 'すき', romaji: 'suki', english: 'Like / Love', emoji: '&#x2764;&#xFE0F;', category: 'な-Adjectives', theme: 'naadj' },
+            { japanese: 'きらい', romaji: 'kirai', english: 'Dislike', emoji: '&#x1F61E;', category: 'な-Adjectives', theme: 'naadj' },
+            { japanese: 'げんき', romaji: 'genki', english: 'Well / Healthy / Energetic', emoji: '&#x1F4AA;', category: 'な-Adjectives', theme: 'naadj' },
+            { japanese: 'きれい', romaji: 'kirei', english: 'Pretty / Clean / Beautiful', emoji: '&#x1F338;', category: 'な-Adjectives', theme: 'naadj' },
+
+            // Colors (nouns — use の to describe: みどりの くるま)
+            { japanese: 'いろ', romaji: 'iro', english: 'Color', emoji: '&#x1F308;', category: 'Colors', theme: 'colors' },
+            { japanese: 'みどり', romaji: 'midori', english: 'Green', emoji: '&#x1F7E2;', category: 'Colors', theme: 'colors' },
+            { japanese: 'むらさき', romaji: 'murasaki', english: 'Purple', emoji: '&#x1F7E3;', category: 'Colors', theme: 'colors' },
+            { japanese: 'ピンク', romaji: 'pinku', english: 'Pink', emoji: '&#x1FA77;', category: 'Colors', theme: 'colors' },
+            { japanese: 'オレンジ', romaji: 'orenji', english: 'Orange', emoji: '&#x1F7E0;', category: 'Colors', theme: 'colors' },
+            { japanese: 'はいいろ', romaji: 'haiiro', english: 'Gray', emoji: '&#x1FA76;', category: 'Colors', theme: 'colors' },
+
             { japanese: 'てんき', romaji: 'tenki', english: 'Weather', emoji: '&#x26C5;', category: 'Descriptions & Feelings', theme: 'descriptions' },
             { japanese: 'そら', romaji: 'sora', english: 'Sky', emoji: '&#x2601;&#xFE0F;', category: 'Descriptions & Feelings', theme: 'descriptions' },
 
@@ -1815,7 +1868,10 @@
             'Greetings & Polite Phrases': '&#x1F44B;',
             'Demonstratives': '&#x1F449;',
             'Verbs': '&#x1F3C3;',
-            'Descriptions & Feelings': '&#x1F308;',
+            'い-Adjectives': '&#x1F31F;',
+            'な-Adjectives': '&#x1F338;',
+            'Colors': '&#x1F3A8;',
+            'Descriptions & Feelings': '&#x2601;&#xFE0F;',
             'Counters (1-10 things)': '&#x1F3B2;',
             'Shopping': '&#x1F6D2;'
         };
