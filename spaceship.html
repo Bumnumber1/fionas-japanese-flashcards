@@ -219,6 +219,45 @@
         }
         .big-btn:active { transform: scale(0.95); }
         #finalStats { font-size: 1.15em; font-weight: 800; color: #ffe57f; margin: 10px 0; }
+
+        #winnerName {
+            font-family: inherit;
+            font-size: 1.1em;
+            font-weight: 700;
+            padding: 10px 14px;
+            margin: 6px 0 4px;
+            border-radius: 12px;
+            border: 2px solid #b388ff;
+            background: #0b1030;
+            color: white;
+            text-align: center;
+            width: 85%;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .coupon-card {
+            margin: 8px 0;
+            padding: 16px;
+            border: 3px dashed #ffe57f;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255, 229, 127, 0.14), rgba(255, 128, 171, 0.14));
+        }
+        .coupon-card h3 { color: #ffe57f; font-size: 1.25em; margin-bottom: 4px; }
+        #winnersList {
+            text-align: left;
+            max-height: 40vh;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .winner-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 7px 4px;
+            border-bottom: 1px solid rgba(179, 136, 255, 0.25);
+            font-weight: 700;
+            color: #e3f2fd;
+        }
     </style>
 </head>
 <body>
@@ -250,10 +289,12 @@
                 <p class="rule">🟢 <b>BEAM</b> the pod that matches the romaji at the top</p>
                 <p class="rule">🔴 <b>LASER</b> all the other pods for points</p>
                 <p class="rule">⚠️ Beam the wrong one — or shoot the right one — and you lose a heart!</p>
-                <p class="rule">🎁 Catch falling powerups: ⚡ rapid fire, 🛡️ shield, 🌟 wide beam, ⏳ slow-mo, ❤️ extra life</p>
-                <p class="rule">👾 A <b>Kana Pirate UFO</b> attacks every 4th wave — only shoot it while its dome shows the hunted kana!</p>
+                <p class="rule">🎁 Powerups: ⚡ rapid fire, 🛡️ shield, 🌟 wide beam, ⏳ slow-mo, 💥 nova blast, ✨ double points, ❄️ freeze, ❤️ extra life</p>
+                <p class="rule">👾 A space boss attacks every 4th wave — a different monster each time! Only shoot it while its dome shows the hunted kana!</p>
+                <p class="rule">🍦 Score <b>30,000+</b> and earn a REAL <b>Rocksalt Milk Bar</b> ice cream coupon!</p>
                 <p>Move: drag, or ← → keys &nbsp;|&nbsp; Laser: SPACE &nbsp;|&nbsp; Beam: B</p>
                 <button class="big-btn" id="startBtn">START MISSION</button>
+                <button class="big-btn" id="winnersBtn" style="background:linear-gradient(135deg,#ff80ab,#c2185b);margin-left:8px;">🍦 WINNERS</button>
                 <p id="bestLine" style="color:#ffe57f;font-weight:800;"></p>
             </div>
         </div>
@@ -262,8 +303,42 @@
             <div class="panel">
                 <h2 id="overTitle">Mission Over</h2>
                 <div id="finalStats"></div>
+                <p id="overCoupon" style="color:#ffe57f;font-weight:800;"></p>
                 <p id="overBest"></p>
                 <button class="big-btn" id="restartBtn">FLY AGAIN</button>
+            </div>
+        </div>
+
+        <div class="overlay" id="couponOverlay">
+            <div class="panel">
+                <div id="couponEntry">
+                    <h2>🎉 INCREDIBLE!! 🎉</h2>
+                    <p style="font-size:1.1em;">You scored <b style="color:#ffe57f;">30,000 points</b> and earned a real</p>
+                    <p style="font-size:1.4em;font-weight:800;color:#ff80ab;">🍦 ROCKSALT MILK BAR ICE CREAM COUPON! 🍦</p>
+                    <p>Write your name in the winners book:</p>
+                    <input id="winnerName" maxlength="20" placeholder="Your name" autocomplete="off">
+                    <br>
+                    <button class="big-btn" id="saveWinnerBtn">CLAIM MY COUPON</button>
+                </div>
+                <div id="couponCard" style="display:none;">
+                    <div class="coupon-card">
+                        <h3>🍦 ROCKSALT MILK BAR 🍦</h3>
+                        <p style="font-size:1.2em;font-weight:800;color:#fff;">DIGITAL ICE CREAM COUPON</p>
+                        <p>Awarded to: <b id="couponName" style="color:#ffe57f;"></b></p>
+                        <p>Date: <b id="couponDate" style="color:#ffe57f;"></b></p>
+                        <p style="font-size:0.85em;">Show a parent — redeemable for one ice cream trip! 🚀</p>
+                    </div>
+                    <button class="big-btn" id="couponContinueBtn">KEEP FLYING!</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overlay" id="winnersOverlay">
+            <div class="panel">
+                <h2>🍦 Ice Cream Winners</h2>
+                <p>Pilots who scored 30,000+ — they've earned a trip to Rocksalt Milk Bar!</p>
+                <div id="winnersList"></div>
+                <button class="big-btn" id="winnersCloseBtn">CLOSE</button>
             </div>
         </div>
 
@@ -323,7 +398,9 @@ let captures = 0, capturesNeeded = 3, totalCaptured = 0;
 let hunted = null;       // the kana object being hunted
 let pods = [], shots = [], bombs = [], pups = [], parts = [], texts = [];
 let boss = null, beamObj = null;
-let rapidUntil = 0, wideUntil = 0, slowUntil = 0;
+let rapidUntil = 0, wideUntil = 0, slowUntil = 0, x2Until = 0, freezeUntil = 0;
+const GOAL = 30000;  // Rocksalt Milk Bar ice cream coupon threshold
+let couponEarned = false, couponFrom = 'playing', winnerIdx = null, bossCount = 0;
 let shakeT = 0, lastShot = 0, now = 0, lastT = 0;
 let stars = [];
 const ship = { x: 200, tx: 200, y: 0, w: 60 };
@@ -454,16 +531,22 @@ function newTarget(excludePod) {
 function dropPowerup(x, y, fromBoss) {
     const roll = Math.random();
     let type;
-    if (fromBoss) type = roll < 0.4 ? 'heart' : (roll < 0.7 ? 'shield' : 'rapid');
-    else if (roll < 0.26) type = 'rapid';
-    else if (roll < 0.5) type = 'shield';
-    else if (roll < 0.72) type = 'wide';
-    else if (roll < 0.92) type = 'slow';
+    if (fromBoss) type = roll < 0.3 ? 'heart' : (roll < 0.55 ? 'shield' : (roll < 0.8 ? 'x2' : 'rapid'));
+    else if (roll < 0.16) type = 'rapid';
+    else if (roll < 0.32) type = 'shield';
+    else if (roll < 0.48) type = 'wide';
+    else if (roll < 0.62) type = 'slow';
+    else if (roll < 0.76) type = 'nova';
+    else if (roll < 0.88) type = 'x2';
+    else if (roll < 0.96) type = 'freeze';
     else type = 'heart';
     pups.push({ x: x, y: y, vy: 75, type: type });
 }
-const PUP_ICON = { rapid: '⚡', shield: '🛡️', wide: '🌟', slow: '⏳', heart: '❤️' };
-const PUP_NAME = { rapid: 'RAPID FIRE!', shield: 'SHIELD +1', wide: 'WIDE BEAM!', slow: 'SLOW-MO!', heart: 'EXTRA LIFE!' };
+const PUP_ICON = { rapid: '⚡', shield: '🛡️', wide: '🌟', slow: '⏳', heart: '❤️', nova: '💥', x2: '✨', freeze: '❄️' };
+const PUP_NAME = { rapid: 'RAPID FIRE!', shield: 'SHIELD +1', wide: 'WIDE BEAM!', slow: 'SLOW-MO!', heart: 'EXTRA LIFE!', nova: 'NOVA BLAST!', x2: 'DOUBLE POINTS!', freeze: 'FREEZE!' };
+
+// Points helper: doubled while the ✨ powerup is active
+function award(n) { return n * (now < x2Until ? 2 : 1); }
 
 function applyPowerup(type) {
     playSfx('pup');
@@ -472,13 +555,37 @@ function applyPowerup(type) {
     else if (type === 'wide') wideUntil = now + 8;
     else if (type === 'slow') slowUntil = now + 8;
     else if (type === 'heart') lives = Math.min(lives + 1, 7);
+    else if (type === 'x2') x2Until = now + 10;
+    else if (type === 'freeze') freezeUntil = now + 6;
+    else if (type === 'nova') {
+        // Blast every visible decoy off the screen (the hunted kana survives)
+        const targets = pods.filter(p => !p.captured && p.r !== hunted.r && p.y > 0);
+        targets.forEach(p => {
+            const v = award(5);
+            score += v;
+            explode(p.x, p.y, 12, 'hsl(' + p.hue + ',90%,70%)');
+            addText(p.x, p.y, '+' + v, '#ffe57f');
+        });
+        pods = pods.filter(p => !targets.includes(p));
+        for (let i = 0; i < targets.length; i++) spawnDecoy();
+        playSfx('boom');
+        shakeT = 0.3;
+    }
     addText(ship.x, ship.y - 60, PUP_NAME[type], '#69f0ae');
     updateHUD();
 }
 
 // =========================================================================
-// BOSS - Kana Pirate UFO
+// BOSSES - a different monster model every encounter
 // =========================================================================
+const BOSS_TYPES = [
+    { name: 'KANA PIRATE UFO', shape: 'saucer', c1: '#b388ff', c2: '#4527a0', dome: 'rgba(128, 216, 255, 0.35)' },
+    { name: 'CRAB COMMANDER', shape: 'crab', c1: '#ff8a65', c2: '#bf360c', dome: 'rgba(255, 224, 130, 0.35)' },
+    { name: 'STAR SQUID', shape: 'squid', c1: '#4dd0e1', c2: '#006064', dome: 'rgba(178, 255, 89, 0.3)' },
+    { name: 'MECHA MOON', shape: 'moon', c1: '#b0bec5', c2: '#37474f', dome: 'rgba(255, 138, 128, 0.35)' },
+    { name: 'GHOST GALLEON', shape: 'ghost', c1: '#a5d6a7', c2: '#1b5e20', dome: 'rgba(225, 190, 231, 0.4)' }
+];
+
 function startBoss() {
     state = 'boss';
     pods = []; shots = []; bombs = []; beamObj = null;
@@ -486,14 +593,17 @@ function startBoss() {
     hunted = pool[Math.floor(Math.random() * pool.length)];
     const decoys = pool.filter(c => c.r !== hunted.r).sort(() => Math.random() - 0.5).slice(0, 3);
     const seq = [hunted, ...decoys].sort(() => Math.random() - 0.5);
+    const type = BOSS_TYPES[bossCount % BOSS_TYPES.length];
+    bossCount++;
     boss = {
         x: W / 2, y: 110, vx: 70 + wave * 4,
         rx: Math.min(120, W * 0.18), ry: 52,
         hp: 5 + Math.floor(wave / 4), maxHp: 5 + Math.floor(wave / 4),
-        seq: seq, idx: 0, cycleT: 0, nextBomb: now + 1.6, flash: 0
+        seq: seq, idx: 0, cycleT: 0, nextBomb: now + 1.6, flash: 0,
+        type: type
     };
     updateHUD();
-    showBanner('⚠️ KANA PIRATE! ⚠️', '#ff8a80');
+    showBanner('⚠️ ' + type.name + '! ⚠️', '#ff8a80');
     playSfx('siren');
     speak(hunted.k);
 }
@@ -550,7 +660,7 @@ function mistake(msg) {
 function captureResolve(pod) {
     if (pod.r === hunted.r) {
         combo = Math.min(combo + 1, 5);
-        const pts = 100 * combo;
+        const pts = award(100 * combo);
         score += pts; captures++; totalCaptured++;
         addText(ship.x, ship.y - 70, pod.k + ' = ' + pod.r + '!  +' + pts, '#69f0ae');
         explode(ship.x, ship.y - 40, 14, '#69f0ae');
@@ -582,8 +692,9 @@ function shotHitsPod(pod) {
         mistake("Don't shoot " + pod.k + ' (' + pod.r + ') — BEAM it!');
     } else {
         combo = Math.min(combo + 1, 5);
-        score += 20 * combo;
-        addText(pod.x, pod.y, '+' + (20 * combo), '#ffe57f');
+        const v = award(5 * combo);  // decoys are worth a little, captures are the real prize
+        score += v;
+        addText(pod.x, pod.y, '+' + v, '#ffe57f');
         explode(pod.x, pod.y, 12, 'hsl(' + pod.hue + ',90%,70%)');
         playSfx('boom');
         if (Math.random() < 0.16) dropPowerup(pod.x, pod.y, false);
@@ -595,6 +706,18 @@ function shotHitsPod(pod) {
 
 function gameOver() {
     state = 'over';
+    // Record the final score next to the winner's name
+    if (winnerIdx !== null) {
+        try {
+            const winners = JSON.parse(localStorage.getItem('kana-galaxy-winners') || '[]');
+            if (winners[winnerIdx]) {
+                winners[winnerIdx].score = Math.max(winners[winnerIdx].score, score);
+                localStorage.setItem('kana-galaxy-winners', JSON.stringify(winners));
+            }
+        } catch (e) {}
+    }
+    document.getElementById('overCoupon').textContent =
+        couponEarned ? '🍦 Rocksalt Milk Bar coupon earned - show a parent!' : '';
     if (score > best) {
         best = score;
         try { localStorage.setItem('kana-galaxy-best', '' + best); } catch (e) {}
@@ -609,7 +732,8 @@ function gameOver() {
 
 function startGame() {
     score = 0; lives = 5; shield = 0; wave = 1; combo = 0; totalCaptured = 0;
-    rapidUntil = wideUntil = slowUntil = 0;
+    rapidUntil = wideUntil = slowUntil = x2Until = freezeUntil = 0;
+    couponEarned = false; winnerIdx = null;
     pups = []; parts = []; texts = [];
     document.getElementById('startOverlay').classList.remove('show');
     document.getElementById('overOverlay').classList.remove('show');
@@ -644,6 +768,81 @@ function updateHUD() {
     document.getElementById('hudWave').textContent = 'WAVE ' + wave;
     document.getElementById('hudScore').textContent = score;
     document.getElementById('hudTarget').textContent = hunted ? hunted.r.toUpperCase() : '–';
+    if (!couponEarned && score >= GOAL && (state === 'playing' || state === 'boss')) triggerCoupon();
+}
+
+// =========================================================================
+// ROCKSALT MILK BAR COUPON - score GOAL+ and win real-world ice cream.
+// Winners are recorded on this device (🍦 WINNERS on the title screen)
+// so a parent can see who to take out.
+// =========================================================================
+function fireworksWave() {
+    const cols = ['#ffe57f', '#ff80ab', '#80d8ff', '#69f0ae', '#b388ff'];
+    for (let i = 0; i < 7; i++) {
+        explode(40 + Math.random() * (W - 80), 40 + Math.random() * (H * 0.7),
+            26, cols[Math.floor(Math.random() * cols.length)]);
+    }
+}
+
+function triggerCoupon() {
+    couponEarned = true;
+    couponFrom = state;
+    state = 'coupon';
+    shakeT = 0.8;
+    playSfx('fanfare');
+    showBanner('🍦 ' + GOAL.toLocaleString() + ' POINTS!! 🍦', '#ffe57f');
+    fireworksWave();
+    setTimeout(() => { fireworksWave(); playSfx('capture'); }, 500);
+    setTimeout(() => { fireworksWave(); playSfx('fanfare'); }, 1000);
+    setTimeout(() => { fireworksWave(); }, 1500);
+    setTimeout(() => {
+        document.getElementById('couponEntry').style.display = 'block';
+        document.getElementById('couponCard').style.display = 'none';
+        document.getElementById('couponOverlay').classList.add('show');
+    }, 2000);
+}
+
+function loadWinners() {
+    try { return JSON.parse(localStorage.getItem('kana-galaxy-winners') || '[]'); } catch (e) { return []; }
+}
+
+function saveWinner() {
+    const name = (document.getElementById('winnerName').value || '').trim() || 'Space Cadet';
+    const winners = loadWinners();
+    winners.push({ name: name, score: score, date: new Date().toLocaleDateString() });
+    winnerIdx = winners.length - 1;
+    try { localStorage.setItem('kana-galaxy-winners', JSON.stringify(winners)); } catch (e) {}
+    document.getElementById('couponEntry').style.display = 'none';
+    document.getElementById('couponName').textContent = name;
+    document.getElementById('couponDate').textContent = new Date().toLocaleDateString();
+    document.getElementById('couponCard').style.display = 'block';
+    playSfx('capture');
+}
+
+function continueMission() {
+    document.getElementById('couponOverlay').classList.remove('show');
+    if (state === 'coupon') state = couponFrom;
+}
+
+function showWinners() {
+    const list = document.getElementById('winnersList');
+    list.innerHTML = '';
+    const winners = loadWinners();
+    if (winners.length === 0) {
+        const d = document.createElement('div');
+        d.className = 'winner-row';
+        d.textContent = 'No winners yet - score ' + GOAL.toLocaleString() + '+ to get on the board!';
+        list.appendChild(d);
+    }
+    winners.slice().reverse().forEach(w => {
+        const row = document.createElement('div');
+        row.className = 'winner-row';
+        const n = document.createElement('span'); n.textContent = '🍦 ' + w.name;
+        const s = document.createElement('span'); s.textContent = w.score.toLocaleString() + ' · ' + w.date;
+        row.appendChild(n); row.appendChild(s);
+        list.appendChild(row);
+    });
+    document.getElementById('winnersOverlay').classList.add('show');
 }
 
 // =========================================================================
@@ -668,6 +867,7 @@ function update(dt) {
             if (p.capT >= 1) captureResolve(p);
             return;
         }
+        if (now < freezeUntil) return;  // ❄️ frozen in place
         p.phase += dt;
         p.y += p.vy * sm * dt;
         p.x += Math.sin(p.phase * 1.3) * p.amp * dt;
@@ -687,10 +887,11 @@ function update(dt) {
                 }
                 return true;
             });
-            // Capture the lowest pod inside the beam
+            // Capture the lowest pod inside the beam - only pods the player
+            // can actually see (on screen), never ones still above the top edge
             let target = null;
             pods.forEach(p => {
-                if (!p.captured && Math.abs(p.x - ship.x) < beamObj.w / 2 + p.rad * 0.4 && p.y < ship.y - 10) {
+                if (!p.captured && p.y > 0 && Math.abs(p.x - ship.x) < beamObj.w / 2 + p.rad * 0.4 && p.y < ship.y - 10) {
                     if (!target || p.y > target.y) target = p;
                 }
             });
@@ -708,8 +909,9 @@ function update(dt) {
                 shots = shots.filter(x => x !== s);
                 if (boss.seq[boss.idx].r === hunted.r) {
                     boss.hp--; boss.flash = 0.25;
-                    score += 150;
-                    addText(s.x, boss.y + 60, 'HIT! +150', '#ffe57f');
+                    const v = award(150);
+                    score += v;
+                    addText(s.x, boss.y + 60, 'HIT! +' + v, '#ffe57f');
                     explode(s.x, boss.y + 40, 12, '#ffe57f');
                     playSfx('bossHit');
                     if (boss.hp <= 0) { defeatBoss(); return; }
@@ -723,6 +925,7 @@ function update(dt) {
         }
         for (const p of pods) {
             if (p.captured) continue;
+            if (p.y <= 0) continue;  // offscreen pods can't be shot
             const dx = s.x - p.x, dy = s.y - p.y;
             if (dx * dx + dy * dy < (p.rad + 6) * (p.rad + 6)) {
                 shots = shots.filter(x => x !== s);
@@ -861,23 +1064,86 @@ function draw() {
         ctx.restore();
     });
 
-    // Boss
+    // Boss - body drawn per model, dome/kana shared by all
     if (boss) {
+        const T = boss.type;
         ctx.save();
         if (boss.flash > 0) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 30; }
-        // saucer body
         const bg = ctx.createLinearGradient(boss.x, boss.y - boss.ry, boss.x, boss.y + boss.ry);
-        bg.addColorStop(0, '#b388ff'); bg.addColorStop(1, '#4527a0');
+        bg.addColorStop(0, T.c1); bg.addColorStop(1, T.c2);
         ctx.fillStyle = boss.flash > 0 ? '#ffffff' : bg;
-        ctx.beginPath();
-        ctx.ellipse(boss.x, boss.y, boss.rx, boss.ry, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // dome
-        ctx.fillStyle = 'rgba(128, 216, 255, 0.35)';
+
+        if (T.shape === 'crab') {
+            // snapping claws
+            ctx.beginPath();
+            ctx.moveTo(boss.x - boss.rx, boss.y);
+            ctx.lineTo(boss.x - boss.rx - 34, boss.y - 30 + Math.sin(now * 3) * 10);
+            ctx.lineTo(boss.x - boss.rx - 24, boss.y + 18);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(boss.x + boss.rx, boss.y);
+            ctx.lineTo(boss.x + boss.rx + 34, boss.y - 30 - Math.sin(now * 3) * 10);
+            ctx.lineTo(boss.x + boss.rx + 24, boss.y + 18);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx, boss.ry, 0, 0, Math.PI * 2); ctx.fill();
+        } else if (T.shape === 'squid') {
+            // wriggling tentacles
+            ctx.strokeStyle = boss.flash > 0 ? '#ffffff' : T.c2;
+            ctx.lineWidth = 7; ctx.lineCap = 'round';
+            for (let i = -2; i <= 2; i++) {
+                ctx.beginPath();
+                ctx.moveTo(boss.x + i * boss.rx * 0.3, boss.y + boss.ry * 0.4);
+                ctx.quadraticCurveTo(
+                    boss.x + i * boss.rx * 0.45 + Math.sin(now * 2.5 + i) * 14, boss.y + boss.ry + 24,
+                    boss.x + i * boss.rx * 0.5 + Math.cos(now * 2 + i) * 16, boss.y + boss.ry + 46);
+                ctx.stroke();
+            }
+            ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx * 0.8, boss.ry * 1.15, 0, 0, Math.PI * 2); ctx.fill();
+        } else if (T.shape === 'moon') {
+            // cratered battle moon
+            ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx * 0.85, boss.ry * 1.25, 0, 0, Math.PI * 2); ctx.fill();
+            if (boss.flash <= 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                [[-0.4, 0.3, 9], [0.3, -0.1, 12], [0.05, 0.55, 7], [-0.15, -0.45, 6]].forEach(c => {
+                    ctx.beginPath();
+                    ctx.arc(boss.x + c[0] * boss.rx, boss.y + c[1] * boss.ry, c[2], 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        } else if (T.shape === 'ghost') {
+            // ghost with a wavy skirt and spooky eyes
+            const gw = boss.rx * 0.8, hem = boss.y + boss.ry * 0.8;
+            ctx.beginPath();
+            ctx.ellipse(boss.x, boss.y - boss.ry * 0.2, gw, boss.ry, 0, Math.PI, 0);
+            ctx.lineTo(boss.x + gw, hem);
+            for (let i = 3; i >= -3; i--) {
+                ctx.quadraticCurveTo(
+                    boss.x + (i + 0.5) * gw / 3.5, hem + 16 + Math.sin(now * 3 + i) * 5,
+                    boss.x + i * gw / 3.5, hem);
+            }
+            ctx.closePath(); ctx.fill();
+            if (boss.flash <= 0) {
+                ctx.fillStyle = '#102510';
+                ctx.beginPath(); ctx.arc(boss.x - 18, boss.y + 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(boss.x + 18, boss.y + 2, 6, 0, Math.PI * 2); ctx.fill();
+            }
+        } else {
+            // classic saucer with blinking lights
+            ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx, boss.ry, 0, 0, Math.PI * 2); ctx.fill();
+            for (let i = -2; i <= 2; i++) {
+                ctx.fillStyle = (Math.floor(now * 4) + i) % 2 === 0 ? '#ffe57f' : '#ff80ab';
+                ctx.beginPath();
+                ctx.arc(boss.x + i * boss.rx * 0.38, boss.y + boss.ry * 0.35, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // dome (every model carries one)
+        ctx.fillStyle = T.dome;
         ctx.beginPath();
         ctx.ellipse(boss.x, boss.y - boss.ry * 0.7, boss.rx * 0.45, boss.ry * 0.95, 0, Math.PI, 0);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(128, 216, 255, 0.8)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.lineWidth = 2; ctx.stroke();
         // dome kana (the thing to read!) - always white, no color hint:
         // the kid has to actually read it
@@ -885,13 +1151,6 @@ function draw() {
         ctx.fillStyle = '#ffffff';
         ctx.font = '800 44px "Noto Sans JP", sans-serif';
         ctx.fillText(showing.k, boss.x, boss.y - boss.ry * 0.75);
-        // lights
-        for (let i = -2; i <= 2; i++) {
-            ctx.fillStyle = (Math.floor(now * 4) + i) % 2 === 0 ? '#ffe57f' : '#ff80ab';
-            ctx.beginPath();
-            ctx.arc(boss.x + i * boss.rx * 0.38, boss.y + boss.ry * 0.35, 6, 0, Math.PI * 2);
-            ctx.fill();
-        }
         ctx.restore();
         // HP bar
         const bw2 = boss.rx * 2;
@@ -969,6 +1228,13 @@ function loop(t) {
         if (keys.right) ship.tx += 420 * dt;
         ship.tx = Math.min(Math.max(ship.tx, 34), W - 34);
         update(dt);
+    } else if (state === 'coupon') {
+        // Keep the fireworks going while the game itself is frozen
+        parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
+        parts = parts.filter(p => p.life > 0);
+        texts.forEach(t => { t.y -= 28 * dt; t.life -= dt; });
+        texts = texts.filter(t => t.life > 0);
+        shakeT = Math.max(0, shakeT - dt);
     }
     draw();
 }
@@ -1024,6 +1290,12 @@ document.addEventListener('visibilitychange', () => {
 
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('saveWinnerBtn').addEventListener('click', saveWinner);
+document.getElementById('couponContinueBtn').addEventListener('click', continueMission);
+document.getElementById('winnersBtn').addEventListener('click', showWinners);
+document.getElementById('winnersCloseBtn').addEventListener('click', () => {
+    document.getElementById('winnersOverlay').classList.remove('show');
+});
 
 // iOS: unlock audio on first interaction
 document.addEventListener('touchstart', function unlock() {
