@@ -97,33 +97,46 @@
         #stage { position: relative; flex: 1 1 auto; min-height: 0; }
         #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
+        /* Controls live in their own bar BELOW the play field so the ship
+           can never overlap them on any screen size */
+        #controls {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 18px;
+            background: rgba(10, 14, 40, 0.92);
+            border-top: 1px solid rgba(124, 77, 255, 0.4);
+            z-index: 5;
+        }
         .fire-btn {
-            position: absolute;
-            bottom: 14px;
-            width: 92px;
-            height: 92px;
+            width: 86px;
+            height: 86px;
             border-radius: 50%;
             border: 3px solid;
             font-family: inherit;
             font-weight: 800;
             font-size: 0.85em;
             color: white;
-            z-index: 6;
             cursor: pointer;
             line-height: 1.15;
         }
         .fire-btn:active { transform: scale(0.92); }
         #btnLaser {
-            left: 14px;
             background: radial-gradient(circle at 35% 30%, rgba(255,138,128,0.95), rgba(183,28,28,0.9));
             border-color: #ff8a80;
             box-shadow: 0 0 18px rgba(255, 82, 82, 0.5);
         }
         #btnBeam {
-            right: 14px;
             background: radial-gradient(circle at 35% 30%, rgba(105,240,174,0.95), rgba(27,94,32,0.9));
             border-color: #69f0ae;
             box-shadow: 0 0 18px rgba(105, 240, 174, 0.5);
+        }
+        #controlsHint {
+            color: #7986cb;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-align: center;
         }
 
         #pauseBtn {
@@ -228,8 +241,6 @@
     <div id="stage">
         <canvas id="game"></canvas>
         <button id="pauseBtn" title="Pause">⏸</button>
-        <button class="fire-btn" id="btnLaser">🔴<br>LASER</button>
-        <button class="fire-btn" id="btnBeam">🟢<br>BEAM</button>
         <div id="banner"></div>
 
         <div class="overlay show" id="startOverlay">
@@ -262,6 +273,11 @@
                 <button class="big-btn" id="resumeBtn">RESUME</button>
             </div>
         </div>
+    </div>
+    <div id="controls">
+        <button class="fire-btn" id="btnLaser">🔴<br>LASER</button>
+        <div id="controlsHint">drag to fly</div>
+        <button class="fire-btn" id="btnBeam">🟢<br>BEAM</button>
     </div>
 </div>
 
@@ -321,8 +337,9 @@ function resize() {
     canvas.width = Math.floor(W * DPR);
     canvas.height = Math.floor(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // Keep the ship above the LASER/BEAM buttons (92px tall + 14px margin)
-    ship.y = H - 160;
+    // Buttons live in their own bar below the canvas, so the ship just
+    // needs clearance for its own flame
+    ship.y = H - 70;
     ship.x = Math.min(Math.max(ship.x, 40), W - 40);
     ship.tx = ship.x;
     stars = [];
