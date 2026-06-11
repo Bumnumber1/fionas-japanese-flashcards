@@ -737,7 +737,7 @@ function update(dt) {
         boss.x += boss.vx * dt * (now < slowUntil ? 0.5 : 1);
         if (boss.x < boss.rx + 10 || boss.x > W - boss.rx - 10) boss.vx *= -1;
         boss.cycleT += dt;
-        if (boss.cycleT > 1.35) {
+        if (boss.cycleT > 8.1) {
             boss.cycleT = 0;
             boss.idx = (boss.idx + 1) % boss.seq.length;
         }
