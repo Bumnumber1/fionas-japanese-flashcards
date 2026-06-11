@@ -279,13 +279,18 @@ const KANA = [
     {k:'ま',r:'ma',row:6},{k:'み',r:'mi',row:6},{k:'む',r:'mu',row:6},{k:'め',r:'me',row:6},{k:'も',r:'mo',row:6},
     {k:'や',r:'ya',row:7},{k:'ゆ',r:'yu',row:7},{k:'よ',r:'yo',row:7},
     {k:'ら',r:'ra',row:8},{k:'り',r:'ri',row:8},{k:'る',r:'ru',row:8},{k:'れ',r:'re',row:8},{k:'ろ',r:'ro',row:8},
-    {k:'わ',r:'wa',row:9},{k:'を',r:'wo',row:9},{k:'ん',r:'n',row:9}
+    {k:'わ',r:'wa',row:9},{k:'を',r:'wo',row:9},{k:'ん',r:'n',row:9},
+    {k:'が',r:'ga',row:10},{k:'ぎ',r:'gi',row:10},{k:'ぐ',r:'gu',row:10},{k:'げ',r:'ge',row:10},{k:'ご',r:'go',row:10},
+    {k:'ざ',r:'za',row:11},{k:'じ',r:'ji',row:11},{k:'ず',r:'zu',row:11},{k:'ぜ',r:'ze',row:11},{k:'ぞ',r:'zo',row:11},
+    {k:'だ',r:'da',row:12},{k:'ぢ',r:'ji',row:12},{k:'づ',r:'zu',row:12},{k:'で',r:'de',row:12},{k:'ど',r:'do',row:12},
+    {k:'ば',r:'ba',row:13},{k:'び',r:'bi',row:13},{k:'ぶ',r:'bu',row:13},{k:'べ',r:'be',row:13},{k:'ぼ',r:'bo',row:13},
+    {k:'ぱ',r:'pa',row:14},{k:'ぴ',r:'pi',row:14},{k:'ぷ',r:'pu',row:14},{k:'ぺ',r:'pe',row:14},{k:'ぽ',r:'po',row:14}
 ];
 
 function poolForWave(w) {
-    // Wave 1 starts with the a + ka rows; each wave unlocks one more row
-    const maxRow = Math.min(1 + w, 9);
-    return KANA.filter(c => c.row <= maxRow);
+    // Full shuffled hiragana set every wave (incl. dakuten/handakuten) -
+    // the player knows all of them, so no progressive unlocking
+    return KANA;
 }
 
 // =========================================================================
@@ -316,7 +321,8 @@ function resize() {
     canvas.width = Math.floor(W * DPR);
     canvas.height = Math.floor(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ship.y = H - 74;
+    // Keep the ship above the LASER/BEAM buttons (92px tall + 14px margin)
+    ship.y = H - 160;
     ship.x = Math.min(Math.max(ship.x, 40), W - 40);
     ship.tx = ship.x;
     stars = [];
@@ -387,13 +393,15 @@ function spawnPod(kana, yTop) {
     });
 }
 
-function labelsOnScreen() { return new Set(pods.map(p => p.k)); }
+// Uniqueness is by romaji: ji/zu each have two kana, and two pods that read
+// the same would make the bounty ambiguous
+function labelsOnScreen() { return new Set(pods.map(p => p.r)); }
 
 function spawnDecoy() {
     const pool = poolForWave(wave);
     const used = labelsOnScreen();
-    let cands = pool.filter(c => c.k !== hunted.k && !used.has(c.k));
-    if (cands.length === 0) cands = pool.filter(c => c.k !== hunted.k);
+    let cands = pool.filter(c => c.r !== hunted.r && !used.has(c.r));
+    if (cands.length === 0) cands = pool.filter(c => c.r !== hunted.r);
     spawnPod(cands[Math.floor(Math.random() * cands.length)]);
 }
 
@@ -405,8 +413,10 @@ function startWave() {
     captures = 0;
     const pool = poolForWave(wave);
     const n = podCount();
-    // Build a unique set of kana for this wave's pods
-    const picks = [...pool].sort(() => Math.random() - 0.5).slice(0, n);
+    // Build a set of kana unique by romaji for this wave's pods
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const seen = new Set();
+    const picks = shuffled.filter(c => !seen.has(c.r) && seen.add(c.r)).slice(0, n);
     picks.forEach(c => spawnPod(c));
     hunted = picks[Math.floor(Math.random() * picks.length)];
     updateHUD();
@@ -457,7 +467,7 @@ function startBoss() {
     pods = []; shots = []; bombs = []; beamObj = null;
     const pool = poolForWave(wave);
     hunted = pool[Math.floor(Math.random() * pool.length)];
-    const decoys = pool.filter(c => c.k !== hunted.k).sort(() => Math.random() - 0.5).slice(0, 3);
+    const decoys = pool.filter(c => c.r !== hunted.r).sort(() => Math.random() - 0.5).slice(0, 3);
     const seq = [hunted, ...decoys].sort(() => Math.random() - 0.5);
     boss = {
         x: W / 2, y: 110, vx: 70 + wave * 4,
@@ -521,7 +531,7 @@ function mistake(msg) {
 }
 
 function captureResolve(pod) {
-    if (pod.k === hunted.k) {
+    if (pod.r === hunted.r) {
         combo = Math.min(combo + 1, 5);
         const pts = 100 * combo;
         score += pts; captures++; totalCaptured++;
@@ -548,7 +558,7 @@ function captureResolve(pod) {
 }
 
 function shotHitsPod(pod) {
-    if (pod.k === hunted.k) {
+    if (pod.r === hunted.r) {
         explode(pod.x, pod.y, 16, '#ff8a80');
         pods = pods.filter(p => p !== pod);
         spawnPod(hunted);  // the hunted kana respawns - still must be captured
@@ -679,7 +689,7 @@ function update(dt) {
             const dx = (s.x - boss.x) / boss.rx, dy = (s.y - boss.y) / boss.ry;
             if (dx * dx + dy * dy < 1) {
                 shots = shots.filter(x => x !== s);
-                if (boss.seq[boss.idx].k === hunted.k) {
+                if (boss.seq[boss.idx].r === hunted.r) {
                     boss.hp--; boss.flash = 0.25;
                     score += 150;
                     addText(s.x, boss.y + 60, 'HIT! +150', '#ffe57f');
@@ -854,7 +864,7 @@ function draw() {
         ctx.lineWidth = 2; ctx.stroke();
         // dome kana (the thing to read!)
         const showing = boss.seq[boss.idx];
-        ctx.fillStyle = showing.k === hunted.k ? '#69f0ae' : '#ffffff';
+        ctx.fillStyle = showing.r === hunted.r ? '#69f0ae' : '#ffffff';
         ctx.font = '800 44px "Noto Sans JP", sans-serif';
         ctx.fillText(showing.k, boss.x, boss.y - boss.ry * 0.75);
         // lights
