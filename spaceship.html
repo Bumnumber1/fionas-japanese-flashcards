@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kana Galaxy">
+    <title>Kana Galaxy — Hiragana Space Patrol</title>
+    <style>
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: #060818;
+            color: #e3f2fd;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #wrap { display: flex; flex-direction: column; height: 100%; }
+
+        .header {
+            text-align: center;
+            padding: 6px 10px 4px;
+            background: rgba(10, 14, 40, 0.9);
+            border-bottom: 1px solid rgba(124, 77, 255, 0.4);
+            flex: 0 0 auto;
+            z-index: 5;
+        }
+        .header h1 {
+            font-size: 1.05em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #80d8ff, #b388ff, #ff80ab);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .header a {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 14px;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-decoration: none;
+            color: #80d8ff;
+            border: 1px solid rgba(128, 216, 255, 0.4);
+            margin: 0 2px;
+        }
+        .header a:active { transform: scale(0.95); }
+
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            background: rgba(10, 14, 40, 0.85);
+            font-weight: 800;
+            flex: 0 0 auto;
+            z-index: 5;
+            font-size: 0.95em;
+        }
+        .hud-left, .hud-right { flex: 1; display: flex; gap: 14px; align-items: center; white-space: nowrap; }
+        .hud-right { justify-content: flex-end; }
+        #hudLives { color: #ff8a80; letter-spacing: 1px; }
+        #hudShield { color: #80d8ff; }
+        #hudWave { color: #b388ff; }
+        #hudScore { color: #ffe57f; }
+        #hudCombo { color: #69f0ae; min-width: 46px; }
+
+        #target {
+            flex: 0 0 auto;
+            text-align: center;
+            background: rgba(124, 77, 255, 0.18);
+            border: 1px solid rgba(179, 136, 255, 0.5);
+            border-radius: 14px;
+            padding: 2px 18px;
+            line-height: 1.1;
+        }
+        #target .lbl { font-size: 0.6em; font-weight: 700; color: #b388ff; letter-spacing: 0.12em; }
+        #target .romaji {
+            font-size: 1.5em;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 0 12px #7c4dff, 0 0 24px #7c4dff;
+            letter-spacing: 0.06em;
+        }
+
+        #stage { position: relative; flex: 1 1 auto; min-height: 0; }
+        #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+        .fire-btn {
+            position: absolute;
+            bottom: 14px;
+            width: 92px;
+            height: 92px;
+            border-radius: 50%;
+            border: 3px solid;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 0.85em;
+            color: white;
+            z-index: 6;
+            cursor: pointer;
+            line-height: 1.15;
+        }
+        .fire-btn:active { transform: scale(0.92); }
+        #btnLaser {
+            left: 14px;
+            background: radial-gradient(circle at 35% 30%, rgba(255,138,128,0.95), rgba(183,28,28,0.9));
+            border-color: #ff8a80;
+            box-shadow: 0 0 18px rgba(255, 82, 82, 0.5);
+        }
+        #btnBeam {
+            right: 14px;
+            background: radial-gradient(circle at 35% 30%, rgba(105,240,174,0.95), rgba(27,94,32,0.9));
+            border-color: #69f0ae;
+            box-shadow: 0 0 18px rgba(105, 240, 174, 0.5);
+        }
+
+        #pauseBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 6;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(128, 216, 255, 0.5);
+            background: rgba(10, 14, 40, 0.7);
+            color: #80d8ff;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+
+        #banner {
+            position: absolute;
+            top: 32%;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 2.2em;
+            font-weight: 800;
+            pointer-events: none;
+            z-index: 7;
+            opacity: 0;
+            text-shadow: 0 0 18px currentColor;
+            transition: opacity 0.25s;
+        }
+        #banner.show { opacity: 1; }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(6, 8, 24, 0.88);
+            text-align: center;
+            padding: 16px;
+        }
+        .overlay.show { display: flex; }
+        .panel {
+            max-width: 520px;
+            background: rgba(16, 20, 52, 0.95);
+            border: 1px solid rgba(179, 136, 255, 0.5);
+            border-radius: 22px;
+            padding: 24px 26px;
+            box-shadow: 0 0 40px rgba(124, 77, 255, 0.35);
+            max-height: 95%;
+            overflow-y: auto;
+        }
+        .panel h2 {
+            font-size: 1.7em;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #80d8ff, #b388ff, #ff80ab);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .panel p { margin: 7px 0; font-size: 0.95em; color: #cfd8ff; }
+        .panel .rule { text-align: left; margin: 4px auto; max-width: 420px; }
+        .panel .rule b { color: #ffe57f; }
+        .big-btn {
+            margin-top: 16px;
+            font-family: inherit;
+            font-size: 1.15em;
+            font-weight: 800;
+            color: white;
+            padding: 14px 44px;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #7c4dff, #e91e63);
+            box-shadow: 0 0 22px rgba(124, 77, 255, 0.6);
+            cursor: pointer;
+        }
+        .big-btn:active { transform: scale(0.95); }
+        #finalStats { font-size: 1.15em; font-weight: 800; color: #ffe57f; margin: 10px 0; }
+    </style>
+</head>
+<body>
+<div id="wrap">
+    <div class="header">
+        <h1>🚀 Kana Galaxy</h1><a href="index.html">Home</a><a href="writing.html">Writing</a><a href="ocean.html">Ocean</a>
+    </div>
+    <div id="hud">
+        <div class="hud-left">
+            <span id="hudLives">❤️❤️❤️</span>
+            <span id="hudShield"></span>
+            <span id="hudCombo"></span>
+        </div>
+        <div id="target"><div class="lbl">CAPTURE</div><div class="romaji" id="hudTarget">–</div></div>
+        <div class="hud-right">
+            <span id="hudWave">WAVE 1</span>
+            <span id="hudScore">0</span>
+        </div>
+    </div>
+    <div id="stage">
+        <canvas id="game"></canvas>
+        <button id="pauseBtn" title="Pause">⏸</button>
+        <button class="fire-btn" id="btnLaser">🔴<br>LASER</button>
+        <button class="fire-btn" id="btnBeam">🟢<br>BEAM</button>
+        <div id="banner"></div>
+
+        <div class="overlay show" id="startOverlay">
+            <div class="panel">
+                <h2>🚀 Kana Galaxy</h2>
+                <p>Hiragana pods are drifting through space!</p>
+                <p class="rule">🟢 <b>BEAM</b> the pod that matches the romaji at the top</p>
+                <p class="rule">🔴 <b>LASER</b> all the other pods for points</p>
+                <p class="rule">⚠️ Beam the wrong one — or shoot the right one — and you lose a heart!</p>
+                <p class="rule">🎁 Catch falling powerups: ⚡ rapid fire, 🛡️ shield, 🌟 wide beam, ⏳ slow-mo, ❤️ extra life</p>
+                <p class="rule">👾 A <b>Kana Pirate UFO</b> attacks every 4th wave — only shoot it while its dome shows the hunted kana!</p>
+                <p>Move: drag, or ← → keys &nbsp;|&nbsp; Laser: SPACE &nbsp;|&nbsp; Beam: B</p>
+                <button class="big-btn" id="startBtn">START MISSION</button>
+                <p id="bestLine" style="color:#ffe57f;font-weight:800;"></p>
+            </div>
+        </div>
+
+        <div class="overlay" id="overOverlay">
+            <div class="panel">
+                <h2 id="overTitle">Mission Over</h2>
+                <div id="finalStats"></div>
+                <p id="overBest"></p>
+                <button class="big-btn" id="restartBtn">FLY AGAIN</button>
+            </div>
+        </div>
+
+        <div class="overlay" id="pauseOverlay">
+            <div class="panel">
+                <h2>Paused</h2>
+                <button class="big-btn" id="resumeBtn">RESUME</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// =========================================================================
+// KANA DATA - 46 base hiragana with Hepburn romaji
+// =========================================================================
+const KANA = [
+    {k:'あ',r:'a',row:0},{k:'い',r:'i',row:0},{k:'う',r:'u',row:0},{k:'え',r:'e',row:0},{k:'お',r:'o',row:0},
+    {k:'か',r:'ka',row:1},{k:'き',r:'ki',row:1},{k:'く',r:'ku',row:1},{k:'け',r:'ke',row:1},{k:'こ',r:'ko',row:1},
+    {k:'さ',r:'sa',row:2},{k:'し',r:'shi',row:2},{k:'す',r:'su',row:2},{k:'せ',r:'se',row:2},{k:'そ',r:'so',row:2},
+    {k:'た',r:'ta',row:3},{k:'ち',r:'chi',row:3},{k:'つ',r:'tsu',row:3},{k:'て',r:'te',row:3},{k:'と',r:'to',row:3},
+    {k:'な',r:'na',row:4},{k:'に',r:'ni',row:4},{k:'ぬ',r:'nu',row:4},{k:'ね',r:'ne',row:4},{k:'の',r:'no',row:4},
+    {k:'は',r:'ha',row:5},{k:'ひ',r:'hi',row:5},{k:'ふ',r:'fu',row:5},{k:'へ',r:'he',row:5},{k:'ほ',r:'ho',row:5},
+    {k:'ま',r:'ma',row:6},{k:'み',r:'mi',row:6},{k:'む',r:'mu',row:6},{k:'め',r:'me',row:6},{k:'も',r:'mo',row:6},
+    {k:'や',r:'ya',row:7},{k:'ゆ',r:'yu',row:7},{k:'よ',r:'yo',row:7},
+    {k:'ら',r:'ra',row:8},{k:'り',r:'ri',row:8},{k:'る',r:'ru',row:8},{k:'れ',r:'re',row:8},{k:'ろ',r:'ro',row:8},
+    {k:'わ',r:'wa',row:9},{k:'を',r:'wo',row:9},{k:'ん',r:'n',row:9}
+];
+
+function poolForWave(w) {
+    // Wave 1 starts with the a + ka rows; each wave unlocks one more row
+    const maxRow = Math.min(1 + w, 9);
+    return KANA.filter(c => c.row <= maxRow);
+}
+
+// =========================================================================
+// CANVAS / STATE
+// =========================================================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+let state = 'menu';      // menu | playing | boss | over | paused
+let pausedFrom = 'playing';
+let score = 0, lives = 3, shield = 0, wave = 1, combo = 0;
+let captures = 0, capturesNeeded = 3, totalCaptured = 0;
+let hunted = null;       // the kana object being hunted
+let pods = [], shots = [], bombs = [], pups = [], parts = [], texts = [];
+let boss = null, beamObj = null;
+let rapidUntil = 0, wideUntil = 0, slowUntil = 0;
+let shakeT = 0, lastShot = 0, now = 0, lastT = 0;
+let stars = [];
+const ship = { x: 200, tx: 200, y: 0, w: 60 };
+let best = 0;
+try { best = parseInt(localStorage.getItem('kana-galaxy-best') || '0', 10) || 0; } catch (e) {}
+
+function resize() {
+    const stage = document.getElementById('stage');
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ship.y = H - 74;
+    ship.x = Math.min(Math.max(ship.x, 40), W - 40);
+    ship.tx = ship.x;
+    stars = [];
+    for (let i = 0; i < 90; i++) {
+        stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 1.6 + 0.4, v: Math.random() * 22 + 8 });
+    }
+}
+window.addEventListener('resize', resize);
+
+// =========================================================================
+// SOUND (Web Audio, same approach as the other pages)
+// =========================================================================
+let audioCtx = null;
+function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+function tone(freq, t0, dur, type, vol, slide) {
+    const ac = getAudioCtx();
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t0);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(slide, 1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(t0); osc.stop(t0 + dur);
+}
+function playSfx(type) {
+    try {
+        const t = getAudioCtx().currentTime;
+        if (type === 'laser') tone(880, t, 0.12, 'square', 0.12, 180);
+        else if (type === 'beam') { tone(220, t, 0.4, 'sawtooth', 0.08, 520); tone(330, t, 0.4, 'sine', 0.06, 660); }
+        else if (type === 'capture') [523, 659, 784].forEach((f, i) => tone(f, t + i * 0.09, 0.18, 'sine', 0.16));
+        else if (type === 'wrong') { tone(180, t, 0.3, 'sawtooth', 0.15, 90); tone(120, t + 0.05, 0.3, 'square', 0.1, 60); }
+        else if (type === 'boom') { tone(120, t, 0.35, 'sawtooth', 0.18, 30); tone(60, t, 0.4, 'square', 0.14, 25); }
+        else if (type === 'pup') [660, 880, 1100, 1320].forEach((f, i) => tone(f, t + i * 0.06, 0.1, 'triangle', 0.12));
+        else if (type === 'bossHit') { tone(700, t, 0.12, 'square', 0.14, 320); tone(950, t, 0.18, 'triangle', 0.1, 200); }
+        else if (type === 'deflect') tone(1400, t, 0.07, 'triangle', 0.1, 1000);
+        else if (type === 'siren') [440, 587, 440, 587].forEach((f, i) => tone(f, t + i * 0.22, 0.2, 'square', 0.1));
+        else if (type === 'fanfare') [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.12, 0.3, 'triangle', 0.15));
+    } catch (e) {}
+}
+function speak(textJa) {
+    try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(textJa);
+        u.lang = 'ja-JP'; u.rate = 0.85;
+        speechSynthesis.speak(u);
+    } catch (e) {}
+}
+
+// =========================================================================
+// ENTITIES
+// =========================================================================
+function speedMult() { return (now < slowUntil ? 0.45 : 1) * (1 + (wave - 1) * 0.06); }
+
+function spawnPod(kana, yTop) {
+    const rad = Math.max(26, Math.min(34, W * 0.045));
+    pods.push({
+        x: 40 + Math.random() * (W - 80),
+        y: yTop !== undefined ? yTop : -30 - Math.random() * H * 0.6,
+        vy: 18 + Math.random() * 14,
+        phase: Math.random() * Math.PI * 2,
+        amp: 18 + Math.random() * 26,
+        k: kana.k, r: kana.r, rad: rad,
+        captured: false, capT: 0, hue: 190 + Math.random() * 130
+    });
+}
+
+function labelsOnScreen() { return new Set(pods.map(p => p.k)); }
+
+function spawnDecoy() {
+    const pool = poolForWave(wave);
+    const used = labelsOnScreen();
+    let cands = pool.filter(c => c.k !== hunted.k && !used.has(c.k));
+    if (cands.length === 0) cands = pool.filter(c => c.k !== hunted.k);
+    spawnPod(cands[Math.floor(Math.random() * cands.length)]);
+}
+
+function podCount() { return Math.min(5 + Math.floor(wave / 2), 8); }
+
+function startWave() {
+    state = 'playing';
+    pods = []; shots = []; bombs = []; beamObj = null; boss = null;
+    captures = 0;
+    const pool = poolForWave(wave);
+    const n = podCount();
+    // Build a unique set of kana for this wave's pods
+    const picks = [...pool].sort(() => Math.random() - 0.5).slice(0, n);
+    picks.forEach(c => spawnPod(c));
+    hunted = picks[Math.floor(Math.random() * picks.length)];
+    updateHUD();
+    showBanner('WAVE ' + wave, '#b388ff');
+    speak(hunted.k);
+}
+
+function newTarget(excludePod) {
+    const others = pods.filter(p => p !== excludePod && !p.captured);
+    if (others.length === 0) { spawnDecoy(); }
+    const src = (others.length ? others : pods.filter(p => !p.captured));
+    const pick = src[Math.floor(Math.random() * src.length)];
+    hunted = KANA.find(c => c.k === pick.k) || hunted;
+    updateHUD();
+    speak(hunted.k);
+}
+
+function dropPowerup(x, y, fromBoss) {
+    const roll = Math.random();
+    let type;
+    if (fromBoss) type = roll < 0.4 ? 'heart' : (roll < 0.7 ? 'shield' : 'rapid');
+    else if (roll < 0.26) type = 'rapid';
+    else if (roll < 0.5) type = 'shield';
+    else if (roll < 0.72) type = 'wide';
+    else if (roll < 0.92) type = 'slow';
+    else type = 'heart';
+    pups.push({ x: x, y: y, vy: 75, type: type });
+}
+const PUP_ICON = { rapid: '⚡', shield: '🛡️', wide: '🌟', slow: '⏳', heart: '❤️' };
+const PUP_NAME = { rapid: 'RAPID FIRE!', shield: 'SHIELD +1', wide: 'WIDE BEAM!', slow: 'SLOW-MO!', heart: 'EXTRA LIFE!' };
+
+function applyPowerup(type) {
+    playSfx('pup');
+    if (type === 'rapid') rapidUntil = now + 8;
+    else if (type === 'shield') shield = Math.min(shield + 1, 3);
+    else if (type === 'wide') wideUntil = now + 8;
+    else if (type === 'slow') slowUntil = now + 8;
+    else if (type === 'heart') lives = Math.min(lives + 1, 5);
+    addText(ship.x, ship.y - 60, PUP_NAME[type], '#69f0ae');
+    updateHUD();
+}
+
+// =========================================================================
+// BOSS - Kana Pirate UFO
+// =========================================================================
+function startBoss() {
+    state = 'boss';
+    pods = []; shots = []; bombs = []; beamObj = null;
+    const pool = poolForWave(wave);
+    hunted = pool[Math.floor(Math.random() * pool.length)];
+    const decoys = pool.filter(c => c.k !== hunted.k).sort(() => Math.random() - 0.5).slice(0, 3);
+    const seq = [hunted, ...decoys].sort(() => Math.random() - 0.5);
+    boss = {
+        x: W / 2, y: 110, vx: 70 + wave * 4,
+        rx: Math.min(120, W * 0.18), ry: 52,
+        hp: 5 + Math.floor(wave / 4), maxHp: 5 + Math.floor(wave / 4),
+        seq: seq, idx: 0, cycleT: 0, nextBomb: now + 1.6, flash: 0
+    };
+    updateHUD();
+    showBanner('⚠️ KANA PIRATE! ⚠️', '#ff8a80');
+    playSfx('siren');
+    speak(hunted.k);
+}
+
+function defeatBoss() {
+    playSfx('fanfare');
+    explode(boss.x, boss.y, 60, '#ffe57f');
+    explode(boss.x - 60, boss.y + 20, 30, '#ff80ab');
+    explode(boss.x + 60, boss.y + 20, 30, '#80d8ff');
+    score += 1000;
+    addText(boss.x, boss.y, '+1000', '#ffe57f');
+    dropPowerup(boss.x - 40, boss.y, true);
+    dropPowerup(boss.x + 40, boss.y, true);
+    boss = null;
+    shakeT = 0.5;
+    wave++;
+    setTimeout(() => { if (state === 'boss') startWave(); }, 1200);
+}
+
+// =========================================================================
+// ACTIONS
+// =========================================================================
+function fireLaser() {
+    if (state !== 'playing' && state !== 'boss') return;
+    const cd = now < rapidUntil ? 0.16 : 0.34;
+    if (now - lastShot < cd) return;
+    lastShot = now;
+    shots.push({ x: ship.x, y: ship.y - 26 });
+    playSfx('laser');
+}
+
+function fireBeam() {
+    if (state !== 'playing' && state !== 'boss') return;
+    if (beamObj) return;
+    beamObj = { until: now + 0.5, w: now < wideUntil ? 110 : 40, caught: false };
+    playSfx('beam');
+}
+
+function mistake(msg) {
+    combo = 0;
+    if (shield > 0) {
+        shield--;
+        addText(ship.x, ship.y - 60, '🛡️ Shield saved you!', '#80d8ff');
+    } else {
+        lives--;
+        addText(W / 2, H * 0.4, msg, '#ff8a80');
+        shakeT = 0.4;
+    }
+    playSfx('wrong');
+    updateHUD();
+    if (lives <= 0) gameOver();
+}
+
+function captureResolve(pod) {
+    if (pod.k === hunted.k) {
+        combo = Math.min(combo + 1, 5);
+        const pts = 100 * combo;
+        score += pts; captures++; totalCaptured++;
+        addText(ship.x, ship.y - 70, pod.k + ' = ' + pod.r + '!  +' + pts, '#69f0ae');
+        explode(ship.x, ship.y - 40, 14, '#69f0ae');
+        playSfx('capture');
+        speak(pod.k);
+        pods = pods.filter(p => p !== pod);
+        if (captures >= capturesNeeded) {
+            wave++;
+            updateHUD();
+            if (wave % 4 === 0) { setTimeout(() => { if (state === 'playing') startBoss(); }, 700); }
+            else { setTimeout(() => { if (state === 'playing') startWave(); }, 700); }
+        } else {
+            spawnDecoy();
+            newTarget(pod);
+        }
+    } else {
+        pods = pods.filter(p => p !== pod);
+        spawnDecoy();
+        mistake('That was ' + pod.k + ' (' + pod.r + ') — beam ' + hunted.r.toUpperCase() + '!');
+    }
+    updateHUD();
+}
+
+function shotHitsPod(pod) {
+    if (pod.k === hunted.k) {
+        explode(pod.x, pod.y, 16, '#ff8a80');
+        pods = pods.filter(p => p !== pod);
+        spawnPod(hunted);  // the hunted kana respawns - still must be captured
+        mistake("Don't shoot " + pod.k + ' (' + pod.r + ') — BEAM it!');
+    } else {
+        combo = Math.min(combo + 1, 5);
+        score += 20 * combo;
+        addText(pod.x, pod.y, '+' + (20 * combo), '#ffe57f');
+        explode(pod.x, pod.y, 12, 'hsl(' + pod.hue + ',90%,70%)');
+        playSfx('boom');
+        if (Math.random() < 0.16) dropPowerup(pod.x, pod.y, false);
+        pods = pods.filter(p => p !== pod);
+        spawnDecoy();
+    }
+    updateHUD();
+}
+
+function gameOver() {
+    state = 'over';
+    if (score > best) {
+        best = score;
+        try { localStorage.setItem('kana-galaxy-best', '' + best); } catch (e) {}
+        document.getElementById('overBest').textContent = '🏆 NEW HIGH SCORE!';
+    } else {
+        document.getElementById('overBest').textContent = 'Best: ' + best;
+    }
+    document.getElementById('finalStats').innerHTML =
+        'Score: ' + score + '<br>Kana captured: ' + totalCaptured + ' · Reached wave ' + wave;
+    document.getElementById('overOverlay').classList.add('show');
+}
+
+function startGame() {
+    score = 0; lives = 3; shield = 0; wave = 1; combo = 0; totalCaptured = 0;
+    rapidUntil = wideUntil = slowUntil = 0;
+    pups = []; parts = []; texts = [];
+    document.getElementById('startOverlay').classList.remove('show');
+    document.getElementById('overOverlay').classList.remove('show');
+    getAudioCtx();
+    startWave();
+}
+
+// =========================================================================
+// FX HELPERS
+// =========================================================================
+function explode(x, y, n, col) {
+    for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 160;
+        parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.5, col: col, s: 2 + Math.random() * 3 });
+    }
+}
+function addText(x, y, txt, col) {
+    texts.push({ x: x, y: y, txt: txt, col: col, life: 1.4 });
+}
+let bannerTimer = null;
+function showBanner(txt, col) {
+    const b = document.getElementById('banner');
+    b.textContent = txt; b.style.color = col;
+    b.classList.add('show');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => b.classList.remove('show'), 1500);
+}
+function updateHUD() {
+    document.getElementById('hudLives').textContent = '❤️'.repeat(Math.max(lives, 0));
+    document.getElementById('hudShield').textContent = shield > 0 ? '🛡️x' + shield : '';
+    document.getElementById('hudCombo').textContent = combo > 1 ? 'x' + combo : '';
+    document.getElementById('hudWave').textContent = 'WAVE ' + wave;
+    document.getElementById('hudScore').textContent = score;
+    document.getElementById('hudTarget').textContent = hunted ? hunted.r.toUpperCase() : '–';
+}
+
+// =========================================================================
+// UPDATE
+// =========================================================================
+function update(dt) {
+    const sm = speedMult();
+
+    // Ship eases toward target x
+    ship.x += (ship.tx - ship.x) * Math.min(1, dt * 10);
+    ship.x = Math.min(Math.max(ship.x, 34), W - 34);
+
+    // Stars
+    stars.forEach(s => { s.y += s.v * dt; if (s.y > H) { s.y = -2; s.x = Math.random() * W; } });
+
+    // Pods
+    pods.forEach(p => {
+        if (p.captured) {
+            p.capT += dt * 3;
+            p.x += (ship.x - p.x) * Math.min(1, dt * 8);
+            p.y += (ship.y - 30 - p.y) * Math.min(1, dt * 8);
+            if (p.capT >= 1) captureResolve(p);
+            return;
+        }
+        p.phase += dt;
+        p.y += p.vy * sm * dt;
+        p.x += Math.sin(p.phase * 1.3) * p.amp * dt;
+        p.x = Math.min(Math.max(p.x, p.rad), W - p.rad);
+        if (p.y > H + p.rad) { p.y = -p.rad - 10; p.x = 40 + Math.random() * (W - 80); }
+    });
+
+    // Beam
+    if (beamObj) {
+        if (now > beamObj.until) beamObj = null;
+        else if (!beamObj.caught) {
+            // Beam vaporizes boss bombs
+            bombs = bombs.filter(b => {
+                if (Math.abs(b.x - ship.x) < beamObj.w / 2 && b.y < ship.y) {
+                    explode(b.x, b.y, 8, '#69f0ae');
+                    return false;
+                }
+                return true;
+            });
+            // Capture the lowest pod inside the beam
+            let target = null;
+            pods.forEach(p => {
+                if (!p.captured && Math.abs(p.x - ship.x) < beamObj.w / 2 + p.rad * 0.4 && p.y < ship.y - 10) {
+                    if (!target || p.y > target.y) target = p;
+                }
+            });
+            if (target) { target.captured = true; beamObj.caught = true; }
+        }
+    }
+
+    // Shots
+    shots.forEach(s => { s.y -= 620 * dt; });
+    shots = shots.filter(s => s.y > -20);
+    for (const s of [...shots]) {
+        if (boss) {
+            const dx = (s.x - boss.x) / boss.rx, dy = (s.y - boss.y) / boss.ry;
+            if (dx * dx + dy * dy < 1) {
+                shots = shots.filter(x => x !== s);
+                if (boss.seq[boss.idx].k === hunted.k) {
+                    boss.hp--; boss.flash = 0.25;
+                    score += 150;
+                    addText(s.x, boss.y + 60, 'HIT! +150', '#ffe57f');
+                    explode(s.x, boss.y + 40, 12, '#ffe57f');
+                    playSfx('bossHit');
+                    if (boss.hp <= 0) { defeatBoss(); return; }
+                } else {
+                    addText(s.x, boss.y + 70, 'Wait for ' + hunted.r.toUpperCase() + '!', '#80d8ff');
+                    explode(s.x, boss.y + 50, 5, '#80d8ff');
+                    playSfx('deflect');
+                }
+                continue;
+            }
+        }
+        for (const p of pods) {
+            if (p.captured) continue;
+            const dx = s.x - p.x, dy = s.y - p.y;
+            if (dx * dx + dy * dy < (p.rad + 6) * (p.rad + 6)) {
+                shots = shots.filter(x => x !== s);
+                shotHitsPod(p);
+                break;
+            }
+        }
+    }
+
+    // Boss
+    if (boss) {
+        boss.x += boss.vx * dt * (now < slowUntil ? 0.5 : 1);
+        if (boss.x < boss.rx + 10 || boss.x > W - boss.rx - 10) boss.vx *= -1;
+        boss.cycleT += dt;
+        if (boss.cycleT > 1.35) {
+            boss.cycleT = 0;
+            boss.idx = (boss.idx + 1) % boss.seq.length;
+        }
+        boss.flash = Math.max(0, boss.flash - dt);
+        if (now > boss.nextBomb) {
+            boss.nextBomb = now + 1.5 + Math.random() * 1.2 - Math.min(wave * 0.04, 0.8);
+            bombs.push({ x: boss.x, y: boss.y + boss.ry, vy: 130 + wave * 5 });
+        }
+    }
+
+    // Bombs
+    bombs.forEach(b => { b.y += b.vy * dt * (now < slowUntil ? 0.45 : 1); });
+    for (const b of [...bombs]) {
+        const dx = b.x - ship.x, dy = b.y - ship.y;
+        if (dx * dx + dy * dy < 38 * 38) {
+            bombs = bombs.filter(x => x !== b);
+            explode(b.x, b.y, 14, '#ff8a80');
+            mistake('💥 Hit by a bomb!');
+        }
+    }
+    bombs = bombs.filter(b => b.y < H + 20);
+
+    // Powerups
+    pups.forEach(p => { p.y += p.vy * dt; });
+    for (const p of [...pups]) {
+        const dx = p.x - ship.x, dy = p.y - ship.y;
+        if (dx * dx + dy * dy < 44 * 44) {
+            pups = pups.filter(x => x !== p);
+            applyPowerup(p.type);
+        }
+    }
+    pups = pups.filter(p => p.y < H + 20);
+
+    // Particles & texts
+    parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
+    parts = parts.filter(p => p.life > 0);
+    texts.forEach(t => { t.y -= 28 * dt; t.life -= dt; });
+    texts = texts.filter(t => t.life > 0);
+
+    shakeT = Math.max(0, shakeT - dt);
+}
+
+// =========================================================================
+// DRAW
+// =========================================================================
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (shakeT > 0) ctx.translate((Math.random() - 0.5) * 10 * shakeT, (Math.random() - 0.5) * 10 * shakeT);
+
+    // Starfield
+    ctx.fillStyle = '#cfd8ff';
+    stars.forEach(s => { ctx.globalAlpha = 0.3 + s.s * 0.3; ctx.fillRect(s.x, s.y, s.s, s.s); });
+    ctx.globalAlpha = 1;
+
+    // Beam
+    if (beamObj) {
+        const grad = ctx.createLinearGradient(0, 0, 0, ship.y);
+        grad.addColorStop(0, 'rgba(105, 240, 174, 0)');
+        grad.addColorStop(1, 'rgba(105, 240, 174, 0.45)');
+        ctx.fillStyle = grad;
+        const bw = beamObj.w;
+        ctx.beginPath();
+        ctx.moveTo(ship.x - bw / 2, 0);
+        ctx.lineTo(ship.x + bw / 2, 0);
+        ctx.lineTo(ship.x + 10, ship.y - 20);
+        ctx.lineTo(ship.x - 10, ship.y - 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(185, 255, 220, 0.6)';
+        ctx.setLineDash([6, 10]);
+        ctx.lineDashOffset = -now * 90;
+        ctx.beginPath(); ctx.moveTo(ship.x - bw / 2, 0); ctx.lineTo(ship.x - 10, ship.y - 20); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ship.x + bw / 2, 0); ctx.lineTo(ship.x + 10, ship.y - 20); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Pods
+    const kanaFont = '700 ' + Math.floor(28) + 'px "Noto Sans JP", sans-serif';
+    pods.forEach(p => {
+        const r = p.rad * (p.captured ? Math.max(0.3, 1 - p.capT * 0.6) : 1);
+        const g = ctx.createRadialGradient(p.x, p.y, r * 0.2, p.x, p.y, r);
+        g.addColorStop(0, 'hsla(' + p.hue + ', 90%, 72%, 0.95)');
+        g.addColorStop(1, 'hsla(' + p.hue + ', 90%, 45%, 0.25)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'hsla(' + p.hue + ', 95%, 80%, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#0b1030';
+        ctx.font = kanaFont;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(p.k, p.x, p.y + 2);
+    });
+
+    // Shots
+    ctx.strokeStyle = '#ff5252';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#ff5252'; ctx.shadowBlur = 10;
+    shots.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x, s.y + 16); ctx.stroke(); });
+    ctx.shadowBlur = 0;
+
+    // Bombs
+    bombs.forEach(b => {
+        ctx.fillStyle = '#ff8a80';
+        ctx.shadowColor = '#ff5252'; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(b.x, b.y, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#3e0a0a';
+        ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Powerups
+    ctx.font = '26px "Nunito", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    pups.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(Math.sin(now * 3 + p.x) * 0.2);
+        ctx.fillText(PUP_ICON[p.type], 0, 0);
+        ctx.restore();
+    });
+
+    // Boss
+    if (boss) {
+        ctx.save();
+        if (boss.flash > 0) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 30; }
+        // saucer body
+        const bg = ctx.createLinearGradient(boss.x, boss.y - boss.ry, boss.x, boss.y + boss.ry);
+        bg.addColorStop(0, '#b388ff'); bg.addColorStop(1, '#4527a0');
+        ctx.fillStyle = boss.flash > 0 ? '#ffffff' : bg;
+        ctx.beginPath();
+        ctx.ellipse(boss.x, boss.y, boss.rx, boss.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // dome
+        ctx.fillStyle = 'rgba(128, 216, 255, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(boss.x, boss.y - boss.ry * 0.7, boss.rx * 0.45, boss.ry * 0.95, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(128, 216, 255, 0.8)';
+        ctx.lineWidth = 2; ctx.stroke();
+        // dome kana (the thing to read!)
+        const showing = boss.seq[boss.idx];
+        ctx.fillStyle = showing.k === hunted.k ? '#69f0ae' : '#ffffff';
+        ctx.font = '800 44px "Noto Sans JP", sans-serif';
+        ctx.fillText(showing.k, boss.x, boss.y - boss.ry * 0.75);
+        // lights
+        for (let i = -2; i <= 2; i++) {
+            ctx.fillStyle = (Math.floor(now * 4) + i) % 2 === 0 ? '#ffe57f' : '#ff80ab';
+            ctx.beginPath();
+            ctx.arc(boss.x + i * boss.rx * 0.38, boss.y + boss.ry * 0.35, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+        // HP bar
+        const bw2 = boss.rx * 2;
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(boss.x - bw2 / 2, boss.y - boss.ry - 58, bw2, 8);
+        ctx.fillStyle = '#ff5252';
+        ctx.fillRect(boss.x - bw2 / 2, boss.y - boss.ry - 58, bw2 * boss.hp / boss.maxHp, 8);
+    }
+
+    // Ship
+    ctx.save();
+    ctx.translate(ship.x, ship.y);
+    // flame
+    const fl = 14 + Math.sin(now * 30) * 5;
+    const fg = ctx.createLinearGradient(0, 18, 0, 18 + fl + 12);
+    fg.addColorStop(0, '#ffe57f'); fg.addColorStop(1, 'rgba(255, 87, 34, 0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.moveTo(-8, 18); ctx.lineTo(8, 18); ctx.lineTo(0, 18 + fl + 12); ctx.closePath(); ctx.fill();
+    // body
+    const sg = ctx.createLinearGradient(-24, 0, 24, 0);
+    sg.addColorStop(0, '#4dd0e1'); sg.addColorStop(0.5, '#e1f5fe'); sg.addColorStop(1, '#4dd0e1');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(0, -30); ctx.quadraticCurveTo(16, -8, 14, 14); ctx.lineTo(-14, 14); ctx.quadraticCurveTo(-16, -8, 0, -30);
+    ctx.closePath(); ctx.fill();
+    // fins
+    ctx.fillStyle = '#e91e63';
+    ctx.beginPath(); ctx.moveTo(-13, 2); ctx.lineTo(-26, 20); ctx.lineTo(-12, 16); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(13, 2); ctx.lineTo(26, 20); ctx.lineTo(12, 16); ctx.closePath(); ctx.fill();
+    // cockpit
+    ctx.fillStyle = '#7c4dff';
+    ctx.beginPath(); ctx.arc(0, -8, 7, 0, Math.PI * 2); ctx.fill();
+    // shield ring
+    if (shield > 0) {
+        ctx.strokeStyle = 'rgba(128, 216, 255, ' + (0.5 + Math.sin(now * 5) * 0.2) + ')';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, -6, 38, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+
+    // Particles
+    parts.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.col;
+        ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
+    });
+    ctx.globalAlpha = 1;
+
+    // Float texts
+    ctx.font = '800 17px "Nunito", "Noto Sans JP", sans-serif';
+    ctx.textAlign = 'center';
+    texts.forEach(t => {
+        ctx.globalAlpha = Math.min(1, t.life);
+        ctx.fillStyle = t.col;
+        ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+        ctx.fillText(t.txt, Math.min(Math.max(t.x, 80), W - 80), t.y);
+        ctx.shadowBlur = 0;
+    });
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+}
+
+// =========================================================================
+// LOOP
+// =========================================================================
+function loop(t) {
+    requestAnimationFrame(loop);
+    if (!lastT) lastT = t;
+    const dt = Math.min((t - lastT) / 1000, 0.05);
+    lastT = t;
+    now += dt;
+    if (state === 'playing' || state === 'boss') {
+        if (keys.left) ship.tx -= 420 * dt;
+        if (keys.right) ship.tx += 420 * dt;
+        ship.tx = Math.min(Math.max(ship.tx, 34), W - 34);
+        update(dt);
+    }
+    draw();
+}
+
+// =========================================================================
+// INPUT
+// =========================================================================
+const keys = { left: false, right: false };
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+    else if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+    else if (e.key === ' ') { e.preventDefault(); fireLaser(); }
+    else if (e.key === 'b' || e.key === 'B' || e.key === 'Shift') fireBeam();
+    else if (e.key === 'Escape') togglePause();
+});
+document.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+    else if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+});
+
+function pointerMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    ship.tx = cx;
+}
+canvas.addEventListener('mousemove', e => { if (e.buttons || true) pointerMove(e); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); pointerMove(e); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); pointerMove(e); }, { passive: false });
+
+function bindFire(id, fn) {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false });
+    el.addEventListener('mousedown', e => { e.preventDefault(); fn(); });
+}
+bindFire('btnLaser', fireLaser);
+bindFire('btnBeam', fireBeam);
+
+function togglePause() {
+    if (state === 'playing' || state === 'boss') {
+        pausedFrom = state;
+        state = 'paused';
+        document.getElementById('pauseOverlay').classList.add('show');
+    } else if (state === 'paused') {
+        state = pausedFrom;
+        document.getElementById('pauseOverlay').classList.remove('show');
+    }
+}
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && (state === 'playing' || state === 'boss')) togglePause();
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+// iOS: unlock audio on first interaction
+document.addEventListener('touchstart', function unlock() {
+    getAudioCtx();
+    document.removeEventListener('touchstart', unlock);
+}, { once: true });
+
+// =========================================================================
+// INIT
+// =========================================================================
+if (best > 0) document.getElementById('bestLine').textContent = '🏆 Best: ' + best;
+resize();
+if (document.fonts && document.fonts.load) {
+    document.fonts.load('700 28px "Noto Sans JP"', 'あ').catch(() => {});
+}
+requestAnimationFrame(loop);
+</script>
+<script>
+    // Offline support: caches all course assets after the first visit
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+</body>
+</html>

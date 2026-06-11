@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PAGES = [
-    'index.html', 'writing.html', 'ocean.html', 'review.html',
+    'index.html', 'writing.html', 'ocean.html', 'spaceship.html', 'review.html',
     'questions.html', 'voicepractice.html', 'sentencebuilder.html', 'ebook.html'
 ];
 
