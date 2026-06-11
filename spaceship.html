@@ -228,7 +228,7 @@
     </div>
     <div id="hud">
         <div class="hud-left">
-            <span id="hudLives">❤️❤️❤️</span>
+            <span id="hudLives">❤️❤️❤️❤️❤️</span>
             <span id="hudShield"></span>
             <span id="hudCombo"></span>
         </div>
@@ -318,7 +318,7 @@ let W = 0, H = 0, DPR = 1;
 
 let state = 'menu';      // menu | playing | boss | over | paused
 let pausedFrom = 'playing';
-let score = 0, lives = 3, shield = 0, wave = 1, combo = 0;
+let score = 0, lives = 5, shield = 0, wave = 1, combo = 0;
 let captures = 0, capturesNeeded = 3, totalCaptured = 0;
 let hunted = null;       // the kana object being hunted
 let pods = [], shots = [], bombs = [], pups = [], parts = [], texts = [];
@@ -471,7 +471,7 @@ function applyPowerup(type) {
     else if (type === 'shield') shield = Math.min(shield + 1, 3);
     else if (type === 'wide') wideUntil = now + 8;
     else if (type === 'slow') slowUntil = now + 8;
-    else if (type === 'heart') lives = Math.min(lives + 1, 5);
+    else if (type === 'heart') lives = Math.min(lives + 1, 7);
     addText(ship.x, ship.y - 60, PUP_NAME[type], '#69f0ae');
     updateHUD();
 }
@@ -608,7 +608,7 @@ function gameOver() {
 }
 
 function startGame() {
-    score = 0; lives = 3; shield = 0; wave = 1; combo = 0; totalCaptured = 0;
+    score = 0; lives = 5; shield = 0; wave = 1; combo = 0; totalCaptured = 0;
     rapidUntil = wideUntil = slowUntil = 0;
     pups = []; parts = []; texts = [];
     document.getElementById('startOverlay').classList.remove('show');
