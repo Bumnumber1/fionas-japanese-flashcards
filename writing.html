@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Fiona's Writing">
     <title>Fiona's Hiragana Writing Practice</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * {
             margin: 0;
@@ -711,6 +711,7 @@
         </div>
     </div>
 
+    <script src="kanjivg_data.js"></script>
     <script>
     // =========================================================================
     // HIRAGANA DATA - All 46 basic characters with stroke data
@@ -1759,7 +1760,15 @@
     }
 
     function drawStrokePath(points, color, width) {
-        if (points.length < 2) return;
+        if (points.length === 0) return;
+        if (points.length < 2) {
+            // A tap - render as a dot so the stroke is visible
+            drawCtx.fillStyle = color;
+            drawCtx.beginPath();
+            drawCtx.arc(points[0].x, points[0].y, width, 0, Math.PI * 2);
+            drawCtx.fill();
+            return;
+        }
         drawCtx.strokeStyle = color;
         drawCtx.lineWidth = width;
         drawCtx.lineCap = 'round';
@@ -1775,7 +1784,11 @@
 
     function updateStrokeCounter() {
         const count = userStrokes.length + (currentStroke ? 1 : 0);
-        const expected = getCurrentChar().strokes;
+        const data = getCurrentChar();
+        // KanjiVG (one path per stroke) is the authority on stroke count,
+        // so the counter always agrees with what Check expects
+        const kvg = kvgCache[data.char];
+        const expected = (kvg && kvg.length > 0) ? kvg.length : data.strokes;
         document.getElementById('strokeCounter').textContent = 'Strokes: ' + count + ' / ' + expected;
     }
 
@@ -1821,7 +1834,9 @@
         if (!isDrawing || !currentStroke || showingAnimation) return;
         e.preventDefault();
         isDrawing = false;
-        if (currentStroke.length > 2) {
+        // Keep even 1-2 point strokes: quick taps are real "dot" strokes
+        // in characters like ふ - discarding them broke the stroke count.
+        if (currentStroke.length >= 1) {
             userStrokes.push(currentStroke);
         }
         currentStroke = null;
@@ -2022,19 +2037,99 @@
         return precisionScore * 0.7 + Math.min(coverageScore, 1.0) * 0.3;
     }
 
-    function checkDrawing() {
+    // =========================================================================
+    // KANJIVG PER-STROKE SCORING
+    // The on-screen guide is drawn from KanjiVG strokes, so accuracy is judged
+    // against those same strokes. (The old scorer compared against a
+    // font-rendered glyph, which has different proportions than the guide -
+    // a perfect trace of the guide could still score badly.)
+    // =========================================================================
+
+    // Resample a polyline to n points evenly spaced along its length
+    function resamplePoints(pts, n) {
+        if (pts.length === 0) return [];
+        if (pts.length === 1) return Array.from({length: n}, () => ({x: pts[0].x, y: pts[0].y}));
+        const dists = [0];
+        let total = 0;
+        for (let i = 1; i < pts.length; i++) {
+            total += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+            dists.push(total);
+        }
+        if (total === 0) return Array.from({length: n}, () => ({x: pts[0].x, y: pts[0].y}));
+        const out = [];
+        let seg = 0;
+        for (let s = 0; s < n; s++) {
+            const target = total * s / (n - 1);
+            while (seg < pts.length - 2 && dists[seg + 1] < target) seg++;
+            const span = dists[seg + 1] - dists[seg];
+            const t = span > 0 ? (target - dists[seg]) / span : 0;
+            out.push({
+                x: pts[seg].x + (pts[seg+1].x - pts[seg].x) * t,
+                y: pts[seg].y + (pts[seg+1].y - pts[seg].y) * t
+            });
+        }
+        return out;
+    }
+
+    function meanMinDist(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) {
+            let best = Infinity;
+            for (let j = 0; j < b.length; j++) {
+                const dx = a[i].x - b[j].x, dy = a[i].y - b[j].y;
+                const d = dx * dx + dy * dy;
+                if (d < best) best = d;
+            }
+            sum += Math.sqrt(best);
+        }
+        return sum / a.length;
+    }
+
+    // Compare one user stroke against one guide stroke.
+    // Two-way distance: "stray" = how far the drawing wanders off the stroke,
+    // "missed" = how much of the stroke was never covered. Either one being
+    // large means a bad trace, so the worse of the two drives the score.
+    function strokeMatchScore(userStroke, guideStroke, w) {
+        const u = resamplePoints(userStroke, 24);
+        const g = resamplePoints(guideStroke, 24);
+        const stray = meanMinDist(u, g);
+        const missed = meanMinDist(g, u);
+
+        // Endpoint distances, both orientations (also powers the backwards check)
+        const gEnd = g[g.length - 1], uEnd = u[u.length - 1];
+        const forward = Math.hypot(u[0].x - g[0].x, u[0].y - g[0].y) + Math.hypot(uEnd.x - gEnd.x, uEnd.y - gEnd.y);
+        const reversed = Math.hypot(u[0].x - gEnd.x, u[0].y - gEnd.y) + Math.hypot(uEnd.x - g[0].x, uEnd.y - g[0].y);
+        // Endpoint term catches half-drawn strokes that mean distance is too
+        // forgiving about (half of 一 still averaged a passing score without it)
+        const endDist = Math.min(forward, reversed) / 2;
+
+        const d = Math.max(stray, missed, endDist);
+        const free = w * 0.05;   // this close counts as perfect (kid-sized wobble)
+        const range = w * 0.20;  // score fades to 0 across this distance
+        const score = Math.max(0, Math.min(1, 1 - Math.max(0, d - free) / range));
+
+        const backwards = reversed + w * 0.04 < forward;
+
+        return { score: score, backwards: backwards };
+    }
+
+    async function checkDrawing() {
         const data = getCurrentChar();
-        const expectedCount = data.strokes;
-        const userCount = userStrokes.length;
         const w = drawCanvas.width;
 
-        if (userCount === 0) {
+        if (userStrokes.length === 0) {
             showFeedback('Draw the character first!', 'tryagain');
             playSfx('wrong');
             return;
         }
 
-        // Check stroke count
+        // Judge against the same KanjiVG strokes the guide displays.
+        // KanjiVG is also the authority on stroke count (one path per stroke).
+        const kvgRaw = await getKvgPaths(data.char);
+        const guide = (kvgRaw && kvgRaw.length > 0) ? scaleKvgToCanvas(kvgRaw, w) : null;
+        const expectedCount = guide ? guide.length : data.strokes;
+        const userCount = userStrokes.length;
+
         if (userCount !== expectedCount) {
             if (userCount < expectedCount) {
                 showFeedback('Need ' + expectedCount + ' strokes - you drew ' + userCount + '!', 'wrong');
@@ -2045,10 +2140,73 @@
             return;
         }
 
-        // Check how well user strokes match the actual font-rendered character
+        if (!guide) {
+            // KanjiVG unavailable (offline) - fall back to the font-mask check
+            checkDrawingFallback(data, w);
+            return;
+        }
+
+        // Score stroke i of the drawing against stroke i of the guide
+        const results = userStrokes.map((s, i) => strokeMatchScore(s, guide[i], w));
+        const avg = results.reduce((sum, r) => sum + r.score, 0) / results.length;
+        const backwardsCount = results.filter(r => r.backwards).length;
+        const pct = Math.round(avg * 100);
+
+        // If strokes fit much better in some other order, it's an order problem
+        let orderSwapped = false;
+        if (avg < 0.55 && expectedCount > 1) {
+            let bestSum = 0;
+            for (let i = 0; i < userStrokes.length; i++) {
+                let best = 0;
+                for (let j = 0; j < guide.length; j++) {
+                    const sc = strokeMatchScore(userStrokes[i], guide[j], w).score;
+                    if (sc > best) best = sc;
+                }
+                bestSum += best;
+            }
+            orderSwapped = (bestSum / userStrokes.length) > avg + 0.2;
+        }
+
+        if (avg >= 0.55 && backwardsCount <= expectedCount / 2) {
+            showFeedback('Great job! (' + pct + '% accuracy)', 'great');
+            playSfx('correct');
+            // Speak the character on success
+            setTimeout(() => speakCurrentChar(), 400);
+            if (currentMode.startsWith('kanji')) {
+                practicedKanji.add(data.char);
+            } else {
+                practiced.add(data.char);
+            }
+            savePracticed();
+            buildCharGrid();
+            updateProgress();
+            spawnStars();
+        } else if (avg >= 0.55) {
+            showFeedback('Good shape! Start each stroke at its ① dot!', 'tryagain');
+            playSfx('wrong');
+        } else if (orderSwapped) {
+            showFeedback('Right lines - check the stroke order! (' + pct + '%)', 'tryagain');
+            playSfx('wrong');
+        } else if (avg >= 0.35) {
+            let worst = 0;
+            for (let i = 1; i < results.length; i++) {
+                if (results[i].score < results[worst].score) worst = i;
+            }
+            showFeedback('Almost! ' + pct + '% - stroke ' + (worst + 1) + ' needs the most work!', 'tryagain');
+            playSfx('wrong');
+        } else {
+            showFeedback('Try to trace over the dashed guide! (' + pct + '%)', 'tryagain');
+            playSfx('wrong');
+        }
+    }
+
+    // Old font-mask scoring, kept only for when KanjiVG can't be fetched
+    function checkDrawingFallback(data, w) {
+        const expectedCount = data.strokes;
+        const userCount = userStrokes.length;
+
         const pixelScore = fontProximityScore(w);
 
-        // Also check stroke directions
         let directionScore = 0;
         for (let i = 0; i < Math.min(userCount, data.paths.length); i++) {
             const userDir = analyzeStrokeDirection(userStrokes[i]);
@@ -2059,12 +2217,9 @@
         }
         const dirPct = directionScore / expectedCount;
 
-        // pixelScore: 1.0 = all points on character, 0 = none on character
-        // Lower threshold (0.45) to be forgiving for simple/thin characters like 一
         if (pixelScore >= 0.45 && dirPct >= 0.4) {
             showFeedback('Great job! (' + Math.round(pixelScore * 100) + '% accuracy)', 'great');
             playSfx('correct');
-            // Speak the character on success
             setTimeout(() => speakCurrentChar(), 400);
             if (currentMode.startsWith('kanji')) {
                 practicedKanji.add(data.char);
@@ -2202,6 +2357,15 @@
     async function getKvgPaths(char) {
         if (kvgCache[char]) return kvgCache[char];
 
+        // Embedded local data first (kanjivg_data.js) - works offline and on file://
+        if (window.KVG_DATA && window.KVG_DATA[char]) {
+            const strokes = window.KVG_DATA[char].map(d => parseSvgPath(d, 8)).filter(p => p.length > 0);
+            if (strokes.length > 0) {
+                kvgCache[char] = strokes;
+                return strokes;
+            }
+        }
+
         const code = char.codePointAt(0).toString(16).padStart(5, '0');
         const url = 'https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/' + code + '.svg';
 
@@ -2275,10 +2439,15 @@
 
             const scaledStrokes = scaleKvgToCanvas(kvgStrokes, w);
             let strokeIdx = 0;
+            // Demo strokes live in their own array - putting them in
+            // userStrokes let "Show Me" + "Check" pass with a perfect score
+            // without the kid drawing anything.
+            const animStrokes = [];
 
             function animateNextStroke() {
                 if (strokeIdx >= scaledStrokes.length) {
                     showingAnimation = false;
+                    updateStrokeCounter();
                     return;
                 }
 
@@ -2288,7 +2457,7 @@
 
                 function drawNext() {
                     if (ptIdx >= animPts.length) {
-                        userStrokes.push(drawnPts.slice());
+                        animStrokes.push(drawnPts.slice());
                         strokeIdx++;
                         setTimeout(animateNextStroke, 350);
                         return;
@@ -2300,7 +2469,7 @@
                     drawCtx.clearRect(0, 0, w, w);
                     drawGuideOnMain();
 
-                    userStrokes.forEach(s => {
+                    animStrokes.forEach(s => {
                         if (s.length >= 2) drawStrokePath(s, '#e91e63', lineW);
                     });
 
@@ -2443,6 +2612,8 @@
         if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(() => {
                 fontLoaded = true;
+                // Drop any mask rendered with the fallback font
+                guidePixelCache = { char: null, mask: null, w: 0 };
                 resizeCanvas();
                 updateUI();
             });
@@ -2483,6 +2654,12 @@
 
     init();
     waitForFont();
+    </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

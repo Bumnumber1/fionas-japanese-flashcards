@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Ocean Adventure">
     <title>Yuna's Ocean Adventure</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * {
             margin: 0;
@@ -1294,6 +1294,7 @@
         </div>
     </div>
 
+<script src="kanjivg_data.js"></script>
 <script>
 // =========================================================================
 // KANJI DATA - 80+ kanji (1st & 2nd grade mix)
@@ -2870,7 +2871,15 @@ function getCurrentKanjiChar() {
 }
 
 function drawStrokePath(points, color, width) {
-    if (points.length < 2) return;
+    if (points.length === 0) return;
+    if (points.length < 2) {
+        // A tap - render as a dot so the stroke is visible
+        drawCtx.fillStyle = color;
+        drawCtx.beginPath();
+        drawCtx.arc(points[0].x, points[0].y, width, 0, Math.PI * 2);
+        drawCtx.fill();
+        return;
+    }
     drawCtx.strokeStyle = color;
     drawCtx.lineWidth = width;
     drawCtx.lineCap = 'round';
@@ -2886,7 +2895,9 @@ function drawStrokePath(points, color, width) {
 
 function updateStrokeCounter() {
     const count = userStrokes.length + (currentStroke ? 1 : 0);
-    const expected = currentKanji ? currentKanji.strokes : '?';
+    // KanjiVG (one path per stroke) is the authority on stroke count
+    const kvg = currentKanji ? kvgCache[currentKanji.char] : null;
+    const expected = (kvg && kvg.length > 0) ? kvg.length : (currentKanji ? currentKanji.strokes : '?');
     document.getElementById('strokeCounter').textContent = 'Strokes: ' + count + ' / ' + expected;
 }
 
@@ -2931,7 +2942,8 @@ function endStroke(e) {
     if (!isDrawing || !currentStroke || showingAnimation) return;
     e.preventDefault();
     isDrawing = false;
-    if (currentStroke.length > 2) {
+    // Keep even 1-2 point strokes: quick taps are real "dot" strokes
+    if (currentStroke.length >= 1) {
         userStrokes.push(currentStroke);
     }
     currentStroke = null;
@@ -3065,11 +3077,72 @@ function fontProximityScore(canvasW) {
 
 // =========================================================================
 // CHECK DRAWING
+// Judges against the same KanjiVG strokes the dashed guide displays.
+// (The old scorer compared against a font-rendered glyph whose proportions
+// differ from the guide, so good traces could score badly.)
 // =========================================================================
-function checkDrawing() {
+
+// Resample a polyline to n points evenly spaced along its length
+function resamplePoints(pts, n) {
+    if (pts.length === 0) return [];
+    if (pts.length === 1) return Array.from({length: n}, () => ({x: pts[0].x, y: pts[0].y}));
+    const dists = [0];
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) {
+        total += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+        dists.push(total);
+    }
+    if (total === 0) return Array.from({length: n}, () => ({x: pts[0].x, y: pts[0].y}));
+    const out = [];
+    let seg = 0;
+    for (let s = 0; s < n; s++) {
+        const target = total * s / (n - 1);
+        while (seg < pts.length - 2 && dists[seg + 1] < target) seg++;
+        const span = dists[seg + 1] - dists[seg];
+        const t = span > 0 ? (target - dists[seg]) / span : 0;
+        out.push({
+            x: pts[seg].x + (pts[seg+1].x - pts[seg].x) * t,
+            y: pts[seg].y + (pts[seg+1].y - pts[seg].y) * t
+        });
+    }
+    return out;
+}
+
+function meanMinDist(a, b) {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+        let best = Infinity;
+        for (let j = 0; j < b.length; j++) {
+            const dx = a[i].x - b[j].x, dy = a[i].y - b[j].y;
+            const d = dx * dx + dy * dy;
+            if (d < best) best = d;
+        }
+        sum += Math.sqrt(best);
+    }
+    return sum / a.length;
+}
+
+// Two-way distance: "stray" = how far the drawing wanders off the stroke,
+// "missed" = how much of the stroke was never covered.
+function strokeMatchScore(userStroke, guideStroke, w) {
+    const u = resamplePoints(userStroke, 24);
+    const g = resamplePoints(guideStroke, 24);
+    // Endpoint term catches half-drawn strokes that mean distance alone
+    // is too forgiving about; orientation-agnostic
+    const gEnd = g[g.length - 1], uEnd = u[u.length - 1];
+    const forward = Math.hypot(u[0].x - g[0].x, u[0].y - g[0].y) + Math.hypot(uEnd.x - gEnd.x, uEnd.y - gEnd.y);
+    const reversed = Math.hypot(u[0].x - gEnd.x, u[0].y - gEnd.y) + Math.hypot(uEnd.x - g[0].x, uEnd.y - g[0].y);
+    const endDist = Math.min(forward, reversed) / 2;
+    const d = Math.max(meanMinDist(u, g), meanMinDist(g, u), endDist);
+    const free = w * 0.05;   // this close counts as perfect
+    const range = w * 0.20;  // score fades to 0 across this distance
+    return Math.max(0, Math.min(1, 1 - Math.max(0, d - free) / range));
+}
+
+async function checkDrawing() {
     if (!currentKanji || !gameActive) return;
 
-    const expectedCount = currentKanji.strokes;
+    const kanji = currentKanji;
     const userCount = userStrokes.length;
     const w = drawCanvas.width;
 
@@ -3081,25 +3154,40 @@ function checkDrawing() {
         return;
     }
 
+    const kvgRaw = await getKvgPaths(kanji.char);
+    // Bail if the kanji changed while we awaited the fetch
+    if (currentKanji !== kanji || !gameActive) return;
+    const guide = (kvgRaw && kvgRaw.length > 0) ? scaleKvgToCanvas(kvgRaw, w) : null;
+    const expectedCount = guide ? guide.length : kanji.strokes;
+
     // Check stroke count
     if (userCount !== expectedCount) {
         if (userCount < expectedCount) {
             showFeedback('Need ' + expectedCount + ' strokes - you drew ' + userCount + '!', 'wrong');
         } else {
-            showFeedback('Too many strokes! ' + currentKanji.char + ' has ' + expectedCount + '.', 'wrong');
+            showFeedback('Too many strokes! ' + kanji.char + ' has ' + expectedCount + '.', 'wrong');
         }
         playSfx('wrong');
         handleWrongAnswer();
         return;
     }
 
-    // Check pixel proximity
     let pixelScore;
-    try {
-        pixelScore = fontProximityScore(w);
-    } catch (e) {
-        console.error('fontProximityScore error:', e);
-        pixelScore = 0;
+    if (guide) {
+        // Score stroke i of the drawing against stroke i of the guide
+        let sum = 0;
+        for (let i = 0; i < userStrokes.length; i++) {
+            sum += strokeMatchScore(userStrokes[i], guide[i], w);
+        }
+        pixelScore = sum / userStrokes.length;
+    } else {
+        // KanjiVG unavailable (offline) - fall back to the font-mask check
+        try {
+            pixelScore = fontProximityScore(w);
+        } catch (e) {
+            console.error('fontProximityScore error:', e);
+            pixelScore = 0;
+        }
     }
     if (typeof pixelScore !== 'number' || isNaN(pixelScore)) pixelScore = 0;
 
@@ -3240,6 +3328,15 @@ function parseSvgPath(d, steps) {
 async function getKvgPaths(char) {
     if (kvgCache[char]) return kvgCache[char];
 
+    // Embedded local data first (kanjivg_data.js) - works offline and on file://
+    if (window.KVG_DATA && window.KVG_DATA[char]) {
+        const strokes = window.KVG_DATA[char].map(d => parseSvgPath(d, 8)).filter(p => p.length > 0);
+        if (strokes.length > 0) {
+            kvgCache[char] = strokes;
+            return strokes;
+        }
+    }
+
     const code = char.codePointAt(0).toString(16).padStart(5, '0');
     const url = 'https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/' + code + '.svg';
 
@@ -3310,10 +3407,14 @@ function showMe() {
 
         const scaledStrokes = scaleKvgToCanvas(kvgStrokes, w);
         let strokeIdx = 0;
+        // Demo strokes live in their own array - putting them in userStrokes
+        // let "Show Me" + "Check" score points without drawing anything.
+        const animStrokes = [];
 
         function animateNextStroke() {
             if (strokeIdx >= scaledStrokes.length) {
                 showingAnimation = false;
+                updateStrokeCounter();
                 return;
             }
 
@@ -3323,7 +3424,7 @@ function showMe() {
 
             function drawNext() {
                 if (ptIdx >= animPts.length) {
-                    userStrokes.push(drawnPts.slice());
+                    animStrokes.push(drawnPts.slice());
                     strokeIdx++;
                     setTimeout(animateNextStroke, 350);
                     return;
@@ -3335,7 +3436,7 @@ function showMe() {
                 drawCtx.clearRect(0, 0, w, w);
                 drawGuideOnMain();
 
-                userStrokes.forEach(s => {
+                animStrokes.forEach(s => {
                     if (s.length >= 2) drawStrokePath(s, '#00e5ff', lineW);
                 });
 
@@ -3693,5 +3794,11 @@ setTimeout(() => {
     resizeCanvas();
 }, 100);
 </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
 </body>
 </html>

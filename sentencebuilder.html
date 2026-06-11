@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-title" content="Sentence Builder">
     <title>Fiona's Sentence Builder &mdash; Adjectives</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -439,6 +439,12 @@
         // init
         renderSubjectGrid();
         setMode('iadj');
+    </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

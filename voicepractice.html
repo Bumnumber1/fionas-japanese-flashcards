@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Voice Practice">
     <title>Fiona's Voice Practice — Ask &amp; Answer</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -336,7 +336,7 @@
                 cue: '&#x1F370;',
                 prompt: 'Ask how the cake tastes. Then answer that it’s delicious.',
                 q: { jp: 'ケーキは どう ですか？', plain: 'ケーキはどうですか', romaji: 'Keeki wa dou desu ka?', en: 'How is the cake?' },
-                a: { jp: 'おいしい です。', plain: 'おいしいです', romaji: 'Oishii desu.', en: 'It’s delicious.' }
+                a: { jp: 'おいしいです。', plain: 'おいしいです', romaji: 'Oishii desu.', en: 'It’s delicious.' }
             },
             {
                 theme: 'What time (なんじ)',
@@ -683,6 +683,12 @@
         });
 
         renderScenario();
+    </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

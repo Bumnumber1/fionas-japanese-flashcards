@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Fiona's Japanese">
     <title>Fiona's Japanese Flashcards</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * {
             margin: 0;
@@ -1818,7 +1818,6 @@
             { japanese: 'にほんご', romaji: 'nihongo', english: 'Japanese (language)', emoji: '&#x1F1EF;&#x1F1F5;', category: 'Everyday Objects', theme: 'objects' },
             { japanese: 'テレビ', romaji: 'terebi', english: 'TV', emoji: '&#x1F4FA;', category: 'Everyday Objects', theme: 'objects' },
 
-            { japanese: 'いぬ', romaji: 'inu', english: 'Dog', emoji: '&#x1F415;', category: 'People & Animals', theme: 'people' },
             { japanese: 'ひと', romaji: 'hito', english: 'Person', emoji: '&#x1F9CD;', category: 'People & Animals', theme: 'people' },
 
             { japanese: 'あなたたち', romaji: 'anatatachi', english: 'You (plural)', emoji: '&#x1F46B;', category: 'Pronouns', theme: 'pronouns' },
@@ -3042,6 +3041,12 @@
 
         // Initialize
         renderCards();
+    </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

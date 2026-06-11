@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Fiona's Workbook">
     <title>Fiona's Japanese Workbook</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * {
             margin: 0;
@@ -840,6 +840,12 @@
         setTimeout(() => {
             if (swipeHint) swipeHint.style.display = 'none';
         }, 5000);
+    </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

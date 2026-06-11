@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Quarterly Review">
     <title>Fiona's Quarterly Review</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('fonts/fonts.css'); /* local Nunito + Noto Sans JP (offline-capable) */
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -1350,7 +1350,7 @@
                     <button class="qm-add-btn" id="qmAddBtn" onclick="qmAdd()">+ か</button>
                     <div class="qm-arrow">&darr;</div>
                     <div class="qm-result-line" id="qmLine">${it.stmt} ___</div>
-                    <div style="color:#607d8b;font-weight:600;" id="qmEnQ" style="display:none;"></div>
+                    <div style="color:#607d8b;font-weight:600;display:none;" id="qmEnQ"></div>
                 </div>
                 <div class="qa-result" id="qmResult"></div>
                 <button class="qa-next" id="qmNext" onclick="qmNext()">Next &rarr;</button>
@@ -1762,6 +1762,12 @@
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
+    </script>
+    <script>
+        // Offline support: caches all course assets after the first visit
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

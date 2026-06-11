@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "mcp__pikes-ai__generate_image",
-      "mcp__hf-mcp-server__gr1_z_image_turbo_generate"
+      "mcp__hf-mcp-server__gr1_z_image_turbo_generate",
+      "PowerShell(\"PS works\"; Get-ChildItem \"C:\\\\JapaneseLessons\" -Filter *.html -Recurse | Select-Object -ExpandProperty FullName)"
     ]
   }
 }
