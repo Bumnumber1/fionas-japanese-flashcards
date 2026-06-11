@@ -48,11 +48,26 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
     if (e.request.method !== 'GET') return;
+    const accept = e.request.headers.get('accept') || '';
+    if (e.request.mode === 'navigate' || accept.includes('text/html')) {
+        // Pages: network first so updates apply on the next load,
+        // cache fallback keeps them working offline
+        e.respondWith(
+            fetch(e.request).then(resp => {
+                if (resp.ok) {
+                    const copy = resp.clone();
+                    caches.open(CACHE).then(c => c.put(e.request, copy));
+                }
+                return resp;
+            }).catch(() => caches.match(e.request, { ignoreSearch: true }))
+        );
+        return;
+    }
+    // Everything else (fonts, images, audio, data): cache first for speed
     e.respondWith(
         caches.match(e.request, { ignoreSearch: true }).then(hit => {
             if (hit) return hit;
             return fetch(e.request).then(resp => {
-                // Cache same-origin responses fetched at runtime too
                 if (resp.ok && new URL(e.request.url).origin === self.location.origin) {
                     const copy = resp.clone();
                     caches.open(CACHE).then(c => c.put(e.request, copy));

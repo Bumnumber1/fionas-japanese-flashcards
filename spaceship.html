@@ -737,7 +737,7 @@ function update(dt) {
         boss.x += boss.vx * dt * (now < slowUntil ? 0.5 : 1);
         if (boss.x < boss.rx + 10 || boss.x > W - boss.rx - 10) boss.vx *= -1;
         boss.cycleT += dt;
-        if (boss.cycleT > 8.1) {
+        if (boss.cycleT > 12) {
             boss.cycleT = 0;
             boss.idx = (boss.idx + 1) % boss.seq.length;
         }
@@ -879,9 +879,10 @@ function draw() {
         ctx.fill();
         ctx.strokeStyle = 'rgba(128, 216, 255, 0.8)';
         ctx.lineWidth = 2; ctx.stroke();
-        // dome kana (the thing to read!)
+        // dome kana (the thing to read!) - always white, no color hint:
+        // the kid has to actually read it
         const showing = boss.seq[boss.idx];
-        ctx.fillStyle = showing.r === hunted.r ? '#69f0ae' : '#ffffff';
+        ctx.fillStyle = '#ffffff';
         ctx.font = '800 44px "Noto Sans JP", sans-serif';
         ctx.fillText(showing.k, boss.x, boss.y - boss.ry * 0.75);
         // lights
