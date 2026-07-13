@@ -636,6 +636,27 @@
             font-size: 0.6em;
             display: block;
         }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -648,6 +669,15 @@
     </div>
 
     <div class="container">
+        <!-- Piyo-chan the cheerleader -->
+        <div class="mascot-row">
+            <span class="mascot" id="piyoMascot" onclick="piyoTap()">🐣</span>
+            <div class="mascot-bubble">
+                <span class="mb-jp" id="piyoJp">ゆっくりで いいよ</span>
+                <span class="mb-en" id="piyoEn">Take your time!</span>
+            </div>
+        </div>
+
         <!-- Practice Area FIRST -->
         <div class="practice-area">
             <!-- Reference -->
@@ -703,6 +733,7 @@
         <div class="char-grid-section">
             <div class="char-tabs">
                 <button class="char-tab active" id="tabHiragana" onclick="switchMode('hiragana')">Hiragana</button>
+                <button class="char-tab" id="tabKatakana" onclick="switchMode('katakana')">Katakana</button>
                 <button class="char-tab" id="tabKanji1" onclick="switchMode('kanji1')">1st Grade</button>
                 <button class="char-tab" id="tabKanji2" onclick="switchMode('kanji2')">2nd Grade</button>
             </div>
@@ -1050,6 +1081,119 @@
     };
 
     // =========================================================================
+    // KATAKANA DATA - All 46 basic characters + dakuten/handakuten rows
+    // =========================================================================
+    // Stroke guides come from KanjiVG (kanjivg_data.js) at runtime, same as
+    // kanji - the paths here are placeholders and only the stroke count matters.
+    const katakanaData = [
+        // --- A row ---
+        { char: 'ア', romaji: 'a', strokes: 2, row: 'a', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'イ', romaji: 'i', strokes: 2, row: 'a', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ウ', romaji: 'u', strokes: 3, row: 'a', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'エ', romaji: 'e', strokes: 3, row: 'a', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'オ', romaji: 'o', strokes: 3, row: 'a', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- KA row ---
+        { char: 'カ', romaji: 'ka', strokes: 2, row: 'ka', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'キ', romaji: 'ki', strokes: 3, row: 'ka', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ク', romaji: 'ku', strokes: 2, row: 'ka', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ケ', romaji: 'ke', strokes: 3, row: 'ka', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'コ', romaji: 'ko', strokes: 2, row: 'ka', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- SA row ---
+        { char: 'サ', romaji: 'sa', strokes: 3, row: 'sa', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'シ', romaji: 'shi', strokes: 3, row: 'sa', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ス', romaji: 'su', strokes: 2, row: 'sa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'セ', romaji: 'se', strokes: 2, row: 'sa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ソ', romaji: 'so', strokes: 2, row: 'sa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- TA row ---
+        { char: 'タ', romaji: 'ta', strokes: 3, row: 'ta', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'チ', romaji: 'chi', strokes: 3, row: 'ta', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ツ', romaji: 'tsu', strokes: 3, row: 'ta', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'テ', romaji: 'te', strokes: 3, row: 'ta', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ト', romaji: 'to', strokes: 2, row: 'ta', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- NA row ---
+        { char: 'ナ', romaji: 'na', strokes: 2, row: 'na', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ニ', romaji: 'ni', strokes: 2, row: 'na', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヌ', romaji: 'nu', strokes: 2, row: 'na', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ネ', romaji: 'ne', strokes: 4, row: 'na', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ノ', romaji: 'no', strokes: 1, row: 'na', paths: Array.from({length: 1}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- HA row ---
+        { char: 'ハ', romaji: 'ha', strokes: 2, row: 'ha', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヒ', romaji: 'hi', strokes: 2, row: 'ha', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'フ', romaji: 'fu', strokes: 1, row: 'ha', paths: Array.from({length: 1}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヘ', romaji: 'he', strokes: 1, row: 'ha', paths: Array.from({length: 1}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ホ', romaji: 'ho', strokes: 4, row: 'ha', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- MA row ---
+        { char: 'マ', romaji: 'ma', strokes: 2, row: 'ma', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ミ', romaji: 'mi', strokes: 3, row: 'ma', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ム', romaji: 'mu', strokes: 2, row: 'ma', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'メ', romaji: 'me', strokes: 2, row: 'ma', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'モ', romaji: 'mo', strokes: 3, row: 'ma', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- YA row ---
+        { char: 'ヤ', romaji: 'ya', strokes: 2, row: 'ya', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ユ', romaji: 'yu', strokes: 2, row: 'ya', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヨ', romaji: 'yo', strokes: 3, row: 'ya', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- RA row ---
+        { char: 'ラ', romaji: 'ra', strokes: 2, row: 'ra', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'リ', romaji: 'ri', strokes: 2, row: 'ra', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ル', romaji: 'ru', strokes: 2, row: 'ra', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'レ', romaji: 're', strokes: 1, row: 'ra', paths: Array.from({length: 1}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ロ', romaji: 'ro', strokes: 3, row: 'ra', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- WA row ---
+        { char: 'ワ', romaji: 'wa', strokes: 2, row: 'wa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヲ', romaji: 'wo', strokes: 3, row: 'wa', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ン', romaji: 'n', strokes: 2, row: 'wa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- GA row (dakuten) ---
+        { char: 'ガ', romaji: 'ga', strokes: 4, row: 'ga', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ギ', romaji: 'gi', strokes: 5, row: 'ga', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'グ', romaji: 'gu', strokes: 4, row: 'ga', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ゲ', romaji: 'ge', strokes: 5, row: 'ga', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ゴ', romaji: 'go', strokes: 4, row: 'ga', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- ZA row (dakuten) ---
+        { char: 'ザ', romaji: 'za', strokes: 5, row: 'za', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ジ', romaji: 'ji', strokes: 5, row: 'za', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ズ', romaji: 'zu', strokes: 4, row: 'za', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ゼ', romaji: 'ze', strokes: 4, row: 'za', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ゾ', romaji: 'zo', strokes: 4, row: 'za', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- DA row (dakuten) ---
+        { char: 'ダ', romaji: 'da', strokes: 5, row: 'da', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヂ', romaji: 'ji', strokes: 5, row: 'da', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ヅ', romaji: 'zu', strokes: 5, row: 'da', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'デ', romaji: 'de', strokes: 5, row: 'da', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ド', romaji: 'do', strokes: 4, row: 'da', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- BA row (dakuten) ---
+        { char: 'バ', romaji: 'ba', strokes: 4, row: 'ba', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ビ', romaji: 'bi', strokes: 4, row: 'ba', paths: Array.from({length: 4}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ブ', romaji: 'bu', strokes: 3, row: 'ba', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ベ', romaji: 'be', strokes: 3, row: 'ba', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ボ', romaji: 'bo', strokes: 6, row: 'ba', paths: Array.from({length: 6}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        // --- PA row (handakuten) ---
+        { char: 'パ', romaji: 'pa', strokes: 3, row: 'pa', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ピ', romaji: 'pi', strokes: 3, row: 'pa', paths: Array.from({length: 3}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'プ', romaji: 'pu', strokes: 2, row: 'pa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ペ', romaji: 'pe', strokes: 2, row: 'pa', paths: Array.from({length: 2}, () => ({ points: [[0.5,0.5]], dir: 'right' })) },
+        { char: 'ポ', romaji: 'po', strokes: 5, row: 'pa', paths: Array.from({length: 5}, () => ({ points: [[0.5,0.5]], dir: 'right' })) }
+    ];
+
+    // Row names for the katakana grid
+    const katakanaRowNames = {
+        'a': 'A row (ア)',
+        'ka': 'KA row (カ)',
+        'sa': 'SA row (サ)',
+        'ta': 'TA row (タ)',
+        'na': 'NA row (ナ)',
+        'ha': 'HA row (ハ)',
+        'ma': 'MA row (マ)',
+        'ya': 'YA row (ヤ)',
+        'ra': 'RA row (ラ)',
+        'wa': 'WA row (ワ)',
+        'ga': 'GA row (ガ)',
+        'za': 'ZA row (ザ)',
+        'da': 'DA row (ダ)',
+        'ba': 'BA row (バ)',
+        'pa': 'PA row (パ)'
+    };
+
+    // =========================================================================
     // KANJI DATA - Grade 1 kanji for Yuna's Kanji mode
     // =========================================================================
     const kanjiData = [
@@ -1326,19 +1470,28 @@
     const kanji1stGrade = kanjiData.filter(k => ['numbers','nature','people','body','direction','time','objects'].includes(k.row));
     const kanji2ndGrade = kanjiData.filter(k => ['actions2','nature2','family2','time2','places2','descriptive2','school2'].includes(k.row));
 
-    let currentMode = 'hiragana'; // 'hiragana', 'kanji1', or 'kanji2'
+    let currentMode = 'hiragana'; // 'hiragana', 'katakana', 'kanji1', or 'kanji2'
     let currentIndex = 0;
     let practiced = new Set();
+    let practicedKatakana = new Set();
     let practicedKanji = new Set();
     let userStrokes = []; // Array of strokes, each stroke = array of {x,y} points
     let currentStroke = null;
     let isDrawing = false;
+    let activeTouchId = null; // identifier of the finger that started the stroke
     let showingAnimation = false;
+    let animGen = 0; // generation counter - bumping it cancels a running Show Me animation
+    let streak = 0; // consecutive correct checks - grows the celebration
+    let rainbowInk = false; // display-only reward ink after finishing a whole row
 
     // Load progress from localStorage
     try {
         const saved = localStorage.getItem('fiona-writing-progress');
         if (saved) practiced = new Set(JSON.parse(saved));
+    } catch(e) {}
+    try {
+        const savedKatakana = localStorage.getItem('fiona-katakana-progress');
+        if (savedKatakana) practicedKatakana = new Set(JSON.parse(savedKatakana));
     } catch(e) {}
     try {
         const savedKanji = localStorage.getItem('yuna-kanji-progress');
@@ -1349,6 +1502,7 @@
     function getCurrentData() {
         if (currentMode === 'kanji1') return kanji1stGrade;
         if (currentMode === 'kanji2') return kanji2ndGrade;
+        if (currentMode === 'katakana') return katakanaData;
         return hiraganaData;
     }
 
@@ -1366,6 +1520,7 @@
 
         // Update tab buttons
         document.getElementById('tabHiragana').classList.toggle('active', mode === 'hiragana');
+        document.getElementById('tabKatakana').classList.toggle('active', mode === 'katakana');
         document.getElementById('tabKanji1').classList.toggle('active', mode === 'kanji1');
         document.getElementById('tabKanji2').classList.toggle('active', mode === 'kanji2');
 
@@ -1389,25 +1544,32 @@
     }
 
     function buildHiraganaGrid(container) {
-        const rowOrder = ['a','ka','sa','ta','na','ha','ma','ya','ra','wa'];
+        // Shared kana grid - serves both the hiragana and katakana tabs
+        const isKatakana = currentMode === 'katakana';
+        const data = isKatakana ? katakanaData : hiraganaData;
+        const names = isKatakana ? katakanaRowNames : rowNames;
+        const practicedSet = isKatakana ? practicedKatakana : practiced;
+        const rowOrder = isKatakana
+            ? ['a','ka','sa','ta','na','ha','ma','ya','ra','wa','ga','za','da','ba','pa']
+            : ['a','ka','sa','ta','na','ha','ma','ya','ra','wa'];
 
         rowOrder.forEach(row => {
             const label = document.createElement('div');
             label.className = 'char-row-label';
-            label.textContent = rowNames[row];
+            label.textContent = names[row];
             container.appendChild(label);
 
             const grid = document.createElement('div');
             grid.className = 'char-grid';
 
-            hiraganaData.forEach((h, idx) => {
+            data.forEach((h, idx) => {
                 if (h.row !== row) return;
                 const btn = document.createElement('button');
                 btn.className = 'char-btn';
                 btn.textContent = h.char;
                 btn.dataset.index = idx;
 
-                if (practiced.has(h.char)) {
+                if (practicedSet.has(h.char)) {
                     btn.classList.add('practiced');
                     const check = document.createElement('span');
                     check.className = 'check-mark';
@@ -1528,19 +1690,22 @@
     }
 
     function updateProgress() {
+        let total, done;
         if (currentMode.startsWith('kanji')) {
-            const total = kanjiData.length;
-            const done = practicedKanji.size;
-            const pct = (done / total) * 100;
-            document.getElementById('progressFill').style.width = pct + '%';
-            document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
+            // Scope to the visible tab's kanji set (1st or 2nd grade), matching the kana tabs
+            const dataArr = getCurrentData();
+            total = dataArr.length;
+            done = dataArr.filter(k => practicedKanji.has(k.char)).length;
+        } else if (currentMode === 'katakana') {
+            total = katakanaData.length;
+            done = practicedKatakana.size;
         } else {
-            const total = hiraganaData.length;
-            const done = practiced.size;
-            const pct = (done / total) * 100;
-            document.getElementById('progressFill').style.width = pct + '%';
-            document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
+            total = hiraganaData.length;
+            done = practiced.size;
         }
+        const pct = (done / total) * 100;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressCount').textContent = done + ' / ' + total + ' practiced';
     }
 
     // =========================================================================
@@ -1665,14 +1830,14 @@
         // Draw guide strokes
         drawGuideOnMain();
 
-        // Redraw user strokes
-        userStrokes.forEach(stroke => {
-            drawStrokePath(stroke, '#37474f', 4);
+        // Redraw user strokes (rainbow ink is display-only - scoring never sees the color)
+        userStrokes.forEach((stroke, i) => {
+            drawStrokePath(stroke, rainbowInk ? 'hsl(' + (i * 40) + ',70%,45%)' : '#37474f', 4);
         });
 
         // Draw current stroke
         if (currentStroke && currentStroke.length > 0) {
-            drawStrokePath(currentStroke, '#37474f', 4);
+            drawStrokePath(currentStroke, rainbowInk ? 'hsl(' + (userStrokes.length * 40) + ',70%,45%)' : '#37474f', 4);
         }
 
         updateStrokeCounter();
@@ -1795,12 +1960,23 @@
     // =========================================================================
     // TOUCH / MOUSE INPUT
     // =========================================================================
+    // Find the finger that started the stroke in a TouchList (null if absent)
+    function findTrackedTouch(list) {
+        if (!list || activeTouchId === null) return null;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].identifier === activeTouchId) return list[i];
+        }
+        return null;
+    }
+
     function getPos(e) {
         canvasRect = drawCanvas.getBoundingClientRect();
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
+            // Follow the finger that started the stroke, not whichever touch is first
+            const t = findTrackedTouch(e.touches) || e.touches[0];
+            clientX = t.clientX;
+            clientY = t.clientY;
         } else {
             clientX = e.clientX;
             clientY = e.clientY;
@@ -1817,6 +1993,11 @@
     function startStroke(e) {
         if (showingAnimation) return;
         e.preventDefault();
+        // A second finger (or a resting palm) must not restart the stroke
+        if (isDrawing) return;
+        activeTouchId = (e.changedTouches && e.changedTouches.length > 0)
+            ? e.changedTouches[0].identifier
+            : null;
         isDrawing = true;
         const pos = getPos(e);
         currentStroke = [pos];
@@ -1825,6 +2006,8 @@
     function moveStroke(e) {
         if (!isDrawing || !currentStroke || showingAnimation) return;
         e.preventDefault();
+        // Ignore moves from fingers other than the one drawing
+        if (activeTouchId !== null && !findTrackedTouch(e.changedTouches)) return;
         const pos = getPos(e);
         currentStroke.push(pos);
         redrawCanvas();
@@ -1833,6 +2016,9 @@
     function endStroke(e) {
         if (!isDrawing || !currentStroke || showingAnimation) return;
         e.preventDefault();
+        // Only lifting the finger that started the stroke ends it
+        if (activeTouchId !== null && !findTrackedTouch(e.changedTouches)) return;
+        activeTouchId = null;
         isDrawing = false;
         // Keep even 1-2 point strokes: quick taps are real "dot" strokes
         // in characters like ふ - discarding them broke the stroke count.
@@ -1867,7 +2053,9 @@
         userStrokes = [];
         currentStroke = null;
         isDrawing = false;
+        activeTouchId = null;
         showingAnimation = false;
+        animGen++; // cancel any Show Me animation still running
         guidePixelCache = { char: null, mask: null, w: 0 };
         redrawCanvas();
         hideFeedback();
@@ -2118,6 +2306,7 @@
         const w = drawCanvas.width;
 
         if (userStrokes.length === 0) {
+            streak = 0;
             showFeedback('Draw the character first!', 'tryagain');
             playSfx('wrong');
             return;
@@ -2131,6 +2320,7 @@
         const userCount = userStrokes.length;
 
         if (userCount !== expectedCount) {
+            streak = 0;
             if (userCount < expectedCount) {
                 showFeedback('Need ' + expectedCount + ' strokes - you drew ' + userCount + '!', 'wrong');
             } else {
@@ -2168,26 +2358,39 @@
         }
 
         if (avg >= 0.55 && backwardsCount <= expectedCount / 2) {
-            showFeedback('Great job! (' + pct + '% accuracy)', 'great');
-            playSfx('correct');
+            streak++;
             // Speak the character on success
             setTimeout(() => speakCurrentChar(), 400);
+            const wasNewChar = !(currentMode.startsWith('kanji') ? practicedKanji
+                : currentMode === 'katakana' ? practicedKatakana : practiced).has(data.char);
             if (currentMode.startsWith('kanji')) {
                 practicedKanji.add(data.char);
+            } else if (currentMode === 'katakana') {
+                practicedKatakana.add(data.char);
             } else {
                 practiced.add(data.char);
             }
             savePracticed();
             buildCharGrid();
             updateProgress();
-            spawnStars();
+            spawnStars(Math.min(8 + streak * 4, 24));
+            if (!(wasNewChar && celebrateIfRowComplete(data))) {
+                let msg = 'Great job! (' + pct + '% accuracy)';
+                if (streak >= 2) msg += ' 🔥 ' + streak + ' in a row!';
+                showFeedback(msg, 'great');
+                playSfx('correct');
+                if (streak >= 3) piyoSay('streak');
+            }
         } else if (avg >= 0.55) {
+            streak = 0;
             showFeedback('Good shape! Start each stroke at its ① dot!', 'tryagain');
             playSfx('wrong');
         } else if (orderSwapped) {
+            streak = 0;
             showFeedback('Right lines - check the stroke order! (' + pct + '%)', 'tryagain');
             playSfx('wrong');
         } else if (avg >= 0.35) {
+            streak = 0;
             let worst = 0;
             for (let i = 1; i < results.length; i++) {
                 if (results[i].score < results[worst].score) worst = i;
@@ -2195,6 +2398,7 @@
             showFeedback('Almost! ' + pct + '% - stroke ' + (worst + 1) + ' needs the most work!', 'tryagain');
             playSfx('wrong');
         } else {
+            streak = 0;
             showFeedback('Try to trace over the dashed guide! (' + pct + '%)', 'tryagain');
             playSfx('wrong');
         }
@@ -2218,25 +2422,38 @@
         const dirPct = directionScore / expectedCount;
 
         if (pixelScore >= 0.45 && dirPct >= 0.4) {
-            showFeedback('Great job! (' + Math.round(pixelScore * 100) + '% accuracy)', 'great');
-            playSfx('correct');
+            streak++;
             setTimeout(() => speakCurrentChar(), 400);
+            const wasNewChar = !(currentMode.startsWith('kanji') ? practicedKanji
+                : currentMode === 'katakana' ? practicedKatakana : practiced).has(data.char);
             if (currentMode.startsWith('kanji')) {
                 practicedKanji.add(data.char);
+            } else if (currentMode === 'katakana') {
+                practicedKatakana.add(data.char);
             } else {
                 practiced.add(data.char);
             }
             savePracticed();
             buildCharGrid();
             updateProgress();
-            spawnStars();
+            spawnStars(Math.min(8 + streak * 4, 24));
+            if (!(wasNewChar && celebrateIfRowComplete(data))) {
+                let msg = 'Great job! (' + Math.round(pixelScore * 100) + '% accuracy)';
+                if (streak >= 2) msg += ' 🔥 ' + streak + ' in a row!';
+                showFeedback(msg, 'great');
+                playSfx('correct');
+                if (streak >= 3) piyoSay('streak');
+            }
         } else if (pixelScore >= 0.3) {
+            streak = 0;
             showFeedback('Almost! ' + Math.round(pixelScore * 100) + '% - trace closer to the guide!', 'tryagain');
             playSfx('wrong');
         } else if (dirPct < 0.4) {
+            streak = 0;
             showFeedback('Check the stroke order! (' + Math.round(pixelScore * 100) + '%)', 'tryagain');
             playSfx('wrong');
         } else {
+            streak = 0;
             showFeedback('Try to trace over the character! (' + Math.round(pixelScore * 100) + '%)', 'tryagain');
             playSfx('wrong');
         }
@@ -2259,19 +2476,54 @@
     function savePracticed() {
         try {
             localStorage.setItem('fiona-writing-progress', JSON.stringify([...practiced]));
+            localStorage.setItem('fiona-katakana-progress', JSON.stringify([...practicedKatakana]));
             localStorage.setItem('yuna-kanji-progress', JSON.stringify([...practicedKanji]));
         } catch(e) {}
     }
 
     // =========================================================================
+    // ROW-COMPLETE REWARD (fanfare + rainbow ink)
+    // =========================================================================
+    const celebratedRows = new Set(); // fanfare fires once per row per session
+
+    function celebrateIfRowComplete(data) {
+        const rowKey = currentMode + ':' + data.row;
+        if (celebratedRows.has(rowKey)) return false;
+
+        let practicedSet, names;
+        if (currentMode.startsWith('kanji')) {
+            practicedSet = practicedKanji;
+            names = kanjiRowNames;
+        } else if (currentMode === 'katakana') {
+            practicedSet = practicedKatakana;
+            names = katakanaRowNames;
+        } else {
+            practicedSet = practiced;
+            names = rowNames;
+        }
+
+        const rowChars = getCurrentData().filter(k => k.row === data.row);
+        if (!rowChars.every(k => practicedSet.has(k.char))) return false;
+
+        celebratedRows.add(rowKey);
+        showFeedback('You finished the whole ' + names[data.row] + '! \ud83c\udf08', 'great');
+        playSfx('fanfare');
+        piyoSay('row');
+        piyoWiggle();
+        rainbowInk = true; // display-only: Check scoring never looks at ink color
+        redrawCanvas();
+        return true;
+    }
+
+    // =========================================================================
     // STAR PARTICLES (celebration)
     // =========================================================================
-    function spawnStars() {
+    function spawnStars(count) {
         const container = document.getElementById('canvasContainer');
         const rect = container.getBoundingClientRect();
         const symbols = ['\u2b50', '\u2728', '\ud83c\udf1f', '\ud83c\udf08'];
 
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < (count || 8); i++) {
             const star = document.createElement('div');
             star.className = 'star-particle';
             star.textContent = symbols[Math.floor(Math.random() * symbols.length)];
@@ -2281,6 +2533,40 @@
             container.appendChild(star);
             setTimeout(() => star.remove(), 1500);
         }
+    }
+
+    // =========================================================================
+    // PIYO-CHAN THE CHEERLEADER (bubble text swaps only - no extra TTS)
+    // =========================================================================
+    const piyoLines = {
+        rest:   { jp: 'ゆっくりで いいよ', en: 'Take your time!' },
+        streak: { jp: 'ぴよ！じょうずだね！', en: 'Piyo! So skillful!' },
+        row:    { jp: 'ぴよぴよ〜！すてき！', en: 'Piyo piyo! Wonderful!' }
+    };
+
+    function piyoSay(key) {
+        const line = piyoLines[key];
+        if (!line) return;
+        document.getElementById('piyoJp').textContent = line.jp;
+        document.getElementById('piyoEn').textContent = line.en;
+    }
+
+    function piyoWiggle() {
+        const el = document.getElementById('piyoMascot');
+        el.classList.remove('wiggle');
+        void el.offsetWidth; // restart the animation
+        el.classList.add('wiggle');
+        setTimeout(() => el.classList.remove('wiggle'), 500);
+    }
+
+    function piyoTap() {
+        piyoWiggle();
+        // Guarded speech: never talk over a stroke in progress, a Show Me
+        // animation, or speech the page is already saying (no cancelling it)
+        if (isDrawing || showingAnimation) return;
+        if (!('speechSynthesis' in window)) return;
+        if (speechSynthesis.speaking || speechSynthesis.pending) return;
+        speakJapanese(document.getElementById('piyoJp').textContent);
     }
 
     // =========================================================================
@@ -2411,6 +2697,10 @@
     function showMe() {
         if (showingAnimation) return;
         showingAnimation = true;
+        // Capture this run's generation - Clear/Next/Prev/tab-switch bump animGen,
+        // which makes every pending callback below bail out instead of painting
+        // stale strokes over the new character.
+        const myGen = ++animGen;
         userStrokes = [];
         currentStroke = null;
 
@@ -2422,6 +2712,7 @@
 
         // Fetch KanjiVG paths, then animate
         getKvgPaths(data.char).then(kvgStrokes => {
+            if (myGen !== animGen) return; // cancelled while fetching
             if (!kvgStrokes || kvgStrokes.length === 0) {
                 // Fallback: just show the character in pink briefly
                 drawCtx.save();
@@ -2445,6 +2736,7 @@
             const animStrokes = [];
 
             function animateNextStroke() {
+                if (myGen !== animGen) return; // cancelled
                 if (strokeIdx >= scaledStrokes.length) {
                     showingAnimation = false;
                     updateStrokeCounter();
@@ -2456,6 +2748,7 @@
                 const drawnPts = [];
 
                 function drawNext() {
+                    if (myGen !== animGen) return; // cancelled
                     if (ptIdx >= animPts.length) {
                         animStrokes.push(drawnPts.slice());
                         strokeIdx++;
@@ -2544,12 +2837,13 @@
         const now = ctx.currentTime;
 
         if (type === 'correct') {
-            // Happy ascending chime
+            // Happy ascending chime - pitch climbs a little as the streak grows
+            const pitchMult = 1 + 0.06 * Math.min(streak, 4);
             [523, 659, 784].forEach((freq, i) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.value = freq;
+                osc.frequency.value = freq * pitchMult;
                 gain.gain.setValueAtTime(0.18, now + i * 0.12);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
                 osc.connect(gain).connect(ctx.destination);
@@ -2567,6 +2861,19 @@
             osc.connect(gain).connect(ctx.destination);
             osc.start(now);
             osc.stop(now + 0.4);
+        } else if (type === 'fanfare') {
+            // Row-complete fanfare: five ascending notes
+            [523, 587, 659, 784, 1047].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.18, now + i * 0.13);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.13 + 0.4);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + i * 0.13);
+                osc.stop(now + i * 0.13 + 0.45);
+            });
         }
     }
 
@@ -2587,7 +2894,7 @@
 
     // Preload all KanjiVG SVGs in the background
     function preloadAllKvg() {
-        const allChars = [...hiraganaData, ...kanjiData].map(d => d.char);
+        const allChars = [...hiraganaData, ...katakanaData, ...kanjiData].map(d => d.char);
         let i = 0;
         // Fetch 4 at a time to avoid overwhelming the connection
         function fetchBatch() {

@@ -553,8 +553,65 @@
             text-align: center;
         }
         .pn-digit.revealed { background: #c8e6c9; border-color: #43a047; color: #1b5e20; }
+        .pn-digit.pn-hit { box-shadow: 0 0 0 4px #66bb6a; transform: scale(1.08); transition: transform 0.15s; }
+
+        /* Emoji confetti */
+        .confetti-piece {
+            position: absolute;
+            top: 0;
+            left: var(--x);
+            font-size: 1.1em;
+            pointer-events: none;
+            z-index: 20;
+            animation: confetti-fall var(--dur) ease-in forwards;
+        }
+        @keyframes confetti-fall {
+            from { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+            to { transform: translateY(var(--fall)) rotate(var(--spin)); opacity: 0; }
+        }
+
+        /* Personal bests + daily stamp card */
+        .activity-card .stamp { position: absolute; top: 8px; right: 10px; font-size: 1.5em; }
+        .activity-card .a-best { font-size: 0.78em; font-weight: 800; color: #f57f17; }
+        .best-line { text-align: center; font-weight: 800; color: #78909c; margin-bottom: 8px; }
+        .best-line.new { color: #f57f17; font-size: 1.15em; }
+        .all-stamps-banner {
+            margin-top: 10px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #fff59d, #ffcc80);
+            color: #e65100;
+            font-weight: 800;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
 
         .all-jp-text { font-family: 'Noto Sans JP', sans-serif; }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
+
+        /* sticker-style section-title emoji + soft background doodles */
+        .section-title .sticker { display: inline-block; transform: rotate(-8deg); }
+        .bg-doodle { position: fixed; font-size: 5em; opacity: 0.1; pointer-events: none; z-index: -1; }
     </style>
 </head>
 <body>
@@ -568,6 +625,10 @@
             <a href="questions.html">Ask &amp; Answer</a>
             <a href="ocean.html">Ocean Adventure</a>
         </div>
+        <div class="mascot-row">
+            <span class="mascot" id="konkonMascot" onclick="konkonTap()">&#x1F98A;</span>
+            <div class="mascot-bubble" id="konkonBubble"></div>
+        </div>
     </div>
 
     <div class="container">
@@ -576,13 +637,19 @@
             <p>This is your quarterly review &mdash; a place to look back on <i>everything</i> we've covered. Read the practice ideas, then try the activities below. Each activity practices a different concept: words, sentences, listening, asking questions, polite phrases, possession, counting, and more!</p>
         </div>
 
-        <h2 class="section-title">&#x1F4DD; How to Practice</h2>
+        <h2 class="section-title"><span class="sticker">&#x1F4DD;</span> How to Practice</h2>
         <div class="practice-grid" id="practiceGrid"></div>
 
-        <h2 class="section-title">&#x1F3AE; Activities</h2>
+        <h2 class="section-title"><span class="sticker">&#x1F3AE;</span> Activities</h2>
         <p style="color:#607d8b;font-weight:600;margin:0 4px 14px;">Tap any card to start. Each activity is short &mdash; do them in any order!</p>
+        <div id="stampLine" style="color:#6a1b9a;font-weight:700;margin:0 4px 12px;"></div>
         <div class="activity-grid" id="activityGrid"></div>
     </div>
+
+    <!-- soft decorative doodles (behind content, never tappable) -->
+    <span class="bg-doodle" style="top:18%; left:4%;" aria-hidden="true">&#x1F338;</span>
+    <span class="bg-doodle" style="top:55%; right:5%;" aria-hidden="true">&#x2B50;</span>
+    <span class="bg-doodle" style="bottom:6%; left:10%;" aria-hidden="true">&#x1F43E;</span>
 
     <!-- Universal modal -->
     <div class="modal" id="modal">
@@ -874,7 +941,6 @@
             { jp:'はじめまして。', plain:'はじめまして', romaji:'Hajimemashite.', en:'Nice to meet you.' },
             { jp:'よろしく おねがいします。', plain:'よろしくおねがいします', romaji:'Yoroshiku onegaishimasu.', en:'Please treat me well.' },
             { jp:'わたしは フィオナ です。', plain:'わたしはフィオナです', romaji:'Watashi wa Fiona desu.', en:'I am Fiona.' },
-            { jp:'おちゃは いい です。', plain:'おちゃはいいです', romaji:'Ocha wa ii desu.', en:'No tea, thanks.' },
             { jp:'もう けっこう です。', plain:'もうけっこうです', romaji:'Mou kekkou desu.', en:'No more, thank you.' }
         ];
 
@@ -900,10 +966,8 @@
         }
         function speak(text, btn) {
             if (!('speechSynthesis' in window)) return;
-            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-                stopAllSpeech();
-                return;
-            }
+            // Interrupt anything still playing, then speak the new text
+            stopAllSpeech();
             if (!jaVoice) loadVoice();
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'ja-JP';
@@ -916,6 +980,14 @@
                 u.onerror = () => btn.classList.remove('playing');
             }
             window.speechSynthesis.speak(u);
+        }
+        // Manual 🔊 buttons keep their tap-again-to-stop behavior
+        function toggleSpeak(text, btn) {
+            if (btn && btn.classList.contains('playing')) {
+                stopAllSpeech();
+                return;
+            }
+            speak(text, btn);
         }
         window.addEventListener('beforeunload', stopAllSpeech);
         window.addEventListener('pagehide', stopAllSpeech);
@@ -938,6 +1010,138 @@
         }
 
         // ============================================================
+        //  SOUND EFFECTS (Web Audio, no assets — context created lazily
+        //  on the first graded tap to satisfy autoplay policy)
+        // ============================================================
+        let sfxCtx = null;
+        function playTone(freq, delay, dur, type, vol) {
+            try {
+                if (!sfxCtx) sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (sfxCtx.state === 'suspended') sfxCtx.resume();
+                const t = sfxCtx.currentTime + delay;
+                const o = sfxCtx.createOscillator();
+                const g = sfxCtx.createGain();
+                o.type = type || 'sine';
+                o.frequency.value = freq;
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                o.connect(g);
+                g.connect(sfxCtx.destination);
+                o.start(t);
+                o.stop(t + dur + 0.05);
+            } catch(e) {}
+        }
+        function sfx(kind) {
+            if (kind === 'correct') { playTone(660, 0, 0.15); playTone(880, 0.12, 0.22); }
+            else if (kind === 'wrong') { playTone(170, 0, 0.28, 'triangle', 0.14); }
+        }
+
+        // ============================================================
+        //  EMOJI CONFETTI
+        // ============================================================
+        const confettiEmoji = ['🎉','🌸','⭐','💮'];
+        function spawnConfetti(container, count) {
+            if (!container) return;
+            if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+            for (let i = 0; i < count; i++) {
+                const s = document.createElement('span');
+                s.className = 'confetti-piece';
+                s.textContent = confettiEmoji[Math.floor(Math.random() * confettiEmoji.length)];
+                s.style.setProperty('--x', `${5 + Math.random() * 90}%`);
+                s.style.setProperty('--dur', `${0.9 + Math.random() * 0.8}s`);
+                s.style.setProperty('--fall', `${80 + Math.random() * 140}px`);
+                s.style.setProperty('--spin', `${(Math.random() < 0.5 ? -1 : 1) * (180 + Math.floor(Math.random() * 360))}deg`);
+                s.addEventListener('animationend', () => s.remove());
+                container.appendChild(s);
+            }
+        }
+
+        // ============================================================
+        //  CUTE MASCOTS — Kon-Kon Sensei 🦊 hosts the hub, Mochi 🐰 cameos
+        // ============================================================
+        const konkonLines = [
+            { jp:'きょうは なにを あそぶ？', en:'What shall we play today?' },
+            { jp:'いっしょに がんばろう！', en:'Let\'s do our best together!' },
+            { jp:'まいにち すこしずつ、が いちばん！', en:'A little every day is best!' },
+            { jp:'フィオナちゃん、えらいね！', en:'Fiona, you\'re doing great!' }
+        ];
+        let konkonIdx = Math.floor(Math.random() * konkonLines.length);
+        function renderKonkonBubble() {
+            const b = document.getElementById('konkonBubble');
+            if (!b) return;
+            const line = konkonLines[konkonIdx];
+            b.innerHTML = `<span class="mb-jp">${line.jp}</span><span class="mb-en">${line.en}</span>`;
+        }
+        function wiggleMascot(el) {
+            el.classList.remove('wiggle');
+            void el.offsetWidth; // restart the wiggle animation
+            el.classList.add('wiggle');
+            setTimeout(() => el.classList.remove('wiggle'), 500);
+        }
+        function konkonTap() {
+            const el = document.getElementById('konkonMascot');
+            if (!el) return;
+            wiggleMascot(el);
+            konkonIdx = (konkonIdx + 1) % konkonLines.length;
+            renderKonkonBubble();
+            // guard: an open activity owns the audio — never talk over it
+            if (modal.classList.contains('active')) return;
+            speak(konkonLines[konkonIdx].jp);
+        }
+        // Small Mochi cameo for complete screens (tap = wiggle + hear it again)
+        function mochiCameo(newRecord) {
+            const jp = newRecord ? 'しんきろく、おめでとう！' : 'すごい すごい！';
+            const en = newRecord ? 'Congrats on the new record!' : 'Amazing, amazing!';
+            return `<div class="mascot-row"><span class="mascot small" onclick="cameoTap(this, '${jp}')">🐰</span>
+                <div class="mascot-bubble"><span class="mb-jp">${jp}</span><span class="mb-en">${en}</span></div></div>`;
+        }
+        function cameoTap(el, text) {
+            wiggleMascot(el);
+            speak(text); // cameos only render after a round ends — no game speech to cancel
+        }
+        renderKonkonBubble();
+
+        // ============================================================
+        //  PROGRESS: PERSONAL BESTS + DAILY STAMP CARD (localStorage)
+        // ============================================================
+        function lsGet(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+        function lsSet(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+        // Returns the best-score line for a complete screen, saving a new best if beaten
+        function bestLineFor(fn, correct, total) {
+            const key = 'reviewBest:' + fn;
+            const prev = lsGet(key);
+            const prevC = prev ? parseInt(prev, 10) : -1;
+            if (correct > prevC) {
+                lsSet(key, `${correct}/${total}`);
+                return prev ? '<div class="best-line new">⭐ NEW RECORD!</div>' : '';
+            }
+            return `<div class="best-line">Your best: ${prev}</div>`;
+        }
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+        function getStamps() {
+            let data = null;
+            try { data = JSON.parse(lsGet('reviewStamps') || 'null'); } catch(e) {}
+            if (!data || data.date !== todayStr() || !Array.isArray(data.done)) data = { date: todayStr(), done: [] };
+            return data;
+        }
+        function markStamp(fn) {
+            if (!fn) return;
+            const data = getStamps();
+            if (data.done.includes(fn)) return;
+            data.done.push(fn);
+            lsSet('reviewStamps', JSON.stringify(data));
+            if (data.done.length === activities.length) {
+                spawnConfetti(document.querySelector('.modal-card'), 16);
+                // let the activity's own line (final digit, answer playback...) finish first
+                setTimeout(() => { if (!window.speechSynthesis || !speechSynthesis.speaking) speak('ぜんぶ できました。すごい。'); }, 2000);
+            }
+        }
+
+        // ============================================================
         //  MODAL ENGINE
         // ============================================================
         const modal = document.getElementById('modal');
@@ -948,7 +1152,9 @@
         }
         function closeModal() {
             stopAllSpeech();
+            pn.quiz = null; // stop a phone-quiz round from speaking after the modal is gone
             modal.classList.remove('active');
+            renderActivities(); // refresh stamps + best badges on the hub
         }
 
         // ============================================================
@@ -956,10 +1162,10 @@
         // ============================================================
         // questions: [{ tag, tagClass, jp, romaji, en, audioText, options:[strings], correct:string, prompt(optional) }]
         // mode: 'show-jp' or 'show-en' or 'show-prompt-only'
-        let mc = { items: [], idx: 0, correct: 0, mode: '', title: '', sub: '' };
+        let mc = { items: [], idx: 0, correct: 0, streak: 0, mode: '', title: '', sub: '', replay: '' };
 
-        function startMC(title, sub, mode, items) {
-            mc = { items, idx: 0, correct: 0, mode, title, sub };
+        function startMC(title, sub, mode, items, replay) {
+            mc = { items, idx: 0, correct: 0, streak: 0, mode, title, sub, replay };
             renderMCShell();
             renderMCQuestion();
         }
@@ -991,12 +1197,12 @@
             if (mc.mode === 'show-jp') {
                 body += `<div class="qa-jp">${it.jp}</div>`;
                 if (it.romaji) body += `<div class="qa-romaji">${it.romaji}</div>`;
-                body += `<button class="audio-btn" onclick="speak('${(it.audioText||it.jp).replace(/'/g,"\\'")}', this)">&#x1F50A;</button>`;
+                if (!it.noAudio) body += `<button class="audio-btn" onclick="toggleSpeak('${(it.audioText||it.jp).replace(/'/g,"\\'")}', this)">&#x1F50A;</button>`;
             } else if (mc.mode === 'show-en') {
                 body += `<div class="qa-jp" style="color:#c2185b;">${it.en}</div>`;
             } else if (mc.mode === 'listen') {
                 body += `<div style="text-align:center;color:#607d8b;font-weight:600;margin:8px 0 4px;">Tap to listen, then pick the meaning</div>`;
-                body += `<div style="text-align:center;"><button class="audio-btn large" onclick="speak('${(it.audioText||it.jp).replace(/'/g,"\\'")}', this)">&#x1F50A;</button></div>`;
+                body += `<div style="text-align:center;"><button class="audio-btn large" onclick="toggleSpeak('${(it.audioText||it.jp).replace(/'/g,"\\'")}', this)">&#x1F50A;</button></div>`;
             } else if (mc.mode === 'prompt-only') {
                 // prompt is shown above
             }
@@ -1012,7 +1218,7 @@
                 b.className = 'option';
                 if (mc.mode === 'show-en') b.classList.add('large-jp');
                 b.textContent = opt;
-                b.onclick = () => mcAnswer(b, opt, it.correct);
+                b.onclick = () => mcAnswer(b, opt, it);
                 opts.appendChild(b);
             });
 
@@ -1025,21 +1231,37 @@
             }
         }
 
-        function mcAnswer(btn, picked, correct) {
+        function mcAnswer(btn, picked, it) {
             document.querySelectorAll('#mcOpts .option').forEach(b => b.onclick = null);
             const r = document.getElementById('mcResult');
-            if (picked === correct) {
+            // Hearing the answer again right after grading reinforces it —
+            // except in listen mode, where she just heard it
+            const answerText = mc.mode === 'listen' ? '' : (it.audioText || it.jp || '');
+            if (picked === it.correct) {
                 btn.classList.add('correct');
                 mc.correct++;
-                r.innerHTML = '&#x1F389; Correct!';
+                mc.streak++;
+                sfx('correct');
+                let flair = '', praise = '';
+                if (mc.streak >= 8) { flair = '&#x1F308; UNSTOPPABLE! '; praise = 'かんぺき'; }
+                else if (mc.streak === 5) { flair = '&#x26A1; 5 streak! '; praise = 'やったね'; }
+                else if (mc.streak === 3) { flair = '&#x1F525; 3 in a row! '; praise = 'すごい'; }
+                r.innerHTML = flair + '&#x1F389; Correct!';
                 r.style.color = '#2e7d32';
+                r.style.display = 'block';
+                spawnConfetti(r, 10);
+                const toSay = [answerText, praise].filter(Boolean).join('。');
+                if (toSay) speak(toSay);
             } else {
                 btn.classList.add('wrong');
-                document.querySelectorAll('#mcOpts .option').forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
-                r.innerHTML = `&#x1F914; The answer is: <strong>${correct}</strong>`;
+                mc.streak = 0;
+                sfx('wrong');
+                document.querySelectorAll('#mcOpts .option').forEach(b => { if (b.textContent === it.correct) b.classList.add('correct'); });
+                r.innerHTML = `&#x1F914; The answer is: <strong>${it.correct}</strong>`;
                 r.style.color = '#c62828';
+                r.style.display = 'block';
+                if (answerText) speak(answerText);
             }
-            r.style.display = 'block';
             document.getElementById('mcNext').style.display = 'inline-block';
             document.getElementById('mcScore').textContent = `Correct: ${mc.correct}`;
         }
@@ -1056,10 +1278,14 @@
             else if (pct >= 80) { emoji='&#x1F31F;'; title='Great Job!'; }
             else if (pct >= 60) { emoji='&#x1F44D;'; title='Good Effort!'; }
             else { emoji='&#x1F4AA;'; title='Keep Practicing!'; }
+            const fn = (mc.replay || '').replace('()', '');
+            const bestLine = fn ? bestLineFor(fn, mc.correct, mc.items.length) : '';
             document.getElementById('mcStage').innerHTML = `
                 <div class="complete">
                     <div class="big-emoji">${emoji}</div>
                     <h2>${title}</h2>
+                    ${bestLine}
+                    ${mochiCameo(bestLine.indexOf('NEW RECORD') !== -1)}
                     <div class="final-score">You got <strong>${mc.correct}</strong> out of <strong>${mc.items.length}</strong> correct (${pct}%)</div>
                     <div class="complete-actions">
                         <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
@@ -1067,6 +1293,8 @@
                     </div>
                 </div>`;
             document.getElementById('mcFill').style.width = '100%';
+            if (pct === 100) spawnConfetti(document.querySelector('.modal-card'), 16);
+            markStamp(fn);
         }
 
         // ============================================================
@@ -1089,8 +1317,7 @@
                     correct: it.en
                 };
             });
-            mc.replay = 'actMixedQuiz()';
-            startMC('Mixed Quiz', 'Words and sentences &mdash; pick the meaning', 'show-jp', items);
+            startMC('Mixed Quiz', 'Words and sentences &mdash; pick the meaning', 'show-jp', items, 'actMixedQuiz()');
         }
 
         // ============================================================
@@ -1105,25 +1332,27 @@
                     tag: 'English &rarr; Japanese',
                     tagClass: 'reverse',
                     en: it.en,
+                    audioText: it.jp,
                     options: shuffle([it.jp, ...distractors]),
                     correct: it.jp
                 };
             });
-            mc.replay = 'actReverseQuiz()';
-            startMC('Reverse Quiz', 'See English &mdash; pick the Japanese', 'show-en', items);
+            startMC('Reverse Quiz', 'See English &mdash; pick the Japanese', 'show-en', items, 'actReverseQuiz()');
         }
 
         // ============================================================
         //  ACTIVITY 3: LISTENING QUIZ
         // ============================================================
         function actListening() {
-            const pool = uniqEn(vocab);
-            const sentPool = sentences;
-            const wordPicks = pick(pool, 7);
-            const sentPicks = pick(sentPool, 3).map(s => ({ jp:s.jp, en:s.en, plain:s.plain, romaji:s.romaji }));
+            const wordPool = uniqEn(vocab).map(v => ({ ...v, kind:'word' }));
+            const sentPool = sentences.map(s => ({ jp:s.jp, en:s.en, plain:s.plain, romaji:s.romaji, kind:'sentence' }));
+            const wordPicks = pick(wordPool, 7);
+            const sentPicks = pick(sentPool, 3);
+            // Normalize so near-duplicates like 'Thank you' / 'Thank you.' never co-occur
+            const normEn = e => e.toLowerCase().replace(/[.!?]+$/, '');
             const items = shuffle([...wordPicks, ...sentPicks]).map(it => {
-                const sourcePool = it.romaji && it.jp.length > 6 ? sentPool : pool;
-                const distractors = pick(sourcePool.filter(x => x.en !== it.en), 3).map(x => x.en);
+                const sourcePool = it.kind === 'sentence' ? sentPool : wordPool;
+                const distractors = pick(sourcePool.filter(x => normEn(x.en) !== normEn(it.en)), 3).map(x => x.en);
                 return {
                     tag: 'Listen &amp; Pick',
                     tagClass: 'listen',
@@ -1132,8 +1361,7 @@
                     correct: it.en
                 };
             });
-            mc.replay = 'actListening()';
-            startMC('Listening Quiz', 'Listen, then pick the meaning', 'listen', items);
+            startMC('Listening Quiz', 'Listen, then pick the meaning', 'listen', items, 'actListening()');
         }
 
         // ============================================================
@@ -1165,6 +1393,7 @@
             const it = sb.items[sb.idx];
             sb.slots = [];
             sb.used = new Array(it.chunks.length).fill(false);
+            sb.checked = false;
             const bank = shuffle(it.chunks.map((c, i) => ({ c, i })));
 
             openModal(`
@@ -1228,6 +1457,7 @@
         }
 
         function sbClear() {
+            if (sb.checked) return; // already graded — no rebuilding from the shown answer
             sb.slots = [];
             sb.used = sb.used.map(() => false);
             document.querySelectorAll('.sb-bank .sb-chunk').forEach(b => b.classList.remove('placed'));
@@ -1237,20 +1467,25 @@
         }
 
         function sbCheck() {
+            if (sb.checked) return; // one grade per sentence
+            sb.checked = true;
             const it = sb.items[sb.idx];
             const ok = sb.slots.length === it.chunks.length && sb.slots.every((s, i) => s.originalIdx === i);
             const r = document.getElementById('sbResult');
             const correctText = it.chunks.join(' ');
             if (ok) {
                 sb.correct++;
+                sfx('correct');
                 r.innerHTML = `&#x1F389; Correct! <strong>${correctText}</strong>`;
                 r.style.color = '#2e7d32';
                 speak(it.audio);
             } else {
+                sfx('wrong');
                 r.innerHTML = `&#x1F914; Try again. The answer is: <strong>${correctText}</strong>`;
                 r.style.color = '#c62828';
             }
             r.style.display = 'block';
+            document.querySelectorAll('.sb-actions .sb-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
             document.getElementById('sbNext').style.display = 'inline-block';
         }
 
@@ -1265,11 +1500,14 @@
             if (pct === 100) { emoji='&#x1F3C6;'; title='Perfect!'; }
             else if (pct >= 70) { emoji='&#x1F31F;'; title='Great Job!'; }
             else { emoji='&#x1F4AA;'; title='Keep Building!'; }
+            const bestLine = bestLineFor('actSentenceBuilder', sb.correct, sb.items.length);
             openModal(`
                 <div class="modal-title">Sentence Builder</div>
                 <div class="complete">
                     <div class="big-emoji">${emoji}</div>
                     <h2>${title}</h2>
+                    ${bestLine}
+                    ${mochiCameo(bestLine.indexOf('NEW RECORD') !== -1)}
                     <div class="final-score">You built <strong>${sb.correct}</strong> out of <strong>${sb.items.length}</strong> correctly (${pct}%)</div>
                     <div class="complete-actions">
                         <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
@@ -1277,6 +1515,8 @@
                     </div>
                 </div>
             `);
+            if (pct === 100) spawnConfetti(document.querySelector('.modal-card'), 16);
+            markStamp('actSentenceBuilder');
         }
 
         // ============================================================
@@ -1305,11 +1545,11 @@
                 tag:'Fill in the Blank', tagClass:'fill',
                 prompt: `<i>"${it.en}"</i>`,
                 jp: it.jp, romaji: '', en: it.en, audioText: it.jp.replace('___', it.missing),
+                noAudio: true, // the audio would read out the missing word — speak it after grading instead
                 options: shuffle([it.missing, ...it.distractors]),
                 correct: it.missing
             }));
-            mc.replay = 'actFillBlank()';
-            startMC('Fill in the Blank', 'Pick the missing word', 'show-jp', items);
+            startMC('Fill in the Blank', 'Pick the missing word', 'show-jp', items, 'actFillBlank()');
         }
 
         // ============================================================
@@ -1384,6 +1624,7 @@
                 <div class="complete">
                     <div class="big-emoji">&#x1F3C6;</div>
                     <h2>Question Master!</h2>
+                    ${mochiCameo(false)}
                     <div class="final-score">You turned <strong>${qm.correct}</strong> statements into questions!</div>
                     <div class="complete-actions">
                         <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
@@ -1391,6 +1632,7 @@
                     </div>
                 </div>
             `);
+            markStamp('actMakeQuestion');
         }
 
         // ============================================================
@@ -1414,8 +1656,7 @@
                 correct: it.correct,
                 jp: it.correct, audioText: it.correct.replace(/[、。?]/g,'')
             }));
-            mc.replay = 'actPoliteRefusal()';
-            startMC('Politely Saying No', 'Pick the right polite phrase for each situation', 'prompt-only', items);
+            startMC('Politely Saying No', 'Pick the right polite phrase for each situation', 'prompt-only', items, 'actPoliteRefusal()');
         }
 
         // ============================================================
@@ -1446,6 +1687,7 @@
             const it = sb.items[sb.idx];
             sb.slots = [];
             sb.used = new Array(it.chunks.length).fill(false);
+            sb.checked = false;
             const bank = shuffle(it.chunks.map((c, i) => ({ c, i })));
             openModal(`
                 <div class="modal-title">Possession Builder &mdash; の</div>
@@ -1477,20 +1719,25 @@
         }
 
         function possCheck() {
+            if (sb.checked) return; // one grade per phrase
+            sb.checked = true;
             const it = sb.items[sb.idx];
             const ok = sb.slots.length === it.chunks.length && sb.slots.every((s, i) => s.originalIdx === i);
             const r = document.getElementById('sbResult');
             const correctText = it.chunks.join(' ');
             if (ok) {
                 sb.correct++;
+                sfx('correct');
                 r.innerHTML = `&#x1F389; Correct! <strong>${correctText}</strong>`;
                 r.style.color = '#2e7d32';
                 speak(it.audio);
             } else {
+                sfx('wrong');
                 r.innerHTML = `&#x1F914; The answer is: <strong>${correctText}</strong>`;
                 r.style.color = '#c62828';
             }
             r.style.display = 'block';
+            document.querySelectorAll('.sb-actions .sb-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
             document.getElementById('sbNext').style.display = 'inline-block';
         }
 
@@ -1500,11 +1747,14 @@
         }
 
         function showPossComplete() {
+            const bestLine = bestLineFor('actPossession', sb.correct, sb.items.length);
             openModal(`
                 <div class="modal-title">Possession Builder</div>
                 <div class="complete">
                     <div class="big-emoji">&#x1F3C6;</div>
                     <h2>Nicely done!</h2>
+                    ${bestLine}
+                    ${mochiCameo(bestLine.indexOf('NEW RECORD') !== -1)}
                     <div class="final-score">${sb.correct} of ${sb.items.length} correct</div>
                     <div class="complete-actions">
                         <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
@@ -1512,6 +1762,7 @@
                     </div>
                 </div>
             `);
+            markStamp('actPossession');
         }
 
         // ============================================================
@@ -1556,8 +1807,7 @@
                     correct: correct, jp: correct, audioText: correct
                 });
             }
-            mc.replay = 'actSequence()';
-            startMC('Sequences', 'Find the missing counter or day', 'prompt-only', shuffle(items));
+            startMC('Sequences', 'Find the missing counter or day', 'prompt-only', shuffle(items), 'actSequence()');
         }
 
         // ============================================================
@@ -1581,6 +1831,7 @@
 
         function actSukiKirai() {
             skState = { remaining: shuffle(skItems), suki: [], kirai: [] };
+            skSelected = null; // no stale selection from a previous session
             renderSK();
         }
 
@@ -1610,10 +1861,12 @@
             bank.innerHTML = '';
             const prompt = document.getElementById('skPrompt');
             if (skState.remaining.length === 0) {
-                prompt.innerHTML = `&#x1F389; Great sorting! You said:<br>
+                prompt.innerHTML = `&#x1F389; Great sorting! <b>すき &#x2764;&#xFE0F; ${skState.suki.length} &middot; きらい &#x1F614; ${skState.kirai.length}</b><br>
                     <b>すき (like):</b> ${skState.suki.map(i => i.label).join('、') || '(none)'}<br>
-                    <b>きらい (don\'t like):</b> ${skState.kirai.map(i => i.label).join('、') || '(none)'}`;
+                    <b>きらい (don\'t like):</b> ${skState.kirai.map(i => i.label).join('、') || '(none)'}<br>
+                    <button class="qa-next" style="display:inline-block;margin-top:10px;" onclick="skReport()">&#x1F50A; Read my list</button>`;
                 document.getElementById('skDone').style.display = 'inline-block';
+                markStamp('actSukiKirai');
             } else {
                 prompt.innerHTML = `Tap a card, then drop it into すき or きらい. <b>${skState.remaining.length} left</b>`;
                 skState.remaining.forEach((it, idx) => {
@@ -1643,10 +1896,20 @@
             if (skSelected === null) return;
             const it = skState.remaining.splice(skSelected, 1)[0];
             skState[bin].push(it);
+            sfx('correct');
             const utterance = bin === 'suki' ? `${it.label} が すき です` : `${it.label} が きらい です`;
             speak(utterance);
             skSelected = null;
             renderSKLists();
+        }
+
+        // Reads her actual choices back as full sentences
+        function skReport() {
+            const parts = [
+                ...skState.suki.map(i => `${i.label} が すき です`),
+                ...skState.kirai.map(i => `${i.label} が きらい です`)
+            ];
+            if (parts.length) speak(parts.join('。') + '。');
         }
 
         // ============================================================
@@ -1654,7 +1917,7 @@
         // ============================================================
         const numToJp = { '0':'ぜろ','1':'いち','2':'に','3':'さん','4':'よん','5':'ご','6':'ろく','7':'なな','8':'はち','9':'きゅう' };
         const numToRomaji = { '0':'zero','1':'ichi','2':'ni','3':'san','4':'yon','5':'go','6':'roku','7':'nana','8':'hachi','9':'kyuu' };
-        let pn = { digits:[], revealed:[] };
+        let pn = { digits:[], revealed:[], quiz:null };
 
         function randomPhone() {
             const d = [];
@@ -1665,6 +1928,7 @@
         function actPhoneNumber() {
             pn.digits = randomPhone();
             pn.revealed = pn.digits.map(() => false);
+            pn.quiz = null;
             renderPN();
         }
 
@@ -1676,10 +1940,12 @@
                 <div class="modal-sub">Read each digit out loud, then tap to reveal!</div>
                 <div class="pn-display">${formatted}</div>
                 <div class="pn-list" id="pnList"></div>
+                <div style="text-align:center;color:#6a1b9a;font-weight:700;margin-bottom:10px;${pn.quiz ? '' : 'display:none;'}" id="pnQuizLine"></div>
                 <div style="text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                    <button class="qa-next" style="display:inline-block" onclick="speakPhone()">&#x1F50A; Hear it</button>
-                    <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #43a047, #2e7d32);" onclick="actPhoneNumber()">New Number</button>
-                    ${allRevealed ? '<button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="closeModal()">Done</button>' : ''}
+                    ${pn.quiz ? '' : '<button class="qa-next audio-btn" style="display:inline-block" onclick="toggleSpeak(pnReading(), this)">&#x1F50A; Hear it</button>'}
+                    ${pn.quiz ? '' : '<button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #43a047, #2e7d32);" onclick="actPhoneNumber()">New Number</button>'}
+                    ${allRevealed && !pn.quiz ? '<button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #8e24aa, #5e35b1);" onclick="pnStartQuiz()">&#x1F3AF; Quiz me!</button>' : ''}
+                    ${allRevealed && !pn.quiz ? '<button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="closeModal()">Done</button>' : ''}
                 </div>
             `);
             const list = document.getElementById('pnList');
@@ -1688,18 +1954,83 @@
                 el.className = 'pn-digit';
                 if (pn.revealed[i]) {
                     el.classList.add('revealed');
-                    el.innerHTML = `<div style="font-size:1.4em;">${d}</div><div style="font-size:0.85em;">${numToJp[d]}</div>`;
+                    // during the quiz, hide the reading so she has to LISTEN, not read
+                    el.innerHTML = pn.quiz
+                        ? `<div style="font-size:1.4em;">${d}</div>`
+                        : `<div style="font-size:1.4em;">${d}</div><div style="font-size:0.85em;">${numToJp[d]}</div>`;
                 } else {
                     el.innerHTML = `<div style="font-size:1.4em;">${d}</div><div style="font-size:0.85em;color:#bbb;">?</div>`;
                 }
-                el.onclick = () => { pn.revealed[i] = true; speak(numToJp[d]); renderPN(); };
+                el.onclick = () => {
+                    if (pn.quiz) { pnQuizTap(i, el); return; }
+                    pn.revealed[i] = true; speak(numToJp[d]); renderPN();
+                };
                 list.appendChild(el);
             });
+            if (allRevealed) markStamp('actPhoneNumber');
         }
 
+        function pnReading() {
+            return pn.digits.map(d => numToJp[d]).join(' ');
+        }
         function speakPhone() {
-            const text = pn.digits.map(d => numToJp[d]).join(' ');
-            speak(text);
+            speak(pnReading());
+        }
+
+        // "Quiz me!" round: hear a digit, tap it (5 rounds)
+        function pnStartQuiz() {
+            pn.quiz = { round: 0, hits: 0, missed: false, target: null };
+            renderPN();
+            pnNextQuiz();
+        }
+
+        function pnNextQuiz() {
+            if (!pn.quiz || !document.getElementById('pnQuizLine')) return; // modal closed mid-quiz
+            if (pn.quiz.round >= 5) return pnQuizComplete();
+            pn.quiz.round++;
+            pn.quiz.missed = false;
+            pn.quiz.target = Math.floor(Math.random() * pn.digits.length);
+            const line = document.getElementById('pnQuizLine');
+            if (line) line.innerHTML = `Round <b>${pn.quiz.round} of 5</b> &mdash; tap the digit you hear!`;
+            setTimeout(() => { if (pn.quiz && pn.quiz.target !== null) speak(numToJp[pn.digits[pn.quiz.target]]); }, 400);
+        }
+
+        function pnQuizTap(i, el) {
+            if (pn.quiz.target === null) return; // between rounds
+            const line = document.getElementById('pnQuizLine');
+            const targetDigit = pn.digits[pn.quiz.target];
+            if (pn.digits[i] === targetDigit) {
+                if (!pn.quiz.missed) pn.quiz.hits++;
+                sfx('correct');
+                el.classList.add('pn-hit');
+                setTimeout(() => el.classList.remove('pn-hit'), 600);
+                if (line) line.innerHTML = `&#x1F389; <b class="all-jp-text">${numToJp[targetDigit]}</b> = ${targetDigit}!`;
+                pn.quiz.target = null;
+                setTimeout(pnNextQuiz, 900);
+            } else {
+                pn.quiz.missed = true;
+                sfx('wrong');
+                if (line) line.innerHTML = 'Almost! Listen again&hellip;';
+                speak(numToJp[targetDigit]);
+            }
+        }
+
+        function pnQuizComplete() {
+            const hits = pn.quiz.hits;
+            pn.quiz = null;
+            openModal(`
+                <div class="modal-title">Phone Number Reader</div>
+                <div class="complete">
+                    <div class="big-emoji">&#x1F977;</div>
+                    <h2>Number Ninja!</h2>
+                    ${mochiCameo(false)}
+                    <div class="final-score">You found <strong>${hits}</strong> of <strong>5</strong> digits on the first try!</div>
+                    <div class="complete-actions">
+                        <button class="qa-next" style="display:inline-block" onclick="closeModal()">Done</button>
+                        <button class="qa-next" style="display:inline-block; background: linear-gradient(135deg, #ff8f00, #ef6c00);" onclick="pnStartQuiz()">Quiz Again</button>
+                    </div>
+                </div>
+            `);
         }
 
         // ============================================================
@@ -1723,8 +2054,7 @@
                 options: shuffle([it.correct, ...it.distractors]),
                 correct: it.correct, jp: it.correct, audioText: it.correct
             }));
-            mc.replay = 'actGreetings()';
-            startMC('Greeting Scenarios', 'Pick the right greeting for the situation', 'prompt-only', items);
+            startMC('Greeting Scenarios', 'Pick the right greeting for the situation', 'prompt-only', items, 'actGreetings()');
         }
 
         // ============================================================
@@ -1747,14 +2077,31 @@
 
         function renderActivities() {
             const grid = document.getElementById('activityGrid');
-            grid.innerHTML = activities.map(a => `
+            const stamps = getStamps();
+            const line = document.getElementById('stampLine');
+            if (line) {
+                let html = `&#x1F338; Today: <b>${stamps.done.length} / ${activities.length}</b> stamps`;
+                if (stamps.done.length === activities.length) {
+                    html += `<div class="all-stamps-banner">
+                        <span class="mascot small" onclick="cameoTap(this, 'やったね！おいわい しよう！')">🐰</span>
+                        <span class="all-jp-text">やったね！おいわい しよう！</span> <span style="font-weight:700;color:#bf360c;">(You did it! Let's celebrate!)</span><br>
+                        &#x1F3C6; ぜんぶ できました! All 12 stamps today &mdash; amazing, Fiona! &#x1F338;</div>`;
+                }
+                line.innerHTML = html;
+            }
+            grid.innerHTML = activities.map(a => {
+                const stamped = stamps.done.includes(a.fn);
+                const best = lsGet('reviewBest:' + a.fn);
+                return `
                 <div class="activity-card c-${a.color}" onclick="${a.fn}()">
+                    ${stamped ? '<div class="stamp">&#x1F338;</div>' : ''}
                     <div class="ico">${a.icon}</div>
                     <span class="a-tag">${a.tag}</span>
                     <div class="a-title">${a.title}</div>
                     <div class="a-desc">${a.desc}</div>
+                    ${best ? `<div class="a-best">&#x2B50; best ${best}</div>` : ''}
                 </div>
-            `).join('');
+            `;}).join('');
         }
         renderActivities();
 

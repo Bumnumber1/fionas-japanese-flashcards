@@ -75,6 +75,8 @@
         #hudWave { color: #b388ff; }
         #hudScore { color: #ffe57f; }
         #hudCombo { color: #69f0ae; min-width: 46px; }
+        #hudCombo.pop { animation: comboPop 0.3s ease-out; }
+        @keyframes comboPop { from { transform: scale(1.6); } to { transform: scale(1); } }
 
         #target {
             flex: 0 0 auto;
@@ -218,6 +220,29 @@
             cursor: pointer;
         }
         .big-btn:active { transform: scale(0.95); }
+
+        #modeToggle { display: flex; justify-content: center; gap: 12px; margin-top: 14px; }
+        .mode-btn {
+            font-family: inherit;
+            font-size: 1.05em;
+            font-weight: 800;
+            line-height: 1.25;
+            color: #9fa8da;
+            padding: 10px 24px;
+            border-radius: 18px;
+            border: 2px solid rgba(179, 136, 255, 0.35);
+            background: rgba(11, 16, 48, 0.9);
+            cursor: pointer;
+        }
+        .mode-btn:active { transform: scale(0.95); }
+        .mode-btn span { font-size: 0.68em; font-weight: 700; letter-spacing: 0.08em; }
+        .mode-btn.selected {
+            color: #ffffff;
+            border-color: #69f0ae;
+            background: linear-gradient(135deg, rgba(105, 240, 174, 0.28), rgba(128, 216, 255, 0.28));
+            box-shadow: 0 0 16px rgba(105, 240, 174, 0.5);
+        }
+
         #finalStats { font-size: 1.15em; font-weight: 800; color: #ffe57f; margin: 10px 0; }
 
         #winnerName {
@@ -258,6 +283,27 @@
             font-weight: 700;
             color: #e3f2fd;
         }
+
+        /* ---------- cute mascot kit (dark-page variant) ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: rgba(255,255,255,0.92); border: 2px solid #b388ff; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #b388ff; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: rgba(255,255,255,0.92); }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -285,7 +331,7 @@
         <div class="overlay show" id="startOverlay">
             <div class="panel">
                 <h2>🚀 Kana Galaxy</h2>
-                <p>Hiragana pods are drifting through space!</p>
+                <p>Kana pods are drifting through space!</p>
                 <p class="rule">🟢 <b>BEAM</b> the pod that matches the romaji at the top</p>
                 <p class="rule">🔴 <b>LASER</b> all the other pods for points</p>
                 <p class="rule">⚠️ Beam the wrong one — or shoot the right one — and you lose a heart!</p>
@@ -293,9 +339,19 @@
                 <p class="rule">👾 A space boss attacks every 4th wave — a different monster each time! Only shoot it while its dome shows the hunted kana!</p>
                 <p class="rule">🍦 Score <b>30,000+</b> and earn a REAL <b>Rocksalt Milk Bar</b> ice cream coupon!</p>
                 <p>Move: drag, or ← → keys &nbsp;|&nbsp; Laser: SPACE &nbsp;|&nbsp; Beam: B</p>
+                <div id="modeToggle">
+                    <button class="mode-btn" id="modeHira">あ ひらがな<br><span>Hiragana</span></button>
+                    <button class="mode-btn" id="modeKata">ア カタカナ<br><span>Katakana</span></button>
+                </div>
+                <div class="mascot-row">
+                    <span class="mascot small" id="titleMochi" title="Mochi">🐰<span style="font-size:0.55em;vertical-align:1.1em;margin-left:-0.6em;">🫧</span></span>
+                    <div class="mascot-bubble"><span class="mb-jp">おつきさまも みてるよ！</span><span class="mb-en">Even the moon is watching!</span></div>
+                </div>
                 <button class="big-btn" id="startBtn">START MISSION</button>
                 <button class="big-btn" id="winnersBtn" style="background:linear-gradient(135deg,#ff80ab,#c2185b);margin-left:8px;">🍦 WINNERS</button>
                 <p id="bestLine" style="color:#ffe57f;font-weight:800;"></p>
+                <p id="trophyLine" style="color:#b388ff;font-weight:800;"></p>
+                <p id="lifetimeLine" style="color:#80d8ff;font-weight:700;"></p>
             </div>
         </div>
 
@@ -305,7 +361,12 @@
                 <div id="finalStats"></div>
                 <p id="overCoupon" style="color:#ffe57f;font-weight:800;"></p>
                 <p id="overBest"></p>
+                <div class="mascot-row">
+                    <span class="mascot small" id="overMochi" title="Mochi">🐰</span>
+                    <div class="mascot-bubble"><span class="mb-jp" id="overMochiJp"></span><span class="mb-en" id="overMochiEn"></span></div>
+                </div>
                 <button class="big-btn" id="restartBtn">FLY AGAIN</button>
+                <button class="big-btn" id="menuBtn" style="background:linear-gradient(135deg,#546e7a,#263238);margin-left:8px;">MENU</button>
             </div>
         </div>
 
@@ -358,7 +419,8 @@
 
 <script>
 // =========================================================================
-// KANA DATA - 46 base hiragana with Hepburn romaji
+// KANA DATA - hiragana + katakana (46 base + 25 dakuten/handakuten each)
+// with Hepburn romaji
 // =========================================================================
 const KANA = [
     {k:'あ',r:'a',row:0},{k:'い',r:'i',row:0},{k:'う',r:'u',row:0},{k:'え',r:'e',row:0},{k:'お',r:'o',row:0},
@@ -378,10 +440,37 @@ const KANA = [
     {k:'ぱ',r:'pa',row:14},{k:'ぴ',r:'pi',row:14},{k:'ぷ',r:'pu',row:14},{k:'ぺ',r:'pe',row:14},{k:'ぽ',r:'po',row:14}
 ];
 
+// Same 71 characters in katakana (incl. the ヂ/ヅ 'ji'/'zu' duplicates,
+// mirroring ぢ/づ above - uniqueness is enforced by romaji at spawn time)
+const KATAKANA = [
+    {k:'ア',r:'a',row:0},{k:'イ',r:'i',row:0},{k:'ウ',r:'u',row:0},{k:'エ',r:'e',row:0},{k:'オ',r:'o',row:0},
+    {k:'カ',r:'ka',row:1},{k:'キ',r:'ki',row:1},{k:'ク',r:'ku',row:1},{k:'ケ',r:'ke',row:1},{k:'コ',r:'ko',row:1},
+    {k:'サ',r:'sa',row:2},{k:'シ',r:'shi',row:2},{k:'ス',r:'su',row:2},{k:'セ',r:'se',row:2},{k:'ソ',r:'so',row:2},
+    {k:'タ',r:'ta',row:3},{k:'チ',r:'chi',row:3},{k:'ツ',r:'tsu',row:3},{k:'テ',r:'te',row:3},{k:'ト',r:'to',row:3},
+    {k:'ナ',r:'na',row:4},{k:'ニ',r:'ni',row:4},{k:'ヌ',r:'nu',row:4},{k:'ネ',r:'ne',row:4},{k:'ノ',r:'no',row:4},
+    {k:'ハ',r:'ha',row:5},{k:'ヒ',r:'hi',row:5},{k:'フ',r:'fu',row:5},{k:'ヘ',r:'he',row:5},{k:'ホ',r:'ho',row:5},
+    {k:'マ',r:'ma',row:6},{k:'ミ',r:'mi',row:6},{k:'ム',r:'mu',row:6},{k:'メ',r:'me',row:6},{k:'モ',r:'mo',row:6},
+    {k:'ヤ',r:'ya',row:7},{k:'ユ',r:'yu',row:7},{k:'ヨ',r:'yo',row:7},
+    {k:'ラ',r:'ra',row:8},{k:'リ',r:'ri',row:8},{k:'ル',r:'ru',row:8},{k:'レ',r:'re',row:8},{k:'ロ',r:'ro',row:8},
+    {k:'ワ',r:'wa',row:9},{k:'ヲ',r:'wo',row:9},{k:'ン',r:'n',row:9},
+    {k:'ガ',r:'ga',row:10},{k:'ギ',r:'gi',row:10},{k:'グ',r:'gu',row:10},{k:'ゲ',r:'ge',row:10},{k:'ゴ',r:'go',row:10},
+    {k:'ザ',r:'za',row:11},{k:'ジ',r:'ji',row:11},{k:'ズ',r:'zu',row:11},{k:'ゼ',r:'ze',row:11},{k:'ゾ',r:'zo',row:11},
+    {k:'ダ',r:'da',row:12},{k:'ヂ',r:'ji',row:12},{k:'ヅ',r:'zu',row:12},{k:'デ',r:'de',row:12},{k:'ド',r:'do',row:12},
+    {k:'バ',r:'ba',row:13},{k:'ビ',r:'bi',row:13},{k:'ブ',r:'bu',row:13},{k:'ベ',r:'be',row:13},{k:'ボ',r:'bo',row:13},
+    {k:'パ',r:'pa',row:14},{k:'ピ',r:'pi',row:14},{k:'プ',r:'pu',row:14},{k:'ペ',r:'pe',row:14},{k:'ポ',r:'po',row:14}
+];
+
+// Mode: 'hira' (default) or 'kata' - picked on the title screen,
+// remembered across visits. All spawning/targeting goes through activePool.
+let mode = 'hira';
+try { if (localStorage.getItem('kana-galaxy-mode') === 'kata') mode = 'kata'; } catch (e) {}
+let activePool = mode === 'kata' ? KATAKANA : KANA;
+
 function poolForWave(w) {
-    // Full shuffled hiragana set every wave (incl. dakuten/handakuten) -
-    // the player knows all of them, so no progressive unlocking
-    return KANA;
+    // Full shuffled set of the chosen script every wave (incl.
+    // dakuten/handakuten) - the player knows all of them, so no
+    // progressive unlocking
+    return activePool;
 }
 
 // =========================================================================
@@ -402,10 +491,21 @@ let rapidUntil = 0, wideUntil = 0, slowUntil = 0, x2Until = 0, freezeUntil = 0;
 const GOAL = 30000;  // Rocksalt Milk Bar ice cream coupon threshold
 let couponEarned = false, couponFrom = 'playing', winnerIdx = null, bossCount = 0;
 let shakeT = 0, lastShot = 0, now = 0, lastT = 0;
+let animNow = 0;         // cosmetic clock - keeps ticking while game time is frozen
+let pendingNext = null, pendingT = 0;  // update()-driven wave/boss transition countdown
+let bestBeaten = false, lastMilestone = 0, lastComboShown = 0;
 let stars = [];
 const ship = { x: 200, tx: 200, y: 0, w: 60 };
+// High scores are kept separately per mode ('kana-galaxy-best' predates the
+// katakana mode, so it stays the hiragana key)
+function bestKey() { return mode === 'kata' ? 'kana-galaxy-best-kata' : 'kana-galaxy-best'; }
+function bestWaveKey() { return mode === 'kata' ? 'kana-galaxy-best-wave-kata' : 'kana-galaxy-best-wave'; }
 let best = 0;
-try { best = parseInt(localStorage.getItem('kana-galaxy-best') || '0', 10) || 0; } catch (e) {}
+function loadBest() {
+    best = 0;
+    try { best = parseInt(localStorage.getItem(bestKey()) || '0', 10) || 0; } catch (e) {}
+}
+loadBest();
 
 function resize() {
     const stage = document.getElementById('stage');
@@ -450,7 +550,11 @@ function playSfx(type) {
         const t = getAudioCtx().currentTime;
         if (type === 'laser') tone(880, t, 0.12, 'square', 0.12, 180);
         else if (type === 'beam') { tone(220, t, 0.4, 'sawtooth', 0.08, 520); tone(330, t, 0.4, 'sine', 0.06, 660); }
-        else if (type === 'capture') [523, 659, 784].forEach((f, i) => tone(f, t + i * 0.09, 0.18, 'sine', 0.16));
+        else if (type === 'capture') {
+            // Chime climbs one semitone per combo step - a streak sounds like a streak
+            const mul = Math.pow(2, (Math.max(combo, 1) - 1) / 12);
+            [523, 659, 784].forEach((f, i) => tone(f * mul, t + i * 0.09, 0.18, 'sine', 0.16));
+        }
         else if (type === 'wrong') { tone(180, t, 0.3, 'sawtooth', 0.15, 90); tone(120, t + 0.05, 0.3, 'square', 0.1, 60); }
         else if (type === 'boom') { tone(120, t, 0.35, 'sawtooth', 0.18, 30); tone(60, t, 0.4, 'square', 0.14, 25); }
         else if (type === 'pup') [660, 880, 1100, 1320].forEach((f, i) => tone(f, t + i * 0.06, 0.1, 'triangle', 0.12));
@@ -515,6 +619,12 @@ function startWave() {
     hunted = picks[Math.floor(Math.random() * picks.length)];
     updateHUD();
     showBanner('WAVE ' + wave, '#b388ff');
+    if (wave === 1) {
+        // Greet the pilot by name if she's already in the winners book
+        let pilot = '';
+        try { pilot = localStorage.getItem('kana-galaxy-pilot') || ''; } catch (e) {}
+        if (pilot) addText(W / 2, H * 0.3, '🚀 GO PILOT ' + pilot.toUpperCase() + '!', '#80d8ff');
+    }
     speak(hunted.k);
 }
 
@@ -523,7 +633,7 @@ function newTarget(excludePod) {
     if (others.length === 0) { spawnDecoy(); }
     const src = (others.length ? others : pods.filter(p => !p.captured));
     const pick = src[Math.floor(Math.random() * src.length)];
-    hunted = KANA.find(c => c.k === pick.k) || hunted;
+    hunted = activePool.find(c => c.k === pick.k) || hunted;
     updateHUD();
     speak(hunted.k);
 }
@@ -585,6 +695,8 @@ const BOSS_TYPES = [
     { name: 'MECHA MOON', shape: 'moon', c1: '#b0bec5', c2: '#37474f', dome: 'rgba(255, 138, 128, 0.35)' },
     { name: 'GHOST GALLEON', shape: 'ghost', c1: '#a5d6a7', c2: '#1b5e20', dome: 'rgba(225, 190, 231, 0.4)' }
 ];
+// One trophy emoji per boss shape - shown on the title-screen trophy shelf
+const BOSS_EMOJI = { saucer: '🛸', crab: '🦀', squid: '🦑', moon: '🌕', ghost: '👻' };
 
 function startBoss() {
     state = 'boss';
@@ -610,17 +722,30 @@ function startBoss() {
 
 function defeatBoss() {
     playSfx('fanfare');
+    speak('やったね！');
     explode(boss.x, boss.y, 60, '#ffe57f');
     explode(boss.x - 60, boss.y + 20, 30, '#ff80ab');
     explode(boss.x + 60, boss.y + 20, 30, '#80d8ff');
     score += 1000;
+    updateHUD();
     addText(boss.x, boss.y, '+1000', '#ffe57f');
     dropPowerup(boss.x - 40, boss.y, true);
     dropPowerup(boss.x + 40, boss.y, true);
+    // Trophy shelf: remember this monster for the title screen
+    try {
+        const tr = JSON.parse(localStorage.getItem('kana-galaxy-trophies') || '[]');
+        if (!tr.includes(boss.type.name)) {
+            tr.push(boss.type.name);
+            localStorage.setItem('kana-galaxy-trophies', JSON.stringify(tr));
+        }
+    } catch (e) {}
     boss = null;
     shakeT = 0.5;
     wave++;
-    setTimeout(() => { if (state === 'boss') startWave(); }, 1200);
+    // update()-driven countdown (not setTimeout) so a pause or the coupon
+    // overlay freezes the transition instead of swallowing it
+    pendingNext = 'wave';
+    pendingT = 1.2;
 }
 
 // =========================================================================
@@ -670,8 +795,10 @@ function captureResolve(pod) {
         if (captures >= capturesNeeded) {
             wave++;
             updateHUD();
-            if (wave % 4 === 0) { setTimeout(() => { if (state === 'playing') startBoss(); }, 700); }
-            else { setTimeout(() => { if (state === 'playing') startWave(); }, 700); }
+            // update()-driven countdown (not setTimeout) so a pause or the
+            // coupon overlay freezes the transition instead of swallowing it
+            pendingNext = wave % 4 === 0 ? 'boss' : 'wave';
+            pendingT = 0.7;
         } else {
             spawnDecoy();
             newTarget(pod);
@@ -706,6 +833,7 @@ function shotHitsPod(pod) {
 
 function gameOver() {
     state = 'over';
+    pendingNext = null;
     // Record the final score next to the winner's name
     if (winnerIdx !== null) {
         try {
@@ -716,17 +844,33 @@ function gameOver() {
             }
         } catch (e) {}
     }
+    // Lifetime records: all-time kana rescued + deepest wave (per mode)
+    let bestWave = 0;
+    try {
+        const lifetime = (parseInt(localStorage.getItem('kana-galaxy-lifetime') || '0', 10) || 0) + totalCaptured;
+        localStorage.setItem('kana-galaxy-lifetime', '' + lifetime);
+        bestWave = Math.max(parseInt(localStorage.getItem(bestWaveKey()) || '0', 10) || 0, wave);
+        localStorage.setItem(bestWaveKey(), '' + bestWave);
+    } catch (e) {}
     document.getElementById('overCoupon').textContent =
         couponEarned ? '🍦 Rocksalt Milk Bar coupon earned - show a parent!' : '';
+    const modeName = mode === 'kata' ? 'Katakana' : 'Hiragana';
     if (score > best) {
         best = score;
-        try { localStorage.setItem('kana-galaxy-best', '' + best); } catch (e) {}
-        document.getElementById('overBest').textContent = '🏆 NEW HIGH SCORE!';
+        try { localStorage.setItem(bestKey(), '' + best); } catch (e) {}
+        document.getElementById('overBest').textContent = '🏆 NEW ' + modeName.toUpperCase() + ' HIGH SCORE!';
+        // Mochi the moon rabbit celebrates the new record (text only)
+        document.getElementById('overMochiJp').textContent = 'しんきろく、おめでとう！';
+        document.getElementById('overMochiEn').textContent = 'Congrats on the new record!';
+        speak('すごい！');
     } else {
-        document.getElementById('overBest').textContent = 'Best: ' + best;
+        document.getElementById('overBest').textContent = modeName + ' best: ' + best;
+        document.getElementById('overMochiJp').textContent = 'すごい すごい！';
+        document.getElementById('overMochiEn').textContent = 'Amazing, amazing!';
     }
     document.getElementById('finalStats').innerHTML =
-        'Score: ' + score + '<br>Kana captured: ' + totalCaptured + ' · Reached wave ' + wave;
+        'Score: ' + score + '<br>Kana captured: ' + totalCaptured + ' · Reached wave ' + wave +
+        (bestWave > 0 ? ' · best wave ' + bestWave : '');
     document.getElementById('overOverlay').classList.add('show');
 }
 
@@ -734,6 +878,7 @@ function startGame() {
     score = 0; lives = 5; shield = 0; wave = 1; combo = 0; totalCaptured = 0;
     rapidUntil = wideUntil = slowUntil = x2Until = freezeUntil = 0;
     couponEarned = false; winnerIdx = null;
+    pendingNext = null; bestBeaten = false; lastMilestone = 0;
     pups = []; parts = []; texts = [];
     document.getElementById('startOverlay').classList.remove('show');
     document.getElementById('overOverlay').classList.remove('show');
@@ -764,10 +909,30 @@ function showBanner(txt, col) {
 function updateHUD() {
     document.getElementById('hudLives').textContent = '❤️'.repeat(Math.max(lives, 0));
     document.getElementById('hudShield').textContent = shield > 0 ? '🛡️x' + shield : '';
-    document.getElementById('hudCombo').textContent = combo > 1 ? 'x' + combo : '';
+    const comboEl = document.getElementById('hudCombo');
+    comboEl.textContent = combo > 1 ? 'x' + combo : '';
+    if (combo > lastComboShown && combo > 1) {
+        comboEl.classList.remove('pop');
+        void comboEl.offsetWidth;  // restart the animation
+        comboEl.classList.add('pop');
+    }
+    lastComboShown = combo;
     document.getElementById('hudWave').textContent = 'WAVE ' + wave;
     document.getElementById('hudScore').textContent = score;
     document.getElementById('hudTarget').textContent = hunted ? hunted.r.toUpperCase() : '–';
+    // 🏆 Celebrate beating the personal best the moment it happens
+    if (!bestBeaten && best > 0 && score > best && (state === 'playing' || state === 'boss')) {
+        bestBeaten = true;
+        showBanner('🏆 NEW ' + (mode === 'kata' ? 'KATAKANA' : 'HIRAGANA') + ' BEST!', '#ffe57f');
+        fireworksWave();
+        playSfx('fanfare');
+    }
+    // 🍦 Milestone banners on the road to the coupon (display-only)
+    if (state === 'playing' || state === 'boss') {
+        if (score >= 25000 && lastMilestone < 25000) { lastMilestone = 25000; showBanner('🍦 5,000 to ICE CREAM!', '#ffe57f'); playSfx('pup'); }
+        else if (score >= 20000 && lastMilestone < 20000) { lastMilestone = 20000; showBanner('🍦 20,000! Keep flying!', '#ffe57f'); playSfx('pup'); }
+        else if (score >= 10000 && lastMilestone < 10000) { lastMilestone = 10000; showBanner('🍦 10,000! A third of the way!', '#ffe57f'); playSfx('pup'); }
+    }
     if (!couponEarned && score >= GOAL && (state === 'playing' || state === 'boss')) triggerCoupon();
 }
 
@@ -809,9 +974,10 @@ function loadWinners() {
 function saveWinner() {
     const name = (document.getElementById('winnerName').value || '').trim() || 'Space Cadet';
     const winners = loadWinners();
-    winners.push({ name: name, score: score, date: new Date().toLocaleDateString() });
+    winners.push({ name: name, score: score, date: new Date().toLocaleDateString(), mode: mode });
     winnerIdx = winners.length - 1;
     try { localStorage.setItem('kana-galaxy-winners', JSON.stringify(winners)); } catch (e) {}
+    try { localStorage.setItem('kana-galaxy-pilot', name); } catch (e) {}  // for the wave-1 greeting
     document.getElementById('couponEntry').style.display = 'none';
     document.getElementById('couponName').textContent = name;
     document.getElementById('couponDate').textContent = new Date().toLocaleDateString();
@@ -837,7 +1003,9 @@ function showWinners() {
     winners.slice().reverse().forEach(w => {
         const row = document.createElement('div');
         row.className = 'winner-row';
-        const n = document.createElement('span'); n.textContent = '🍦 ' + w.name;
+        // Older entries were saved before modes existed - they just get no tag
+        const tag = w.mode === 'kata' ? ' · カタカナ' : (w.mode === 'hira' ? ' · ひらがな' : '');
+        const n = document.createElement('span'); n.textContent = '🍦 ' + w.name + tag;
         const s = document.createElement('span'); s.textContent = w.score.toLocaleString() + ' · ' + w.date;
         row.appendChild(n); row.appendChild(s);
         list.appendChild(row);
@@ -849,11 +1017,31 @@ function showWinners() {
 // UPDATE
 // =========================================================================
 function update(dt) {
+    // Pending wave/boss transition - only counts down while the game runs,
+    // so pause and the coupon overlay freeze it naturally
+    if (pendingNext) {
+        pendingT -= dt;
+        if (pendingT <= 0) {
+            const a = pendingNext;
+            pendingNext = null;
+            if (a === 'boss') startBoss(); else startWave();
+        }
+    }
+
     const sm = speedMult();
 
     // Ship eases toward target x
     ship.x += (ship.tx - ship.x) * Math.min(1, dt * 10);
     ship.x = Math.min(Math.max(ship.x, 34), W - 34);
+
+    // ✨ golden trail while double points is active
+    if (now < x2Until) {
+        parts.push({
+            x: ship.x + (Math.random() - 0.5) * 12, y: ship.y + 20,
+            vx: (Math.random() - 0.5) * 30, vy: 60 + Math.random() * 50,
+            life: 0.35 + Math.random() * 0.3, col: '#ffe57f', s: 2 + Math.random() * 2
+        });
+    }
 
     // Stars
     stars.forEach(s => { s.y += s.v * dt; if (s.y > H) { s.y = -2; s.x = Math.random() * W; } });
@@ -911,6 +1099,7 @@ function update(dt) {
                     boss.hp--; boss.flash = 0.25;
                     const v = award(150);
                     score += v;
+                    updateHUD();
                     addText(s.x, boss.y + 60, 'HIT! +' + v, '#ffe57f');
                     explode(s.x, boss.y + 40, 12, '#ffe57f');
                     playSfx('bossHit');
@@ -991,8 +1180,8 @@ function draw() {
     ctx.save();
     if (shakeT > 0) ctx.translate((Math.random() - 0.5) * 10 * shakeT, (Math.random() - 0.5) * 10 * shakeT);
 
-    // Starfield
-    ctx.fillStyle = '#cfd8ff';
+    // Starfield - turns golden while double points is active
+    ctx.fillStyle = now < x2Until ? '#ffe57f' : '#cfd8ff';
     stars.forEach(s => { ctx.globalAlpha = 0.3 + s.s * 0.3; ctx.fillRect(s.x, s.y, s.s, s.s); });
     ctx.globalAlpha = 1;
 
@@ -1012,7 +1201,7 @@ function draw() {
         ctx.fill();
         ctx.strokeStyle = 'rgba(185, 255, 220, 0.6)';
         ctx.setLineDash([6, 10]);
-        ctx.lineDashOffset = -now * 90;
+        ctx.lineDashOffset = -animNow * 90;
         ctx.beginPath(); ctx.moveTo(ship.x - bw / 2, 0); ctx.lineTo(ship.x - 10, ship.y - 20); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(ship.x + bw / 2, 0); ctx.lineTo(ship.x + 10, ship.y - 20); ctx.stroke();
         ctx.setLineDash([]);
@@ -1059,7 +1248,7 @@ function draw() {
     pups.forEach(p => {
         ctx.save();
         ctx.translate(p.x, p.y);
-        ctx.rotate(Math.sin(now * 3 + p.x) * 0.2);
+        ctx.rotate(Math.sin(animNow * 3 + p.x) * 0.2);
         ctx.fillText(PUP_ICON[p.type], 0, 0);
         ctx.restore();
     });
@@ -1077,12 +1266,12 @@ function draw() {
             // snapping claws
             ctx.beginPath();
             ctx.moveTo(boss.x - boss.rx, boss.y);
-            ctx.lineTo(boss.x - boss.rx - 34, boss.y - 30 + Math.sin(now * 3) * 10);
+            ctx.lineTo(boss.x - boss.rx - 34, boss.y - 30 + Math.sin(animNow * 3) * 10);
             ctx.lineTo(boss.x - boss.rx - 24, boss.y + 18);
             ctx.closePath(); ctx.fill();
             ctx.beginPath();
             ctx.moveTo(boss.x + boss.rx, boss.y);
-            ctx.lineTo(boss.x + boss.rx + 34, boss.y - 30 - Math.sin(now * 3) * 10);
+            ctx.lineTo(boss.x + boss.rx + 34, boss.y - 30 - Math.sin(animNow * 3) * 10);
             ctx.lineTo(boss.x + boss.rx + 24, boss.y + 18);
             ctx.closePath(); ctx.fill();
             ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx, boss.ry, 0, 0, Math.PI * 2); ctx.fill();
@@ -1094,8 +1283,8 @@ function draw() {
                 ctx.beginPath();
                 ctx.moveTo(boss.x + i * boss.rx * 0.3, boss.y + boss.ry * 0.4);
                 ctx.quadraticCurveTo(
-                    boss.x + i * boss.rx * 0.45 + Math.sin(now * 2.5 + i) * 14, boss.y + boss.ry + 24,
-                    boss.x + i * boss.rx * 0.5 + Math.cos(now * 2 + i) * 16, boss.y + boss.ry + 46);
+                    boss.x + i * boss.rx * 0.45 + Math.sin(animNow * 2.5 + i) * 14, boss.y + boss.ry + 24,
+                    boss.x + i * boss.rx * 0.5 + Math.cos(animNow * 2 + i) * 16, boss.y + boss.ry + 46);
                 ctx.stroke();
             }
             ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx * 0.8, boss.ry * 1.15, 0, 0, Math.PI * 2); ctx.fill();
@@ -1118,7 +1307,7 @@ function draw() {
             ctx.lineTo(boss.x + gw, hem);
             for (let i = 3; i >= -3; i--) {
                 ctx.quadraticCurveTo(
-                    boss.x + (i + 0.5) * gw / 3.5, hem + 16 + Math.sin(now * 3 + i) * 5,
+                    boss.x + (i + 0.5) * gw / 3.5, hem + 16 + Math.sin(animNow * 3 + i) * 5,
                     boss.x + i * gw / 3.5, hem);
             }
             ctx.closePath(); ctx.fill();
@@ -1131,7 +1320,7 @@ function draw() {
             // classic saucer with blinking lights
             ctx.beginPath(); ctx.ellipse(boss.x, boss.y, boss.rx, boss.ry, 0, 0, Math.PI * 2); ctx.fill();
             for (let i = -2; i <= 2; i++) {
-                ctx.fillStyle = (Math.floor(now * 4) + i) % 2 === 0 ? '#ffe57f' : '#ff80ab';
+                ctx.fillStyle = (Math.floor(animNow * 4) + i) % 2 === 0 ? '#ffe57f' : '#ff80ab';
                 ctx.beginPath();
                 ctx.arc(boss.x + i * boss.rx * 0.38, boss.y + boss.ry * 0.35, 6, 0, Math.PI * 2);
                 ctx.fill();
@@ -1164,7 +1353,7 @@ function draw() {
     ctx.save();
     ctx.translate(ship.x, ship.y);
     // flame
-    const fl = 14 + Math.sin(now * 30) * 5;
+    const fl = 14 + Math.sin(animNow * 30) * 5;
     const fg = ctx.createLinearGradient(0, 18, 0, 18 + fl + 12);
     fg.addColorStop(0, '#ffe57f'); fg.addColorStop(1, 'rgba(255, 87, 34, 0)');
     ctx.fillStyle = fg;
@@ -1185,7 +1374,7 @@ function draw() {
     ctx.beginPath(); ctx.arc(0, -8, 7, 0, Math.PI * 2); ctx.fill();
     // shield ring
     if (shield > 0) {
-        ctx.strokeStyle = 'rgba(128, 216, 255, ' + (0.5 + Math.sin(now * 5) * 0.2) + ')';
+        ctx.strokeStyle = 'rgba(128, 216, 255, ' + (0.5 + Math.sin(animNow * 5) * 0.2) + ')';
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(0, -6, 38, 0, Math.PI * 2); ctx.stroke();
     }
@@ -1222,8 +1411,9 @@ function loop(t) {
     if (!lastT) lastT = t;
     const dt = Math.min((t - lastT) / 1000, 0.05);
     lastT = t;
-    now += dt;
+    animNow += dt;  // cosmetics keep animating on every screen
     if (state === 'playing' || state === 'boss') {
+        now += dt;  // game clock freezes with the game, so powerup timers survive pauses
         if (keys.left) ship.tx -= 420 * dt;
         if (keys.right) ship.tx += 420 * dt;
         ship.tx = Math.min(Math.max(ship.tx, 34), W - 34);
@@ -1244,6 +1434,7 @@ function loop(t) {
 // =========================================================================
 const keys = { left: false, right: false };
 document.addEventListener('keydown', e => {
+    if (e.target && e.target.tagName === 'INPUT') return;  // typing in the winners book
     if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
     else if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
     else if (e.key === ' ') { e.preventDefault(); fireLaser(); }
@@ -1251,16 +1442,21 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'Escape') togglePause();
 });
 document.addEventListener('keyup', e => {
+    if (e.target && e.target.tagName === 'INPUT') return;
     if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
     else if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
 });
 
 function pointerMove(e) {
     const rect = canvas.getBoundingClientRect();
-    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    // Steer with the touch that started on the canvas (targetTouches), so a
+    // thumb resting on a fire button can't yank the ship around
+    const t = e.targetTouches ? e.targetTouches[0] : null;
+    if (e.targetTouches && !t) return;
+    const cx = (t ? t.clientX : e.clientX) - rect.left;
     ship.tx = cx;
 }
-canvas.addEventListener('mousemove', e => { if (e.buttons || true) pointerMove(e); });
+canvas.addEventListener('mousemove', e => { if (e.buttons) pointerMove(e); });
 canvas.addEventListener('touchstart', e => { e.preventDefault(); pointerMove(e); }, { passive: false });
 canvas.addEventListener('touchmove', e => { e.preventDefault(); pointerMove(e); }, { passive: false });
 
@@ -1290,12 +1486,26 @@ document.addEventListener('visibilitychange', () => {
 
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('menuBtn').addEventListener('click', () => {
+    document.getElementById('overOverlay').classList.remove('show');
+    state = 'menu';
+    document.getElementById('startOverlay').classList.add('show');
+    setMode(mode);  // refresh best / trophy / lifetime lines
+});
 document.getElementById('saveWinnerBtn').addEventListener('click', saveWinner);
 document.getElementById('couponContinueBtn').addEventListener('click', continueMission);
 document.getElementById('winnersBtn').addEventListener('click', showWinners);
 document.getElementById('winnersCloseBtn').addEventListener('click', () => {
     document.getElementById('winnersOverlay').classList.remove('show');
 });
+
+// Mochi the moon rabbit: tap = wiggle only (no TTS — this page has its own audio identity)
+function wiggleMascot(el) {
+    el.classList.add('wiggle');
+    setTimeout(() => el.classList.remove('wiggle'), 500);
+}
+document.getElementById('titleMochi').addEventListener('click', e => wiggleMascot(e.currentTarget));
+document.getElementById('overMochi').addEventListener('click', e => wiggleMascot(e.currentTarget));
 
 // iOS: unlock audio on first interaction
 document.addEventListener('touchstart', function unlock() {
@@ -1304,9 +1514,37 @@ document.addEventListener('touchstart', function unlock() {
 }, { once: true });
 
 // =========================================================================
-// INIT
+// MODE TOGGLE + INIT
 // =========================================================================
-if (best > 0) document.getElementById('bestLine').textContent = '🏆 Best: ' + best;
+function setMode(m) {
+    mode = m;
+    activePool = mode === 'kata' ? KATAKANA : KANA;
+    try { localStorage.setItem('kana-galaxy-mode', mode); } catch (e) {}
+    document.getElementById('modeHira').classList.toggle('selected', mode === 'hira');
+    document.getElementById('modeKata').classList.toggle('selected', mode === 'kata');
+    loadBest();
+    document.getElementById('bestLine').textContent =
+        best > 0 ? '🏆 ' + (mode === 'kata' ? 'Katakana' : 'Hiragana') + ' Best: ' + best : '';
+    // Trophy shelf: which bosses has she beaten so far?
+    let trophies = [];
+    try { trophies = JSON.parse(localStorage.getItem('kana-galaxy-trophies') || '[]'); } catch (e) {}
+    document.getElementById('trophyLine').textContent = trophies.length > 0
+        ? '👾 Monsters defeated: ' + trophies.length + '/' + BOSS_TYPES.length + ' — ' +
+          BOSS_TYPES.filter(t => trophies.includes(t.name)).map(t => BOSS_EMOJI[t.shape]).join('')
+        : '';
+    // Lifetime records: all-time kana rescued + deepest wave for this mode
+    let lifetime = 0, bestWave = 0;
+    try {
+        lifetime = parseInt(localStorage.getItem('kana-galaxy-lifetime') || '0', 10) || 0;
+        bestWave = parseInt(localStorage.getItem(bestWaveKey()) || '0', 10) || 0;
+    } catch (e) {}
+    document.getElementById('lifetimeLine').textContent = lifetime > 0
+        ? '⭐ ' + lifetime + ' kana rescued all-time' + (bestWave > 0 ? ' · deepest wave: ' + bestWave : '')
+        : '';
+}
+document.getElementById('modeHira').addEventListener('click', () => setMode('hira'));
+document.getElementById('modeKata').addEventListener('click', () => setMode('kata'));
+setMode(mode);
 resize();
 if (document.fonts && document.fonts.load) {
     document.fonts.load('700 28px "Noto Sans JP"', 'あ').catch(() => {});

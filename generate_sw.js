@@ -7,12 +7,16 @@ const path = require('path');
 
 const PAGES = [
     'index.html', 'writing.html', 'ocean.html', 'spaceship.html', 'review.html',
-    'questions.html', 'voicepractice.html', 'sentencebuilder.html', 'ebook.html'
+    'questions.html', 'voicepractice.html', 'sentencebuilder.html', 'ebook.html',
+    'workbook.html', 'arcade.html', 'kanjiride.html'
 ];
 
 const assets = ['./'];
 for (const p of PAGES) assets.push(p);
 assets.push('kanjivg_data.js');
+assets.push('curriculum.js');
+assets.push('activities.js');
+for (let y = 1; y <= 5; y++) assets.push('curriculum_y' + y + '.js');
 assets.push('Underwater Theme.mp3');
 for (const f of fs.readdirSync('fonts')) assets.push('fonts/' + f);
 for (const f of fs.readdirSync('ocean_images')) assets.push('ocean_images/' + f);

@@ -11,6 +11,19 @@ for (const f of ['writing.html', 'ocean.html']) {
     const html = fs.readFileSync(f, 'utf8');
     for (const m of html.matchAll(/char:\s*'(.)'/g)) chars.add(m[1]);
 }
+// Curriculum data files: writing targets ("chars":["あ",...]) and kanji ("char":"犬")
+for (let y = 1; y <= 5; y++) {
+    const f = 'curriculum_y' + y + '.js';
+    if (!fs.existsSync(f)) continue;
+    const js = fs.readFileSync(f, 'utf8');
+    for (const m of js.matchAll(/"char":\s*"(.)"/g)) chars.add(m[1]);
+    for (const m of js.matchAll(/"chars":\s*\[([^\]]*)\]/g)) {
+        // entries may be combo units ("きゃ") or short words - collect each kana
+        for (const str of m[1].matchAll(/"([^"]+)"/g)) {
+            for (const c of str[1]) if (c !== 'ー') chars.add(c);
+        }
+    }
+}
 const list = [...chars];
 console.log('characters found:', list.length);
 

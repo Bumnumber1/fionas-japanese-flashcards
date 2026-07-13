@@ -120,6 +120,20 @@
             padding: 14px;
             margin-bottom: 12px;
             background: #fafafa;
+            position: relative;
+        }
+
+        /* Stars animation for a passed line (matches writing.html) */
+        @keyframes starFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-60px) scale(0.5); opacity: 0; }
+        }
+
+        .star-particle {
+            position: absolute;
+            font-size: 1.4em;
+            pointer-events: none;
+            animation: starFloat 1s ease forwards;
         }
 
         .step.done {
@@ -275,6 +289,27 @@
             display: none;
         }
         .warn-box.show { display: block; }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -287,6 +322,15 @@
     </div>
 
     <div class="container">
+
+        <!-- Piyo-chan the cheerleader -->
+        <div class="mascot-row">
+            <span class="mascot" id="piyoMascot" onclick="piyoTap()">🐣</span>
+            <div class="mascot-bubble">
+                <span class="mb-jp" id="piyoJp">こえに だして いってみよう！</span>
+                <span class="mb-en">Let's say it out loud!</span>
+            </div>
+        </div>
 
         <div class="warn-box" id="warnBox">
             Voice recognition isn&rsquo;t supported in this browser. You can still tap <b>Listen</b> to hear each line and tap <b>Reveal</b> + <b>I said it!</b> to practice aloud.
@@ -304,6 +348,13 @@
             <h2>&#x1F389; All done!</h2>
             <div class="final-score" id="finalScore"></div>
             <p id="finalMsg"></p>
+            <div class="mascot-row" style="margin-top:14px;">
+                <span class="mascot small" id="piyoFinal" onclick="piyoFinalTap()">🐣</span>
+                <div class="mascot-bubble">
+                    <span class="mb-jp" id="piyoFinalJp">ぴよぴよ〜！すてき！</span>
+                    <span class="mb-en" id="piyoFinalEn">Piyo piyo! Wonderful!</span>
+                </div>
+            </div>
             <div class="nav-row" style="margin-top:16px;">
                 <button class="btn-restart" onclick="restart()">Try again</button>
             </div>
@@ -381,6 +432,7 @@
             if ('speechSynthesis' in window) {
                 try { window.speechSynthesis.cancel(); } catch(e){}
             }
+            clearTimeout(praiseTimer);
             currentUtter = null;
         }
 
@@ -435,8 +487,10 @@
             a = normalize(a); b = normalize(b);
             if (!a || !b) return 0;
             if (a === b) return 1;
-            // substring match is close
-            if (a.includes(b) || b.includes(a)) return 0.85;
+            // substring match is close — but a short fragment of the target
+            // (e.g. just "です") shouldn't pass, so length-gate that direction
+            if (a.includes(b)) return 0.85;
+            if (b.includes(a) && a.length >= b.length * 0.7) return 0.85;
             // Levenshtein ratio
             const dp = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(0));
             for (let i = 0; i <= a.length; i++) dp[i][0] = i;
@@ -506,8 +560,12 @@
             };
             rec.onend = () => {
                 stopListenUI(kind);
-                if (listeningKind === kind) listeningKind = null;
-                recognizer = null;
+                // Only clear if this is still the active recognizer — a stale
+                // onend must not clobber a newly started session on the other step
+                if (recognizer === rec) {
+                    recognizer = null;
+                    if (listeningKind === kind) listeningKind = null;
+                }
             };
 
             try { rec.start(); } catch(e) { stopListenUI(kind); listeningKind = null; recognizer = null; }
@@ -520,6 +578,74 @@
             micBtn.textContent = '\u{1F3A4} Speak ' + (kind === 'q' ? 'question' : 'answer');
         }
 
+        // Celebration for a passed line: floating stars + a spoken Japanese cheer
+        const praiseLines = ['すごい！', 'よくできました！', 'じょうず！'];
+        let praiseTimer = null;
+        function celebrate(kind) {
+            const step = document.getElementById(kind + '-step');
+            if (step) {
+                const symbols = ['⭐', '✨'];
+                for (let i = 0; i < 6; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star-particle';
+                    star.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                    star.style.left = (15 + Math.random() * 70) + '%';
+                    star.style.top = (15 + Math.random() * 70) + '%';
+                    star.style.animationDelay = (Math.random() * 0.3) + 's';
+                    step.appendChild(star);
+                    setTimeout(() => star.remove(), 1500);
+                }
+            }
+            // Speak praise directly (speak() toggles off while something is pending);
+            // tracked so navigation/mic-start can cancel it, and never over a live mic
+            clearTimeout(praiseTimer);
+            praiseTimer = setTimeout(() => {
+                if (!('speechSynthesis' in window) || recognizer) return;
+                if (!jaVoice) loadVoice();
+                const u = new SpeechSynthesisUtterance(praiseLines[Math.floor(Math.random() * praiseLines.length)]);
+                u.lang = 'ja-JP';
+                u.rate = 0.85;
+                u.pitch = 1.2;
+                if (jaVoice) u.voice = jaVoice;
+                window.speechSynthesis.speak(u);
+            }, 600);
+        }
+
+        // Piyo-chan the cheerleader: bubble swaps + guarded speech.
+        // NEVER speaks while the microphone is live (recognizer is set) and
+        // never cancels speech the page is already saying.
+        function piyoWiggle(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('wiggle');
+            void el.offsetWidth; // restart the animation
+            el.classList.add('wiggle');
+            setTimeout(() => el.classList.remove('wiggle'), 500);
+        }
+
+        function piyoSpeak(text) {
+            if (recognizer) return;
+            if (!text || !('speechSynthesis' in window)) return;
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+            if (!jaVoice) loadVoice();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ja-JP';
+            u.rate = 0.85;
+            u.pitch = 1.2;
+            if (jaVoice) u.voice = jaVoice;
+            window.speechSynthesis.speak(u);
+        }
+
+        function piyoTap() {
+            piyoWiggle('piyoMascot');
+            piyoSpeak(document.getElementById('piyoJp').textContent);
+        }
+
+        function piyoFinalTap() {
+            piyoWiggle('piyoFinal');
+            piyoSpeak(document.getElementById('piyoFinalJp').textContent);
+        }
+
         function judge(kind, score) {
             const status = document.getElementById(kind + '-status');
             const step = document.getElementById(kind + '-step');
@@ -530,6 +656,7 @@
                 step.classList.add('done');
                 attempts[current][kind] = 'ok';
                 updateScore();
+                celebrate(kind);
             } else if (score >= 0.5) {
                 status.textContent = '\u{1F44D} Close! Try once more or tap Reveal.';
                 status.className = 'status-msg status-close';
@@ -560,6 +687,7 @@
             if (attempts[current][kind] !== 'ok') {
                 attempts[current][kind] = 'ok';
                 updateScore();
+                celebrate(kind);
             }
         }
 
@@ -586,7 +714,7 @@
                     <div class="heard-line" id="${kind}-heard"></div>
                     <div class="status-msg" id="${kind}-status">Tap &ldquo;Speak&rdquo; when ready, or Listen first to hear an example.</div>
                     <div class="step-btns">
-                        <button class="act btn-play" onclick="speak(${JSON.stringify(line.jp)})">&#x1F50A; Listen</button>
+                        <button class="act btn-play" id="${kind}-listen">&#x1F50A; Listen</button>
                         ${micSupported
                             ? `<button class="act btn-mic" id="${kind}-mic" onclick="startListen('${kind}')">&#x1F3A4; Speak ${kind === 'q' ? 'question' : 'answer'}</button>`
                             : ''}
@@ -619,6 +747,20 @@
                     ${buildStep('a')}
                 </div>
             `;
+
+            ['q', 'a'].forEach(kind => {
+                // Wire Listen via DOM API (inline onclick can't safely hold the JP text)
+                const lineJp = sc[kind].jp;
+                document.getElementById(kind + '-listen').addEventListener('click', () => speak(lineJp));
+                // Restore completed-step visuals when revisiting a scenario
+                if (attempts[current][kind] === 'ok') {
+                    const step = document.getElementById(kind + '-step');
+                    const status = document.getElementById(kind + '-status');
+                    step.classList.add('done');
+                    status.textContent = '✨ Nice — marked as practiced.';
+                    status.className = 'status-msg status-ok';
+                }
+            });
 
             document.getElementById('prevBtn').disabled = current === 0;
             document.getElementById('nextBtn').textContent = current === scenarios.length - 1 ? 'Finish \u{1F389}' : 'Next »';
@@ -662,8 +804,30 @@
             else if (pts >= max * 0.75) msg = 'Great work — just a little more and you’ll be a master asker!';
             else if (pts >= max / 2) msg = 'Nice start! Tap Try again and see if you can get more this round.';
             else msg = 'Keep practicing — tap Listen, then Reveal, then repeat the sentence out loud.';
+            // Personal best tracking
+            let newBest = false;
+            try {
+                const best = parseInt(localStorage.getItem('fiona-voice-best') || '0', 10);
+                if (pts > best) {
+                    localStorage.setItem('fiona-voice-best', String(pts));
+                    msg = '\u{1F3C6} New record! ' + msg;
+                    newBest = true;
+                } else {
+                    msg += ` Your best: ${best} / ${max}.`;
+                }
+            } catch(e) {}
             document.getElementById('finalMsg').textContent = msg;
             document.getElementById('finalCard').classList.add('show');
+
+            // Piyo-chan celebrates on the results card - but a new record is
+            // Mochi the moon rabbit's moment (records are her specialty)
+            const piyoJp = newBest ? 'しんきろく、おめでとう！' : 'ぴよぴよ〜！すてき！';
+            const piyoEn = newBest ? 'Congrats on the new record!' : 'Piyo piyo! Wonderful!';
+            document.getElementById('piyoFinal').textContent = newBest ? '🐰' : '🐣';
+            document.getElementById('piyoFinalJp').textContent = piyoJp;
+            document.getElementById('piyoFinalEn').textContent = piyoEn;
+            piyoWiggle('piyoFinal');
+            piyoSpeak(piyoJp);
         }
 
         function restart() {

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fiona's Arcade">
+    <title>Fiona's Game Arcade</title>
+    <style>
+        @import url('fonts/fonts.css');
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 30%, #e0f7fa 60%, #fff3e0 100%);
+            min-height: 100vh; padding: 16px; background-attachment: fixed; color: #37474f;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* ---------- header ---------- */
+        .header {
+            text-align: center; margin-bottom: 18px; padding: 22px 16px;
+            background: rgba(255,255,255,0.72); backdrop-filter: blur(10px);
+            border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .header h1 {
+            font-size: 1.9em; font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .header .jp-sub { color: #ab47bc; font-weight: 800; margin-top: 2px; font-family: 'Noto Sans JP', sans-serif; }
+        .header .totals { margin-top: 6px; color: #78909c; font-weight: 700; }
+        .nav-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+        .nav-btn {
+            border: none; border-radius: 18px; padding: 9px 16px; font-family: inherit; font-weight: 800;
+            font-size: 0.92em; cursor: pointer; color: #fff; text-decoration: none; display: inline-block;
+            background: linear-gradient(135deg, #7986cb, #5c6bc0); box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+        }
+        .nav-btn.pink { background: linear-gradient(135deg, #f06292, #ec407a); }
+        .nav-btn.teal { background: linear-gradient(135deg, #4dd0e1, #26c6da); }
+        .nav-btn:active { transform: scale(0.96); }
+
+        /* ---------- panels ---------- */
+        .panel {
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); border-radius: 22px;
+            padding: 18px; margin-bottom: 16px; border: 2px solid rgba(255,255,255,0.6);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        }
+        .section-title { font-size: 1.15em; color: #5e35b1; font-weight: 800; margin-bottom: 10px; }
+        .section-title .st-jp { color: #b39ddb; font-size: 0.85em; margin-left: 6px; }
+
+        /* ---------- level picker ---------- */
+        .lvl-chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .lvl-chip {
+            border: 2px solid rgba(255,255,255,0.7); background: rgba(255,255,255,0.6);
+            border-radius: 16px; padding: 8px 14px; font-family: inherit; font-weight: 800; cursor: pointer;
+            color: #607d8b; font-size: 0.95em;
+        }
+        .lvl-chip.active { background: linear-gradient(135deg, #ba68c8, #9575cd); color: #fff; border-color: transparent; }
+        .lvl-hint { text-align: center; color: #90a4ae; font-weight: 700; font-size: 0.85em; margin-top: 8px; }
+
+        /* ---------- category picker ---------- */
+        .cat-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .allwords-chip {
+            border: none; border-radius: 16px; padding: 8px 14px; font-family: inherit; font-weight: 800;
+            cursor: pointer; color: #fff; background: linear-gradient(135deg, #4dd0e1, #26c6da); font-size: 0.9em;
+        }
+        .allwords-chip:active { transform: scale(0.96); }
+        .pool-info { color: #78909c; font-weight: 800; font-size: 0.9em; }
+        .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .cat-card {
+            position: relative; background: #fff; border: 2px solid #eceff1; border-radius: 16px;
+            padding: 10px 8px; cursor: pointer; font-family: inherit; text-align: center; transition: transform 0.15s;
+        }
+        .cat-card:active { transform: scale(0.96); }
+        .cat-card .c-icon { font-size: 1.7em; display: block; }
+        .cat-card .c-name { font-weight: 800; color: #37474f; font-size: 0.88em; display: block; }
+        .cat-card .c-count { color: #b0bec5; font-weight: 800; font-size: 0.72em; display: block; margin-top: 2px; }
+        .cat-card.on { border-color: #26a69a; background: linear-gradient(160deg, #e0f2f1, #fff); }
+        .cat-card.on::after { content: '✔'; position: absolute; top: 6px; right: 8px; color: #26a69a; font-weight: 800; }
+        .cat-card.on .c-count { color: #26a69a; }
+        .cat-card.empty { opacity: 0.55; }
+
+        /* ---------- game grid ---------- */
+        .act-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        .act-card {
+            background: #fff; border-radius: 16px; padding: 14px 10px; text-align: center; cursor: pointer;
+            border: 2px solid #e1f5fe; transition: transform 0.15s;
+        }
+        .act-card:hover { transform: translateY(-3px); }
+        .act-card .a-icon { font-size: 2em; }
+        .act-card .a-name { font-weight: 800; color: #0277bd; font-size: 0.92em; }
+        .act-card .a-jp { color: #90a4ae; font-size: 0.75em; font-weight: 700; }
+        .act-card .a-stars { min-height: 1.2em; font-size: 0.85em; margin-top: 3px; }
+        .game-card.locked { opacity: 0.6; background: #f5f5f5; border-color: #eceff1; cursor: default; }
+        .game-card.locked:hover { transform: none; }
+        .lock-note { color: #ef9a9a; font-weight: 800; font-size: 0.9em; }
+        .game-note { text-align: center; color: #78909c; font-weight: 800; margin-bottom: 10px; min-height: 0; }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0 2px; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
+        /* Mochi's 3-star cameo on game finish screens */
+        .finish-mochi { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 800; color: #ad1457; font-family: 'Noto Sans JP', sans-serif; }
+
+        /* ---------- activity modal ---------- */
+        .modal-back {
+            display: none; position: fixed; inset: 0; background: rgba(38,50,56,0.55); z-index: 50;
+            padding: 14px; overflow-y: auto;
+        }
+        .modal-back.open { display: flex; align-items: flex-start; justify-content: center; }
+        .modal {
+            background: #fdfdfd; border-radius: 22px; max-width: 560px; width: 100%; margin: 3vh auto;
+            padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .modal-head .m-title { font-weight: 800; color: #37474f; font-size: 1.1em; }
+        .modal-close { border: none; background: #eceff1; border-radius: 50%; width: 34px; height: 34px; font-size: 1em; cursor: pointer; font-weight: 800; color: #607d8b; }
+
+        /* ---------- activity engine styles ---------- */
+        .act-host { min-height: 200px; }
+        .act-bar { position: relative; height: 8px; background: #eceff1; border-radius: 6px; }
+        .act-bar-fill { height: 100%; background: linear-gradient(90deg, #ba68c8, #7e57c2); transition: width 0.3s; border-radius: 6px; }
+        .act-walker { position: absolute; top: -16px; font-size: 1em; transition: left 0.3s; }
+        .act-bar-label { text-align: center; color: #90a4ae; font-weight: 800; font-size: 0.8em; margin: 5px 0 8px; }
+        .act-streak { text-align: center; font-weight: 800; color: #ef6c00; font-size: 0.9em; margin: 2px 0 6px; animation: streakPop 0.25s ease-out; }
+        @keyframes streakPop { from { transform: scale(0.6); opacity: 0; } }
+        .act-subtitle { text-align: center; font-weight: 800; color: #455a64; margin: 8px 0; font-size: 1em; }
+        .act-prompt { text-align: center; font-size: 1.25em; font-weight: 800; color: #311b92; margin: 12px 0; font-family: 'Noto Sans JP', 'Nunito', sans-serif; }
+        .act-prompt .q-jp, .speak-card .q-jp { font-size: 1.35em; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .q-rom { display: block; font-size: 0.65em; color: #ab47bc; font-weight: 700; }
+        .act-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .act-opt {
+            border: 2px solid #e1bee7; background: #fff; border-radius: 16px; padding: 14px 8px; font-family: inherit;
+            font-weight: 800; font-size: 1em; color: #37474f; cursor: pointer; min-height: 58px;
+        }
+        .act-opt .q-jp-opt { font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; }
+        .act-opt.right { background: #c8e6c9; border-color: #66bb6a; }
+        .act-opt.wrong { background: #ffcdd2; border-color: #ef5350; }
+        .act-opt:disabled { opacity: 0.7; }
+        .opt-emoji { font-size: 1.3em; }
+        .act-ear { font-size: 1.6em; }
+        .act-speaker {
+            display: block; margin: 4px auto; border: none; background: linear-gradient(135deg, #4dd0e1, #26c6da);
+            color: #fff; font-family: inherit; font-weight: 800; border-radius: 16px; padding: 9px 18px; cursor: pointer; font-size: 0.95em;
+        }
+        .act-speaker-sm { display: inline-block; padding: 4px 10px; margin: 0 0 0 6px; border-radius: 12px; font-size: 0.8em; }
+        .act-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+        .act-btn {
+            border: 2px solid #cfd8dc; background: #fff; border-radius: 16px; padding: 10px 18px; font-family: inherit;
+            font-weight: 800; color: #546e7a; cursor: pointer; font-size: 0.95em;
+        }
+        .act-btn-primary { background: linear-gradient(135deg, #7e57c2, #ab47bc); color: #fff; border-color: transparent; }
+        .act-btn:disabled { opacity: 0.45; }
+        .act-finish { text-align: center; padding: 26px 8px; position: relative; overflow: hidden; }
+        .act-finish-stars { font-size: 2.6em; }
+        .act-finish-stars span { display: inline-block; }
+        .star-dim { opacity: 0.25; }
+        .star-pop { animation: starLand 0.35s ease-out; }
+        @keyframes starLand { from { transform: scale(2); opacity: 0; } }
+        .act-finish-msg { font-size: 1.3em; font-weight: 800; color: #5e35b1; margin: 8px 0 4px; }
+        .act-finish-score { color: #90a4ae; font-weight: 800; margin-bottom: 16px; }
+        .act-finish .act-btn { margin: 4px; }
+        .act-finish .confetti { position: absolute; top: -24px; font-size: 1.15em; pointer-events: none; animation: confettiFall 2.4s ease-in forwards; }
+        @keyframes confettiFall { to { transform: translateY(340px) rotate(360deg); opacity: 0; } }
+        .act-record { font-weight: 800; color: #ef6c00; font-size: 1.05em; animation: recordBounce 0.6s; }
+        @keyframes recordBounce { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+        .mem-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; perspective: 700px; }
+        .mem-card {
+            position: relative; border: none; background: linear-gradient(135deg, #9575cd, #7e57c2); border-radius: 14px;
+            min-height: 74px; cursor: pointer; font-family: inherit; padding: 4px;
+            transition: transform 0.22s; transform-style: preserve-3d;
+        }
+        .mem-card .mem-front, .mem-card .mem-back {
+            position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 4px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+        }
+        .mem-card .mem-front { color: #fff; font-size: 1.5em; font-weight: 800; }
+        .mem-card .mem-back { transform: rotateY(180deg); }
+        .mem-card.open, .mem-card.done { background: #fff; border: 2px solid #b39ddb; transform: rotateY(180deg); }
+        .mem-card.done { border-color: #a5d6a7; background: #f1f8e9; animation: matchPop 0.45s; }
+        @keyframes matchPop { 50% { transform: rotateY(180deg) scale(1.15); } }
+        .mem-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.05em; display: block; }
+        .mem-emoji { font-size: 1.3em; display: block; }
+        .mem-en { font-size: 0.68em; font-weight: 800; color: #78909c; display: block; }
+
+        .scr-en { text-align: center; color: #78909c; font-weight: 700; margin: 6px 0; }
+        .scr-slots {
+            min-height: 52px; background: #f5f5f5; border-radius: 14px; padding: 10px; display: flex; flex-wrap: wrap;
+            gap: 6px; justify-content: center; align-items: center; margin: 8px 0; border: 2px dashed #cfd8dc;
+        }
+        .scr-slots.scr-right { border-color: #66bb6a; background: #e8f5e9; }
+        .scr-slots.scr-wrong { border-color: #ef5350; background: #ffebee; }
+        .scr-slot { background: #fff; border-radius: 10px; padding: 6px 10px; font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; border: 2px solid #b39ddb; }
+        .scr-hint { color: #b0bec5; font-weight: 700; font-size: 0.85em; }
+        .scr-answer { width: 100%; text-align: center; color: #2e7d32; font-weight: 800; font-family: 'Noto Sans JP', sans-serif; }
+        .scr-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0; }
+        .scr-chip {
+            border: 2px solid #80deea; background: #fff; border-radius: 14px; padding: 9px 13px;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 800; font-size: 1.05em; color: #00697b; cursor: pointer;
+        }
+        .scr-chip.used { opacity: 0.25; pointer-events: none; }
+        .blank-sent { font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; font-weight: 800; color: #311b92; }
+        .blank-gap { color: #e91e63; letter-spacing: 0.1em; }
+
+        .trace-wrap { display: flex; justify-content: center; margin: 8px 0; }
+        .trace-canvas { border-radius: 16px; border: 2px solid #cfd8dc; touch-action: none; background: #fff; max-width: 100%; }
+        .trace-char-label { font-family: 'Noto Sans JP', sans-serif; font-size: 1.4em; color: #e65100; }
+        .trace-msg { text-align: center; color: #78909c; font-weight: 700; min-height: 1.4em; margin-top: 8px; }
+
+        .sort-card { text-align: center; background: #fff; border: 2px solid #e1bee7; border-radius: 16px; padding: 18px; font-size: 1.2em; font-family: 'Noto Sans JP', 'Nunito', sans-serif; margin: 10px 0; color: #311b92; }
+        .sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .bingo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .bingo-cell { border: 2px solid #b2dfdb; background: #fff; border-radius: 14px; padding: 10px 4px; cursor: pointer; font-family: inherit; }
+        .bingo-cell .bingo-emoji { display: block; font-size: 1.5em; }
+        .bingo-cell .bingo-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #00695c; font-size: 0.95em; }
+        .bingo-cell.marked { background: #b2dfdb; border-color: #26a69a; }
+        .bingo-cell.bingo-hot { border-color: #ffca28; box-shadow: 0 0 0 3px rgba(255,202,40,0.3); animation: pulse 1s ease-in-out infinite; }
+        .bingo-cell.bingo-win { background: #ffe082; border-color: #ffb300; animation: cellBounce 0.6s; }
+        @keyframes cellBounce { 30% { transform: translateY(-8px) scale(1.12); } }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+
+        .whack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .whack-hole {
+            background: radial-gradient(circle at 50% 70%, #8d6e63, #5d4037); border: none; border-radius: 50%;
+            aspect-ratio: 1.25; cursor: pointer; overflow: hidden;
+        }
+        .whack-mole {
+            display: inline-block; background: #fff; border-radius: 12px; padding: 6px 8px;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.05em;
+            animation: molePop 0.3s ease-out;
+        }
+        @keyframes molePop { from { transform: translateY(28px); } to { transform: translateY(0); } }
+        .whack-timebar { margin-top: 10px; height: 6px; }
+        .whack-timebar .act-bar-fill { background: linear-gradient(90deg, #ffb74d, #ff7043); }
+        .shake { animation: shakeX 0.35s; }
+        @keyframes shakeX { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        .speak-card { text-align: center; background: #fff; border: 2px solid #e1bee7; border-radius: 16px; padding: 16px; margin: 8px 0; }
+        .shop-items { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+        .shop-item { background: #fff; border: 2px solid #ffe0b2; border-radius: 14px; padding: 10px 14px; text-align: center; font-family: 'Noto Sans JP', 'Nunito', sans-serif; font-weight: 800; color: #5d4037; }
+        .shop-plus { font-size: 1.4em; font-weight: 800; color: #90a4ae; }
+        .count-field { text-align: center; font-size: 1.7em; background: #fff; border-radius: 14px; border: 2px solid #c5e1a5; padding: 12px; margin: 8px 0; line-height: 1.5; }
+        .count-field .count-emoji { display: inline-block; opacity: 0; transform: scale(0.3); }
+        .count-field .count-emoji.pop-in { animation: popIn 0.3s ease-out forwards; }
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+
+        .story-title { text-align: center; font-size: 1.25em; font-weight: 800; color: #5d4037; margin-bottom: 10px; }
+        .story-line { display: flex; gap: 10px; align-items: flex-start; background: #fff; border-radius: 14px; padding: 10px; margin-bottom: 8px; border: 2px solid #ffecb3; }
+        .story-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.05em; }
+        .story-rom { color: #ab47bc; font-size: 0.75em; font-weight: 700; }
+        .story-en { color: #90a4ae; font-size: 0.8em; font-weight: 700; }
+        .story-line.playing { background: #fff8e1; border-color: #ffb300; }
+
+        .km-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+        .km-col { display: flex; flex-direction: column; gap: 8px; }
+        .km-card { border: 2px solid #ffe0b2; background: #fff; border-radius: 14px; padding: 10px; font-family: inherit; font-weight: 800; color: #5d4037; cursor: pointer; font-size: 0.95em; }
+        .km-kanji { font-family: 'Noto Sans JP', sans-serif; font-size: 1.9em; color: #e65100; }
+        .km-card.sel { border-color: #7e57c2; background: #ede7f6; }
+        .km-card.done { opacity: 0.35; pointer-events: none; }
+
+        .diary-text { width: 100%; border: 2px solid #cfd8dc; border-radius: 14px; padding: 10px; font-family: 'Noto Sans JP', sans-serif; font-size: 1.1em; margin-top: 8px; }
+        .diary-entry { background: #fff; border-radius: 12px; border: 2px solid #f0f4c3; padding: 8px 12px; margin-top: 8px; font-family: 'Noto Sans JP', 'Nunito', sans-serif; font-weight: 700; color: #55606a; font-size: 0.9em; }
+
+        .karuta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .karuta-card {
+            border: 2px solid #ffcc80; background: linear-gradient(160deg, #fff8e1, #fff); border-radius: 14px;
+            min-height: 76px; padding: 8px 6px; cursor: pointer; font-family: inherit;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        }
+        .karuta-card:disabled { opacity: 0.5; }
+        .karuta-card.grabbed { background: #c8e6c9; border-color: #66bb6a; opacity: 1; animation: cellBounce 0.6s; }
+        .karuta-emoji { font-size: 1.5em; }
+        .karuta-en { font-weight: 800; color: #78909c; font-size: 0.75em; }
+        .karuta-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.15em; }
+        .karuta-fast { text-align: center; min-height: 1.5em; margin-top: 6px; }
+        .karuta-zap { display: inline-block; font-weight: 800; color: #f57f17; font-size: 1.05em; animation: streakPop 0.25s ease-out; }
+
+        .train {
+            display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 8px 8px 10px; margin: 8px 0;
+            background: linear-gradient(180deg, #e0f7fa, #fff); border: 2px solid #b2ebf2; border-radius: 14px;
+        }
+        .train-car {
+            flex: 0 0 auto; background: #fff; border: 2px solid #80deea; border-radius: 12px; padding: 6px 10px;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #00697b; font-size: 0.92em;
+        }
+        .train-car.newest { border-color: #ffb300; background: #fff8e1; animation: cellBounce 0.6s; }
+        .train-station { flex: 0 0 auto; font-size: 1.3em; }
+        .train-engine { flex: 0 0 auto; font-size: 1.4em; }
+        .train-station-big { text-align: center; font-size: 2.6em; margin-top: 6px; animation: tilePop 0.3s ease-out; }
+
+        .kb-word { text-align: center; font-weight: 800; color: #455a64; font-size: 1.05em; margin: 8px 0; }
+        .kb-slots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+        .kb-slot {
+            width: 46px; height: 46px; border: 2px dashed #b39ddb; border-radius: 12px; background: #f6f3fb;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Noto Sans JP', sans-serif; font-size: 1.35em; font-weight: 800; color: #311b92;
+        }
+        .kb-slot.filled { border-style: solid; background: #fff; animation: tilePop 0.25s ease-out; }
+        .kb-slots.kb-done .kb-slot { border-color: #66bb6a; background: #e8f5e9; }
+        @keyframes tilePop { from { transform: scale(0.4); } }
+        .kb-tiles { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+        .kb-tile {
+            width: 52px; height: 52px; border: 2px solid #80deea; background: #fff; border-radius: 14px;
+            font-family: 'Noto Sans JP', sans-serif; font-size: 1.4em; font-weight: 800; color: #00697b; cursor: pointer;
+        }
+        .kb-tile.used { opacity: 0.25; pointer-events: none; }
+
+        .boss-arena { position: relative; text-align: center; padding: 4px 0; }
+        .boss-face { display: inline-block; font-size: 3em; }
+        .boss-name { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #6a1b9a; }
+        .boss-hp { margin-top: 2px; font-size: 0.9em; letter-spacing: 1px; }
+        .boss-heart.lost, .boss-shield.lost { filter: grayscale(1); opacity: 0.3; }
+        .boss-shields { margin-top: 3px; font-size: 1em; color: #78909c; font-weight: 800; }
+        .boss-hit { animation: bossHit 0.45s; }
+        @keyframes bossHit { 30% { transform: translateX(-7px) rotate(-8deg); } 60% { transform: translateX(7px) rotate(8deg); } }
+        .boss-wobble { animation: bossWobble 0.7s; }
+        @keyframes bossWobble { 25% { transform: rotate(-10deg) scale(1.12); } 75% { transform: rotate(10deg) scale(1.12); } }
+        .boss-attack {
+            position: absolute; left: 50%; top: 56px; font-size: 1.6em; pointer-events: none;
+            animation: attackFly 0.5s ease-in forwards;
+        }
+        @keyframes attackFly {
+            from { transform: translate(-50%, 90px) scale(0.6); opacity: 0.9; }
+            to { transform: translate(-50%, -40px) scale(1.25); opacity: 0; }
+        }
+        .boss-end { text-align: center; padding: 30px 8px; }
+        .boss-end .boss-face { font-size: 4em; }
+        .boss-spin { animation: bossSpin 1.5s ease-in forwards; }
+        @keyframes bossSpin { to { transform: rotate(720deg) translateY(-140px) scale(0.1); opacity: 0; } }
+        .boss-fly { animation: bossFly 1.3s ease-in forwards; }
+        @keyframes bossFly { to { transform: translate(230px, -70px) scale(0.4); opacity: 0; } }
+        .boss-endmsg { font-weight: 800; color: #5e35b1; font-size: 1.15em; margin-top: 8px; }
+
+        @media (max-width: 560px) {
+            .act-options { grid-template-columns: 1fr; }
+            .mem-grid { grid-template-columns: repeat(3, 1fr); }
+            .karuta-grid { grid-template-columns: repeat(2, 1fr); }
+            .cat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎮 Fiona's Game Arcade</h1>
+        <div class="jp-sub">ゲームセンター</div>
+        <div class="totals" id="totals"></div>
+        <div class="mascot-row">
+            <span class="mascot" id="tako">🐙</span>
+            <div class="mascot-bubble"><span class="mb-jp" id="takoJp"></span><span class="mb-en" id="takoEn"></span></div>
+        </div>
+        <div class="nav-row">
+            <a class="nav-btn" href="index.html">🏠 Flashcards</a>
+            <a class="nav-btn pink" href="workbook.html">🗺️ 5-Year Journey</a>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="section-title">🚀 Choose your level <span class="st-jp">レベル</span></div>
+        <div class="lvl-chips" id="lvlChips"></div>
+        <div class="lvl-hint" id="lvlHint"></div>
+    </div>
+
+    <div class="panel">
+        <div class="section-title">🧺 Pick your word baskets <span class="st-jp">ことばえらび</span></div>
+        <div class="cat-tools">
+            <button class="allwords-chip" id="allWords">✨ All words</button>
+            <span class="pool-info" id="poolInfo"></span>
+        </div>
+        <div class="cat-grid" id="catGrid"></div>
+    </div>
+
+    <div class="panel">
+        <div class="section-title">🕹️ Pick a game <span class="st-jp">ゲームをえらぼう</span></div>
+        <div class="game-note" id="gameNote"></div>
+        <div class="act-cards" id="gameGrid"></div>
+    </div>
+</div>
+
+<div class="modal-back" id="modalBack">
+    <div class="modal">
+        <div class="modal-head">
+            <span class="m-title" id="modalTitle"></span>
+            <button class="modal-close" id="modalClose">✕</button>
+        </div>
+        <div class="act-host" id="actHost"></div>
+    </div>
+</div>
+
+<script src="kanjivg_data.js"></script>
+<script src="curriculum.js"></script>
+<script src="curriculum_y1.js"></script>
+<script src="curriculum_y2.js"></script>
+<script src="curriculum_y3.js"></script>
+<script src="curriculum_y4.js"></script>
+<script src="curriculum_y5.js"></script>
+<script src="activities.js"></script>
+<script>
+(() => {
+    const $ = id => document.getElementById(id);
+    let activeRun = null;
+
+    /* ===== arcade-core-start =====
+       Pure data helpers (no DOM / localStorage) so the node harness in the
+       scratchpad can load this exact block and audit category coverage. */
+    const LEVELS = [
+        { label: 'Year 1', years: 1 },
+        { label: 'Years 1-2', years: 2 },
+        { label: 'Years 1-3', years: 3 },
+        { label: 'Years 1-4', years: 4 },
+        { label: 'All 5 Years', years: 5 },
+    ];
+
+    // A word may belong to several categories: matched on en (case-insensitive),
+    // pos, and jp where noted. 'Everything Else' catches words matching nothing.
+    // meaning:true marks the meaning-based groups handed to Odd One Out.
+    const CATS = [
+        { key: 'animals', icon: '🐾', name: 'Animals', meaning: true,
+          en: /animal|pupp|kitten|\bdogs?\b|\bcats?\b|\bbirds?\b|\bfish|goldfish|rabbit|bunny|elephant|\blions?\b|tiger|\bbears?\b|panda|monkey|mouse|mice|horse|pony|\bcows?\b|\bpigs?\b|sheep|goat|chick|duck|frog|snake|turtle|tortoise|hamster|\bfox|wol(f|ves)|deer|whale|dolphin|shark|octopus|squid|crab|shrimp|insect|\bbugs?\b|butterfl|beetle|dragon\b|dragonfly|\bants?\b|\bbees?\b|honeybee|spider|penguin|\bowls?\b|eagle|\bcrows?\b|sparrow|swan|\bcranes?\b|dove|pigeon|zebra|giraffe|kangaroo|koala|hippo|rhino|camel|squirrel|hedgehog|snail|jellyfish|starfish|\bseals?\b|otter|raccoon|tanuki|firefly|cicada|cricket|grasshopper|ladybug|gorilla|lizard|\bbats?\b|worm|\bpets?\b|cheetah|parakeet|sardine|peacock|\bzoo\b|turkey/i },
+        { key: 'food', icon: '🍎', name: 'Food & Drink', meaning: true,
+          en: /food|drink|\beat|meal\b|breakfast|lunch|dinner|supper|snack|dessert|candy|sweets|chocolate|cookie|biscuit|cake|ice cream|pudding|donut|doughnut|\brice\b|bread|toast|sandwich|noodle|ramen|udon|soba\b|pasta|spaghetti|pizza|sushi|onigiri|bento|curry|soup|miso|stew\b|salad|\beggs?\b|meat\b|beef|pork|\bham\b|sausage|chicken|steak|tempura|tofu|seaweed|fruit|apple|banana|orange\b|grape|strawberry|peach|\bpears?\b|melon|cherr(y|ies)|lemon|tangerine|mandarin|persimmon|pineapple|kiwi|mango|chestnut|vegetable|carrot|potato|tomato|onion|cucumber|pumpkin|\bcorn\b|mushroom|cabbage|lettuce|radish|eggplant|\bbeans?\b|spinach|broccoli|juice|milk|\btea\b|coffee|cocoa|soda|cola\b|water \(|yogurt|cheese|butter\b|\bjam\b|honey|sugar|salt\b|pepper|sauce|soy|ketchup|delicious|yummy|tasty|hungry|thirsty|bitter|sour\b|spicy|sweet\b|mochi|dango|dumpling|senbei|taiyaki|takoyaki|okonomiyaki|yakisoba|gyoza|katsu\b|cracker|gum\b|caramel|gummy|omelette|omelet\b|feast|taro\b|clam\b|acorn/i },
+        { key: 'people', icon: '👪', name: 'People & Family', meaning: true,
+          en: /family|mother|\bmom|father|\bdad|parent|sister|brother|sibling|grand(ma|pa|mother|father|child)|baby|child|kid\b|kids\b|\bboys?\b|girl|friend|teacher|student|person|people|\bman\b|\bmen\b|woman|women|uncle|\baunts?\b|cousin|everyone|everybody|classmate|neighbo|doctor|nurse|dentist|police|firefighter|farmer|bakers?\b|chef|\bcook\b|singer|driver|pilot|astronaut|player|scientist|professor|hairdresser|actor|\bvet\b|princess|prince\b|\bking\b|queen|knight|soldier|servant|retainer|messenger|samurai|ninja|captain|announcer|angel|celebrity|twins|elderly|adult|clerk|hero|villain|character \(|main character|audience|orihime|hikoboshi|santa\b|sweetheart|myself|oneself|\bwho\b|worker|\bjobs?\b|\bwork\b/i },
+        { key: 'school', icon: '🎒', name: 'School & Things', meaning: true,
+          en: /school|class|homework|lesson|stud(y|ies)|\btests?\b|exam\b|book|notebook|dictionary|magazine|comic|manga|encyclopedia|pencil|\bpens?\b|eraser|crayon|marker|scissors|glue|paper|ruler|desk|chair|\bbags?\b|backpack|randoseru|blackboard|whiteboard|math|p\.e\.|calligraphy|science|social studies|english|kanji|timetable|schedule|\btoys?\b|\bballs?\b|doll|puzzle|\bgames?\b|card|\bbox\b|umbrella|telephone|phone|computer|tablet|\btv\b|television|camera|clock|watch\b|\bkeys?\b|wallet|purse|present|gift|letter|stamp|sticker|envelope|picture|photo|piano|guitar|drum|flute|violin|recorder|whistle|racket|bicycle|bike\b|kite\b|robot|origami|craft|towel|soap|toothbrush|\bcups?\b|glass\b|plate|chopstick|fork\b|spoon|knife|bottle|lunch box|lunchbox|money|\byen\b|coin|\bcars?\b|\bbus\b|train\b|taxi|truck|airplane|plane\b|\bships?\b|boat|rocket|vehicle|ambulance|sled|sleigh|bell\b|wreath|ornament|spinning top|lantern|candle|balloon|microphone|newspaper|remote|outlet|battery|air conditioner|electric fan|lamp|screen|curtain|\blids?\b|switch|machine|flag|thermos|treasure|jewel|gem\b|medal|trophy|certificate|prize|blocks|marble|skateboard|page\b|diary|\bmaps?\b|ticket|futon|pillow|shelf|drawer|broom|instrument|mask\b|\bpot\b|\bpan\b|stuffed animal|jump rope|kendama|karuta|ribbon|\blists?\b|goods|merchandise|wrapping|parasol|bowls?\b|paddle|rope\b|fan\b|banner|streamer|paint\b|swing\b|slide\b|seesaw|sandbox|song\b|lullaby|carol|melody|shower\b|price|cash register|receipt|sale\b|savings|free of charge|\bstor(y|ies)\b|tale\b|folktale|legend|movie/i },
+        { key: 'places', icon: '🏞️', name: 'Places & Nature', meaning: true,
+          en: /park\b|mountain|\bhill|\briver|\bsea\b|ocean|beach|forest|woods?\b|\btrees?\b|flower|blossom|grass|\bsky\b|\bstars?\b|moon|\bsun\b|garden|house|home\b|\btowns?\b|\bcit(y|ies)\b|village|station|\bshop|store\b|market|restaurant|hospital|pharmacy|\bzoo\b|aquarium|pool\b|playground|road|street|bridge|island|lake\b|pond|field|meadow|sand|stone|rock\b|boulder|leaf|leaves|bamboo|sakura|nature|world|earth|japan|country|place\b|room\b|kitchen|bathroom|bedroom|living room|entryway|entrance|toilet|bath\b|roof|stairs|hallway|elevator|building|castle|shrine|temple\b|tower|post office|bank\b|bakery|cafe|theater|theatre|bookstore|greengrocer|butcher|festival|outside|inside|middle\b|behind|beside|next to|corner|above|below|\bunder\b|in front|valley|cliff|summit|\bpeaks?\b|tunnel|intersection|crosswalk|slope|plaza|square\b|cave\b|waterfall|hot spring|amusement|museum|university|cram school|space\b|planet|comet|constellation|milky way|galaxy|horizon|ground\b|^air$|soil|dirt\b|riverbank|veranda|scenery|ranch|pasture|farm|rice field|vegetable field|observation deck|path\b|harbor|port\b|window|door\b|wall\b|floor\b|yard\b|icicle\b|puddle|pinecone|moss\b|branch\b|stem\b|seed\b|bud\b|petal|foliage|sunflower|tulip|dandelion|rose\b|hydrangea|lily|iris\b|holly|mistletoe|fir tree|pampas|library|picnic|camping|hiking|barbecue|bonfire|firework|traffic|handrail|emergency exit|seashell|\bwaves?\b|bench\b|direction|\bwalk\b/i },
+        { key: 'weather', icon: '⛅', name: 'Weather & Seasons', meaning: true,
+          en: /weather|\brain|snow|wind\b|windy|wintry|cloud|sunny|storm|thunder|lightning|typhoon|rainbow|season|^spring|summer|autumn|winter|\bfall\b|temperature|humid|breeze|\bfog|frost|hail\b|sleet|blizzard|icicle|\bhot\b|\bcold|warm\b|chilly|\bice\b| shower$|downpour|sunshine|sunlight|sunset|sunrise/i },
+        { key: 'colors', icon: '🎨', name: 'Colors & Shapes', meaning: true,
+          en: /colou?r|\bred\b|blue\b|yellow|green\b|black(?!board)|white(?!board)|pink\b|purple|orange \(|brown|gr[ae]y\b|gold\b|silver|shape|circle|square|triangle|rectangle|\bround\b|heart shape|diamond|\bdots?\b|stripe|navy/i,
+          jp: /いろ$/ },
+        { key: 'body', icon: '👚', name: 'Body & Clothes', meaning: true,
+          en: /\bbody|\bhead|\bhair|face\b|\beyes?\b|eyebrow|\bears?\b|nose|mouth|tooth|teeth|neck|shoulder|\barms?\b|hand\b|hands\b|finger|\blegs?\b|foot\b|feet\b|knee|elbow|stomach|tummy|belly|\bchest\b|cheek|chin\b|forehead|tongue|\bnails?\b|\bskin\b|bone|\blips?\b|beard|whisker|mustache|clothes|clothing|shirt|pants|trousers|jeans|shorts|skirt|dress\b|dressed|\bhats?\b|\bcaps?\b|shoes?\b|boots?\b|socks?\b|coat\b|jacket|sweater|scarf|glove|mitten|kimono|yukata|pajama|pyjama|wear\b|uniform|button|pocket|glasses|belt\b|swimsuit|sandal|slipper|apron|sweat\b|fever|cough|sneeze|runny nose|sick\b|hurt|itchy|band-aid|bandage|height\b|costume|cape\b|cloak|helmet|obi sash|hair ornament|suntan|sunburn|horn\b|smell\b|taste|flavor|health\b|sleep\b|diaper|armou?r|crown\b/i },
+        { key: 'time', icon: '⏰', name: 'Time & Numbers', meaning: true, pos: ['counter'],
+          en: /time\b|o'clock|hour\b|minute|second \(|today|tomorrow|yesterday|\bdays?\b|week\b|weekend|month|year\b|years\b|morning|noon\b|afternoon|evening|\bnight|tonight|\bnow\b|later|soon\b|\bearly|\blate\b|number|zero|\bone\b(?!['’])|\btwo\b|three|\bfour\b|five|\bsix\b|seven|\beight|\bnine\b|\bten\b|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand|\bcount\b|counting|half\b|birthday|\bdate\b|calendar|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march\b|april|june|july|august|september|october|november|december|holiday|always|sometimes|often|usually|never|every day|daily|first\b|\bwhen\b|deadline|\b\d+(st|nd|rd|th)\b|how many|times\b|once\b|twice|dusk|midnight|past\b|future|long ago|ago\b|christmas|halloween|\beve\b|^may$|\bnext\b|the last|ending\b|beginn/i },
+        { key: 'actions', icon: '🏃', name: 'Action Words', meaning: false, pos: ['verb'] },
+        { key: 'describe', icon: '💖', name: 'Describing Words', meaning: false, pos: ['i-adj', 'na-adj', 'adverb'] },
+        { key: 'phrases', icon: '💬', name: 'Phrases & Greetings', meaning: false, pos: ['phrase', 'expression'] },
+        { key: 'other', icon: '📦', name: 'Everything Else', meaning: false, other: true },
+    ];
+
+    function catMatch(cat, v) {
+        if (cat.other) return !CATS.some(c => !c.other && catMatch(c, v));
+        return !!((cat.pos && cat.pos.indexOf(v.pos) >= 0)
+            || (cat.en && cat.en.test(v.en || ''))
+            || (cat.jp && cat.jp.test(v.jp || '')));
+    }
+    function catWords(vocab, cat) { return vocab.filter(v => catMatch(cat, v)); }
+
+    function levelWeeks(li) {
+        const out = [];
+        for (let y = 1; y <= LEVELS[li].years; y++) {
+            const meta = window.CURRICULUM[y];
+            if (meta && meta.weeks) out.push.apply(out, meta.weeks);
+        }
+        return out;
+    }
+    function levelVocab(li) {
+        const seen = new Set(), out = [];
+        levelWeeks(li).forEach(wk => (wk.vocab || []).forEach(v => {
+            if (v && v.jp && v.en && !seen.has(v.jp)) { seen.add(v.jp); out.push(v); }
+        }));
+        return out;
+    }
+    function levelExamples(li) {
+        let out = [];
+        levelWeeks(li).forEach(wk => {
+            if (wk.grammar && wk.grammar.examples) out = out.concat(wk.grammar.examples);
+            if (wk.phrases) out = out.concat(wk.phrases);
+        });
+        // keep game setup snappy at big levels: sample down to ~400 sentences
+        if (out.length > 400) {
+            const a = out.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const t = a[i]; a[i] = a[j]; a[j] = t;
+            }
+            out = a.slice(0, 400);
+        }
+        return out;
+    }
+    function levelKanji(li) {
+        const seen = new Set(), out = [];
+        levelWeeks(li).forEach(wk => (wk.kanji || []).forEach(k => {
+            if (k && k.char && !seen.has(k.char)) { seen.add(k.char); out.push(k); }
+        }));
+        return out;
+    }
+    function poolFor(vocab, keys) {
+        return vocab.filter(v => CATS.some(c => keys.indexOf(c.key) >= 0 && catMatch(c, v)));
+    }
+
+    const KANA_SMALL = /^[ぁ-ゖァ-ヶー]{2,6}$/; // pure-kana word usable in Kana Builder
+    const GAME_KEYS = ['memory', 'listen', 'quiz', 'karuta', 'bingo', 'whack', 'shiritori', 'oddone',
+                       'kanabuild', 'sort', 'blank', 'scramble', 'speak', 'shop', 'counters', 'trace',
+                       'kanjimatch', 'bossquiz'];
+    const GAME_OK = {
+        memory:     s => s.pool.length >= 6,
+        listen:     s => s.pool.length >= 8,
+        quiz:       s => s.pool.length >= 8,
+        karuta:     s => s.pool.length >= 6,
+        bingo:      s => s.pool.length >= 9,
+        whack:      s => s.pool.length >= 6,
+        shiritori:  s => s.pool.length >= 10,
+        oddone:     s => s.pool.length >= 8,
+        kanabuild:  s => s.pool.filter(v => KANA_SMALL.test(v.jp)).length >= 6,
+        sort:       s => s.pool.length >= 8,
+        blank:      s => s.examples.length >= 4 && s.pool.length >= 4, // non-particle rounds draw distractors from the pool
+        scramble:   s => s.examples.length >= 4,
+        speak:      s => s.examples.length >= 4,
+        shop:       s => s.pool.filter(v => v.pos === 'noun').length >= 4,
+        counters:   s => s.pool.length >= 8,
+        trace:      s => s.pool.length >= 4,
+        kanjimatch: s => s.kanji.length >= 3,
+        bossquiz:   s => s.pool.length >= 8,
+    };
+    /* ===== arcade-core-end ===== */
+
+    // ---------- state ----------
+    function loadLevel() {
+        let v = NaN;
+        try { v = parseInt(localStorage.getItem('arcade-level'), 10); } catch (e) {}
+        return v >= 0 && v < LEVELS.length ? v : 0;
+    }
+    function loadCats() {
+        let keys = null;
+        try { keys = JSON.parse(localStorage.getItem('arcade-cats')); } catch (e) {}
+        if (Array.isArray(keys)) keys = keys.filter(k => CATS.some(c => c.key === k));
+        return keys && keys.length ? keys : CATS.map(c => c.key);
+    }
+    let level = loadLevel();
+    let selCats = loadCats();
+    let LV = null;
+    function rebuildLevel() {
+        LV = { vocab: levelVocab(level), examples: levelExamples(level), kanji: levelKanji(level) };
+    }
+    function saveLevel() { try { localStorage.setItem('arcade-level', String(level)); } catch (e) {} }
+    function saveCats() { try { localStorage.setItem('arcade-cats', JSON.stringify(selCats)); } catch (e) {} }
+    function selection() {
+        return { pool: poolFor(LV.vocab, selCats), examples: LV.examples, kanji: LV.kanji };
+    }
+
+    // ---------- best-star records (per game, per level) ----------
+    function bestFor(key) {
+        let v = 0;
+        try { v = parseInt(localStorage.getItem('arcade-best:' + key + ':' + level), 10); } catch (e) {}
+        return v >= 1 ? Math.min(3, v) : 0;
+    }
+    function recordBest(key, stars) {
+        try {
+            if (stars > bestFor(key)) localStorage.setItem('arcade-best:' + key + ':' + level, String(stars));
+        } catch (e) {}
+    }
+
+    // ---------- rendering ----------
+    function renderTotals() {
+        const total = GAME_KEYS.reduce((a, k) => a + bestFor(k), 0);
+        $('totals').innerHTML = `⭐ ${total} arcade star${total === 1 ? '' : 's'} · <b>${escHtml(LEVELS[level].label)}</b>`;
+    }
+    function renderLevels() {
+        $('lvlChips').innerHTML = LEVELS.map((l, i) =>
+            `<button class="lvl-chip${i === level ? ' active' : ''}" data-lv="${i}">${escHtml(l.label)}</button>`).join('');
+        $('lvlChips').querySelectorAll('.lvl-chip').forEach(b => b.onclick = () => {
+            if (+b.dataset.lv === level) return;
+            level = +b.dataset.lv; saveLevel(); rebuildLevel(); Sfx.pop();
+            renderAll();
+        });
+        $('lvlHint').textContent = `Every word, sentence and kanji from ${LEVELS[level].label === 'Year 1' ? 'Year 1' : LEVELS[level].label.toLowerCase()} of the journey — ${LV.vocab.length} words, ${LV.kanji.length} kanji!`;
+    }
+    function renderCats() {
+        $('catGrid').innerHTML = CATS.map(c => {
+            const n = catWords(LV.vocab, c).length;
+            return `<button class="cat-card${selCats.includes(c.key) ? ' on' : ''}${n ? '' : ' empty'}" data-cat="${c.key}">
+                <span class="c-icon">${c.icon}</span>
+                <span class="c-name">${escHtml(c.name)}</span>
+                <span class="c-count">${n} word${n === 1 ? '' : 's'}</span>
+            </button>`;
+        }).join('');
+        $('catGrid').querySelectorAll('.cat-card').forEach(b => b.onclick = () => {
+            const k = b.dataset.cat;
+            if (selCats.includes(k)) {
+                if (selCats.length === 1) { // always keep one basket picked
+                    b.classList.add('shake'); Sfx.wrong();
+                    setTimeout(() => b.classList.remove('shake'), 400);
+                    return;
+                }
+                selCats = selCats.filter(x => x !== k);
+            } else selCats = selCats.concat([k]);
+            saveCats(); Sfx.pop();
+            renderCats(); renderGames();
+        });
+    }
+    $('allWords').onclick = () => {
+        selCats = CATS.map(c => c.key);
+        saveCats(); Sfx.pop();
+        renderCats(); renderGames();
+    };
+    function renderGames() {
+        const sel = selection();
+        $('poolInfo').textContent = `🎯 ${sel.pool.length} word${sel.pool.length === 1 ? '' : 's'} in your game pool`;
+        $('gameNote').textContent = sel.pool.length ? '' :
+            'Your word basket is empty — tap some categories above! 🧺';
+        $('gameGrid').innerHTML = GAME_KEYS.map(key => {
+            const def = Activities.defs[key];
+            const ok = GAME_OK[key](sel);
+            const best = bestFor(key);
+            return `<div class="act-card game-card${ok ? '' : ' locked'}" data-game="${key}" data-ok="${ok ? 1 : 0}">
+                <div class="a-icon">${def.icon}</div>
+                <div class="a-name">${escHtml(def.name)}</div>
+                <div class="a-jp">${escHtml(def.jp)}</div>
+                <div class="a-stars">${!ok ? '<span class="lock-note">Pick more categories! 🧺</span>'
+                    : best ? '⭐'.repeat(best) : '<span style="color:#cfd8dc">not played yet</span>'}</div>
+            </div>`;
+        }).join('');
+        $('gameGrid').querySelectorAll('.game-card').forEach(c => c.onclick = () => {
+            if (c.dataset.ok !== '1') {
+                c.classList.add('shake'); Sfx.wrong();
+                setTimeout(() => c.classList.remove('shake'), 400);
+                return;
+            }
+            openGame(c.dataset.game);
+        });
+    }
+    function renderAll() { renderTotals(); renderLevels(); renderCats(); renderGames(); }
+
+    // ---------- activity modal ----------
+    function writingFor(pool) {
+        // hand the tracing game a spread of kana from the picked words
+        const seen = new Set(), chars = [];
+        shuffleArr(pool).forEach(v => {
+            if (!/^[ぁ-ゖァ-ヶー]+$/.test(v.jp)) return;
+            for (const c of v.jp) if (c !== 'ー' && !seen.has(c)) { seen.add(c); chars.push(c); }
+        });
+        return chars.length ? { type: 'kana', chars: chars.slice(0, 8) } : null;
+    }
+    function openGame(key) {
+        const def = Activities.defs[key];
+        const sel = selection();
+        $('modalTitle').textContent = def.icon + ' ' + def.name;
+        $('modalBack').classList.add('open');
+        if (activeRun) activeRun.teardown();
+        // only the selected meaning-based baskets, for Odd One Out teams
+        const catObjs = CATS.filter(c => c.meaning && selCats.includes(c.key))
+            .map(c => ({ name: c.name, icon: c.icon, words: catWords(sel.pool, c) }))
+            .filter(c => c.words.length);
+        // real onComplete (never null) so arcade plays count for records
+        activeRun = Activities.startCustom(key, $('actHost'), {
+            pool: sel.pool,
+            examples: sel.examples,
+            kanjiPool: sel.kanji,
+            writing: writingFor(sel.pool),
+            categories: catObjs,
+            prevBest: () => bestFor(key),
+        }, stars => { recordBest(key, stars); renderTotals(); renderGames(); },
+        closeModal);
+    }
+    function closeModal() {
+        $('modalBack').classList.remove('open');
+        if (activeRun) { activeRun.teardown(); activeRun = null; }
+        $('actHost').innerHTML = '';
+        JpSpeech.stop();
+    }
+    $('modalClose').onclick = closeModal;
+    $('modalBack').addEventListener('click', e => { if (e.target === $('modalBack')) closeModal(); });
+
+    // Tako-chan hosts the arcade (tap = wiggle + hear the line)
+    const TAKO = [
+        ['あそぼう あそぼう！', "Let's play, let's play!"],
+        ['もう いっかい？', 'One more time?'],
+        ['こんどは まけないぞ〜！', "I won't lose this time!"],
+        ['うわー、つよいね！', "Whoa, you're strong!"],
+    ];
+    (function () {
+        const line = TAKO[Math.floor(Math.random() * TAKO.length)];
+        $('takoJp').textContent = line[0];
+        $('takoEn').textContent = line[1];
+        $('tako').onclick = () => {
+            const m = $('tako');
+            m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
+            if (!$('modalBack').classList.contains('open')) JpSpeech.speak($('takoJp').textContent);
+        };
+    })();
+
+    rebuildLevel();
+    renderAll();
+
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+})();
+</script>
+</body>
+</html>

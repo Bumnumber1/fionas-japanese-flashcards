@@ -30,7 +30,7 @@ After certain changes, regenerate the offline files and commit them:
 
 | When you... | Run |
 |---|---|
-| Add/change characters in writing.html or ocean.html | `node generate_kanjivg_data.js` |
+| Add/change characters in writing.html, ocean.html, or the curriculum_y*.js writing/kanji lists | `node generate_kanjivg_data.js` |
 | Change the font families/weights | `node generate_local_fonts.js` |
 | Add/rename any page, image, font, or audio file — or change any content | `node generate_sw.js` (bumps the cache version so devices pick up the update) |
 

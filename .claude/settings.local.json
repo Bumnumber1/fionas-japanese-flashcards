@@ -3,7 +3,12 @@
     "allow": [
       "mcp__pikes-ai__generate_image",
       "mcp__hf-mcp-server__gr1_z_image_turbo_generate",
-      "PowerShell(\"PS works\"; Get-ChildItem \"C:\\\\JapaneseLessons\" -Filter *.html -Recurse | Select-Object -ExpandProperty FullName)"
+      "PowerShell(\"PS works\"; Get-ChildItem \"C:\\\\JapaneseLessons\" -Filter *.html -Recurse | Select-Object -ExpandProperty FullName)",
+      "PowerShell(\\(Get-Item C:\\\\JapaneseLessons\\\\sentencebuilder.html\\).Length; \\(Get-Content C:\\\\JapaneseLessons\\\\sentencebuilder.html | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content C:\\\\JapaneseLessons\\\\ocean.html | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content C:\\\\JapaneseLessons\\\\review.html | Measure-Object -Line\\).Lines; \\(Get-Item C:\\\\JapaneseLessons\\\\review.html\\).Length)",
+      "PowerShell(\\(Get-Content C:\\\\JapaneseLessons\\\\writing.html | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content C:\\\\JapaneseLessons\\\\index.html | Measure-Object -Line\\).Lines; \\(Get-Item C:\\\\JapaneseLessons\\\\index.html\\).Length)"
     ]
   }
 }

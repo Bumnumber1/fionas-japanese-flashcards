@@ -65,8 +65,28 @@
         .header-links {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 16px;
             margin-top: 8px;
+        }
+
+        /* Cute mascot kit (header cameo only — tooltip, no bubble) */
+        .mascot {
+            font-size: 2.6em;
+            display: inline-block;
+            cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite;
+            transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+
+        .mascot.small {
+            font-size: 1.7em;
+        }
+
+        @keyframes mascotBob {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-5px) rotate(2deg); }
         }
 
         .header-links a {
@@ -516,20 +536,22 @@
     <div class="header">
         <h1>Fiona's Japanese Workbook</h1>
         <div class="header-links">
+            <span class="mascot small" title="まいにち すこしずつ、が いちばん！ (A little every day is best!)" aria-label="Kon-Kon Sensei">🦊</span>
             <a href="index.html" class="back-link">Back to Flashcards</a>
+            <a href="workbook.html" class="back-link">Vol. 2: 5-Year Journey 🗺️</a>
             <a href="#" class="toc-link" id="tocToggle">Contents</a>
         </div>
     </div>
 
     <!-- Progress Bar -->
     <div class="progress-bar-track">
-        <div class="progress-bar-fill" id="progressBar" style="width: 4.55%"></div>
+        <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
     </div>
 
     <!-- Page Counter -->
     <div class="page-counter">
-        <span id="pageCounter">Page 1 of 36</span>
-        <span class="page-title" id="pageTitle">Meeting Someone for the First Time</span>
+        <span id="pageCounter"></span>
+        <span class="page-title" id="pageTitle"></span>
     </div>
 
     <!-- Book Area -->
@@ -681,6 +703,7 @@
 
                 pageImage.src = IMAGE_BASE + pages[index].file;
                 currentPage = index;
+                try { localStorage.setItem('fiona-workbook-page', String(index)); } catch (e) {}
                 updateUI();
 
                 // Preload neighbors
@@ -832,9 +855,17 @@
         pageImage.onerror = function () {
             pageLoading.textContent = 'Image not found';
         };
-        pageImage.src = IMAGE_BASE + pages[0].file;
+        // Resume where Fiona left off last time
+        let savedPage = 0;
+        try {
+            const s = parseInt(localStorage.getItem('fiona-workbook-page'), 10);
+            if (!isNaN(s) && s >= 0 && s < pages.length) savedPage = s;
+        } catch (e) {}
+        currentPage = savedPage;
+        pageImage.src = IMAGE_BASE + pages[savedPage].file;
         updateUI();
-        preloadImage(1);
+        preloadImage(savedPage - 1);
+        preloadImage(savedPage + 1);
 
         // Hide swipe hint after animation
         setTimeout(() => {

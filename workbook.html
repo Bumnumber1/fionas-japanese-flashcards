@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fiona's Journey">
+    <title>Fiona's 5-Year Japanese Journey</title>
+    <style>
+        @import url('fonts/fonts.css');
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 30%, #e0f7fa 60%, #fff3e0 100%);
+            min-height: 100vh; padding: 16px; background-attachment: fixed; color: #37474f;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* ---------- header ---------- */
+        .header {
+            text-align: center; margin-bottom: 18px; padding: 22px 16px;
+            background: rgba(255,255,255,0.72); backdrop-filter: blur(10px);
+            border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .header h1 {
+            font-size: 1.9em; font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .header .totals { margin-top: 6px; color: #78909c; font-weight: 700; }
+        .nav-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+        .nav-btn {
+            border: none; border-radius: 18px; padding: 9px 16px; font-family: inherit; font-weight: 800;
+            font-size: 0.92em; cursor: pointer; color: #fff; text-decoration: none; display: inline-block;
+            background: linear-gradient(135deg, #7986cb, #5c6bc0); box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+        }
+        .nav-btn.pink { background: linear-gradient(135deg, #f06292, #ec407a); }
+        .nav-btn.teal { background: linear-gradient(135deg, #4dd0e1, #26c6da); }
+        .nav-btn:active { transform: scale(0.96); }
+
+        /* ---------- year tabs ---------- */
+        .year-tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+        .year-tab {
+            border: 2px solid rgba(255,255,255,0.7); background: rgba(255,255,255,0.6);
+            border-radius: 16px; padding: 8px 14px; font-family: inherit; font-weight: 800; cursor: pointer;
+            color: #607d8b; font-size: 0.95em;
+        }
+        .year-tab.active { background: linear-gradient(135deg, #ba68c8, #9575cd); color: #fff; border-color: transparent; }
+        .year-head { text-align: center; margin-bottom: 14px; }
+        .year-head h2 { font-size: 1.35em; color: #5e35b1; }
+        .year-head p { color: #78909c; font-weight: 600; font-size: 0.95em; }
+
+        /* ---------- journey grid ---------- */
+        .term {
+            background: rgba(255,255,255,0.6); border-radius: 20px; padding: 14px; margin-bottom: 16px;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .term h3 { color: #455a64; font-size: 1.05em; margin: 2px 6px 10px; }
+        .term h3 .term-jp { color: #ab47bc; margin-left: 8px; font-size: 0.9em; }
+        .weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .week-card {
+            position: relative; background: #fff; border-radius: 16px; padding: 12px 10px 10px; cursor: pointer;
+            border: 2px solid #eceff1; box-shadow: 0 3px 8px rgba(0,0,0,0.05); text-align: center;
+            transition: transform 0.15s;
+        }
+        .week-card:hover { transform: translateY(-3px); }
+        .week-card .wk-emoji { font-size: 1.9em; }
+        .week-card .wk-num { font-size: 0.7em; font-weight: 800; color: #b0bec5; letter-spacing: 0.06em; }
+        .week-card .wk-title { font-weight: 800; font-size: 0.86em; color: #37474f; line-height: 1.25; min-height: 2.4em; }
+        .week-card .wk-dates { font-size: 0.68em; color: #b0bec5; font-weight: 700; margin-top: 3px; }
+        .week-card .wk-stars { font-size: 0.75em; margin-top: 2px; min-height: 1.1em; }
+        .week-card.kind-review { background: linear-gradient(160deg, #fffde7, #fff); border-color: #ffe082; }
+        .week-card.kind-special { background: linear-gradient(160deg, #fce4ec, #fff); border-color: #f8bbd0; }
+        .week-card.done { border-color: #a5d6a7; }
+        .week-card.done::after { content: '✔'; position: absolute; top: 6px; right: 8px; color: #66bb6a; font-weight: 800; }
+        .week-card.current { border-color: #7e57c2; box-shadow: 0 0 0 3px rgba(126,87,194,0.25); animation: pulse 2s ease-in-out infinite; }
+        .week-card.current::before {
+            content: 'THIS WEEK'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #7e57c2, #ab47bc); color: #fff; font-size: 0.58em; font-weight: 800;
+            padding: 2px 8px; border-radius: 8px; letter-spacing: 0.05em;
+        }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+        .kind-badge {
+            display: inline-block; font-size: 0.6em; font-weight: 800; padding: 1px 7px; border-radius: 8px;
+            letter-spacing: 0.04em; margin-top: 2px;
+        }
+        .kind-badge.review { background: #fff3c4; color: #f57f17; }
+        .kind-badge.special { background: #f8bbd0; color: #c2185b; }
+        .coming-soon { text-align: center; padding: 40px; color: #90a4ae; font-weight: 700; }
+
+        /* ---------- lesson view ---------- */
+        .lesson { display: none; }
+        .panel {
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); border-radius: 22px;
+            padding: 18px; margin-bottom: 16px; border: 2px solid rgba(255,255,255,0.6);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        }
+        .lesson-head { text-align: center; }
+        .lesson-head .big-emoji { font-size: 3em; }
+        .lesson-head h2 { color: #4527a0; font-size: 1.5em; }
+        .lesson-head .jp-title { color: #ab47bc; font-weight: 800; font-size: 1.1em; }
+        .lesson-head .goal {
+            display: inline-block; margin-top: 8px; background: linear-gradient(135deg, #fff9c4, #ffe0b2);
+            padding: 7px 16px; border-radius: 16px; color: #ef6c00; font-weight: 800; font-size: 0.95em;
+        }
+        .lesson-head .meta { color: #90a4ae; font-weight: 700; font-size: 0.85em; margin-top: 8px; }
+        .lesson-nav { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+        .section-title { font-size: 1.15em; color: #5e35b1; font-weight: 800; margin-bottom: 10px; }
+        .section-title .st-jp { color: #b39ddb; font-size: 0.85em; margin-left: 6px; }
+
+        .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .vocab-card {
+            background: #fff; border-radius: 16px; padding: 12px; text-align: center; cursor: pointer;
+            border: 2px solid #ede7f6; transition: transform 0.15s;
+        }
+        .vocab-card:active { transform: scale(0.96); }
+        .vocab-card .v-emoji { font-size: 2em; }
+        .vocab-card .v-jp { font-size: 1.25em; font-weight: 800; color: #311b92; font-family: 'Noto Sans JP', sans-serif; }
+        .vocab-card .v-rom { font-size: 0.78em; color: #ab47bc; font-weight: 700; }
+        .vocab-card .v-en { font-size: 0.85em; color: #78909c; font-weight: 700; }
+        .vocab-card .v-pos { font-size: 0.6em; color: #b0bec5; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        .grammar-box { background: linear-gradient(160deg, #e8eaf6, #fff); border-radius: 16px; padding: 14px; }
+        .grammar-box h4 { color: #303f9f; font-size: 1.1em; margin-bottom: 6px; }
+        .grammar-box .explain { color: #455a64; font-weight: 600; line-height: 1.55; font-size: 0.95em; }
+        .example { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 9px 12px; margin-top: 8px; }
+        .example .ex-jp { font-weight: 800; color: #311b92; font-family: 'Noto Sans JP', sans-serif; }
+        .example .ex-rom { color: #ab47bc; font-size: 0.8em; font-weight: 700; }
+        .example .ex-en { color: #78909c; font-size: 0.85em; font-weight: 700; }
+        .spk-btn {
+            border: none; background: linear-gradient(135deg, #4dd0e1, #26c6da); color: #fff; border-radius: 50%;
+            width: 34px; height: 34px; min-width: 34px; font-size: 1em; cursor: pointer;
+        }
+        .kanji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+        .kanji-card { background: #fff; border-radius: 16px; padding: 10px; text-align: center; border: 2px solid #ffe0b2; cursor: pointer; }
+        .kanji-card .k-char { font-size: 2.4em; font-family: 'Noto Sans JP', sans-serif; color: #e65100; font-weight: 700; }
+        .kanji-card .k-read { font-weight: 800; color: #6d4c41; font-size: 0.9em; }
+        .kanji-card .k-mean { color: #90a4ae; font-size: 0.8em; font-weight: 700; }
+        .writing-chars { display: flex; flex-wrap: wrap; gap: 8px; }
+        .write-chip {
+            background: #fff; border: 2px solid #b2dfdb; border-radius: 14px; padding: 8px 14px;
+            font-size: 1.4em; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; color: #00695c; cursor: pointer;
+        }
+        .culture-box { background: linear-gradient(160deg, #fff3e0, #fff); border-radius: 16px; padding: 14px; color: #6d4c41; font-weight: 600; }
+        .culture-box b { color: #e65100; }
+
+        .act-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        .act-card {
+            background: #fff; border-radius: 16px; padding: 14px 10px; text-align: center; cursor: pointer;
+            border: 2px solid #e1f5fe; transition: transform 0.15s;
+        }
+        .act-card:hover { transform: translateY(-3px); }
+        .act-card .a-icon { font-size: 2em; }
+        .act-card .a-name { font-weight: 800; color: #0277bd; font-size: 0.92em; }
+        .act-card .a-jp { color: #90a4ae; font-size: 0.75em; font-weight: 700; }
+        .act-card .a-stars { min-height: 1.2em; font-size: 0.85em; margin-top: 3px; }
+        .review-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .review-chip {
+            background: #fff; border: 2px solid #d1c4e9; color: #5e35b1; border-radius: 14px; padding: 7px 12px;
+            font-weight: 800; font-size: 0.85em; cursor: pointer;
+        }
+        .complete-row { text-align: center; }
+        .complete-row .big-stars { font-size: 1.6em; margin-bottom: 6px; }
+        .star-dim { opacity: 0.25; }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0 2px; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
+        /* Mochi's 3-star cameo on game finish screens */
+        .finish-mochi { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 800; color: #ad1457; font-family: 'Noto Sans JP', sans-serif; }
+
+        /* ---------- activity modal ---------- */
+        .modal-back {
+            display: none; position: fixed; inset: 0; background: rgba(38,50,56,0.55); z-index: 50;
+            padding: 14px; overflow-y: auto;
+        }
+        .modal-back.open { display: flex; align-items: flex-start; justify-content: center; }
+        .modal {
+            background: #fdfdfd; border-radius: 22px; max-width: 560px; width: 100%; margin: 3vh auto;
+            padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .modal-head .m-title { font-weight: 800; color: #37474f; font-size: 1.1em; }
+        .modal-close { border: none; background: #eceff1; border-radius: 50%; width: 34px; height: 34px; font-size: 1em; cursor: pointer; font-weight: 800; color: #607d8b; }
+
+        /* ---------- activity engine styles ---------- */
+        .act-host { min-height: 200px; }
+        .act-bar { position: relative; height: 8px; background: #eceff1; border-radius: 6px; }
+        .act-bar-fill { height: 100%; background: linear-gradient(90deg, #ba68c8, #7e57c2); transition: width 0.3s; border-radius: 6px; }
+        .act-walker { position: absolute; top: -16px; font-size: 1em; transition: left 0.3s; }
+        .act-bar-label { text-align: center; color: #90a4ae; font-weight: 800; font-size: 0.8em; margin: 5px 0 8px; }
+        .act-streak { text-align: center; font-weight: 800; color: #ef6c00; font-size: 0.9em; margin: 2px 0 6px; animation: streakPop 0.25s ease-out; }
+        @keyframes streakPop { from { transform: scale(0.6); opacity: 0; } }
+        .act-subtitle { text-align: center; font-weight: 800; color: #455a64; margin: 8px 0; font-size: 1em; }
+        .act-prompt { text-align: center; font-size: 1.25em; font-weight: 800; color: #311b92; margin: 12px 0; font-family: 'Noto Sans JP', 'Nunito', sans-serif; }
+        .act-prompt .q-jp, .speak-card .q-jp { font-size: 1.35em; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .q-rom { display: block; font-size: 0.65em; color: #ab47bc; font-weight: 700; }
+        .act-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .act-opt {
+            border: 2px solid #e1bee7; background: #fff; border-radius: 16px; padding: 14px 8px; font-family: inherit;
+            font-weight: 800; font-size: 1em; color: #37474f; cursor: pointer; min-height: 58px;
+        }
+        .act-opt .q-jp-opt { font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; }
+        .act-opt.right { background: #c8e6c9; border-color: #66bb6a; }
+        .act-opt.wrong { background: #ffcdd2; border-color: #ef5350; }
+        .act-opt:disabled { opacity: 0.7; }
+        .opt-emoji { font-size: 1.3em; }
+        .act-ear { font-size: 1.6em; }
+        .act-speaker {
+            display: block; margin: 4px auto; border: none; background: linear-gradient(135deg, #4dd0e1, #26c6da);
+            color: #fff; font-family: inherit; font-weight: 800; border-radius: 16px; padding: 9px 18px; cursor: pointer; font-size: 0.95em;
+        }
+        .act-speaker-sm { display: inline-block; padding: 4px 10px; margin: 0 0 0 6px; border-radius: 12px; font-size: 0.8em; }
+        .act-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+        .act-btn {
+            border: 2px solid #cfd8dc; background: #fff; border-radius: 16px; padding: 10px 18px; font-family: inherit;
+            font-weight: 800; color: #546e7a; cursor: pointer; font-size: 0.95em;
+        }
+        .act-btn-primary { background: linear-gradient(135deg, #7e57c2, #ab47bc); color: #fff; border-color: transparent; }
+        .act-btn:disabled { opacity: 0.45; }
+        .act-finish { text-align: center; padding: 26px 8px; position: relative; overflow: hidden; }
+        .act-finish-stars { font-size: 2.6em; }
+        .act-finish-stars span { display: inline-block; }
+        .star-pop { animation: starLand 0.35s ease-out; }
+        @keyframes starLand { from { transform: scale(2); opacity: 0; } }
+        .act-finish-msg { font-size: 1.3em; font-weight: 800; color: #5e35b1; margin: 8px 0 4px; }
+        .act-finish-score { color: #90a4ae; font-weight: 800; margin-bottom: 16px; }
+        .act-finish .act-btn { margin: 4px; }
+        .act-finish .confetti { position: absolute; top: -24px; font-size: 1.15em; pointer-events: none; animation: confettiFall 2.4s ease-in forwards; }
+        @keyframes confettiFall { to { transform: translateY(340px) rotate(360deg); opacity: 0; } }
+        .act-record { font-weight: 800; color: #ef6c00; font-size: 1.05em; animation: recordBounce 0.6s; }
+        @keyframes recordBounce { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+        .mem-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; perspective: 700px; }
+        .mem-card {
+            position: relative; border: none; background: linear-gradient(135deg, #9575cd, #7e57c2); border-radius: 14px;
+            min-height: 74px; cursor: pointer; font-family: inherit; padding: 4px;
+            transition: transform 0.22s; transform-style: preserve-3d;
+        }
+        .mem-card .mem-front, .mem-card .mem-back {
+            position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 4px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+        }
+        .mem-card .mem-front { color: #fff; font-size: 1.5em; font-weight: 800; }
+        .mem-card .mem-back { transform: rotateY(180deg); }
+        .mem-card.open, .mem-card.done { background: #fff; border: 2px solid #b39ddb; transform: rotateY(180deg); }
+        .mem-card.done { border-color: #a5d6a7; background: #f1f8e9; animation: matchPop 0.45s; }
+        @keyframes matchPop { 50% { transform: rotateY(180deg) scale(1.15); } }
+        .mem-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.05em; display: block; }
+        .mem-emoji { font-size: 1.3em; display: block; }
+        .mem-en { font-size: 0.68em; font-weight: 800; color: #78909c; display: block; }
+
+        .scr-en { text-align: center; color: #78909c; font-weight: 700; margin: 6px 0; }
+        .scr-slots {
+            min-height: 52px; background: #f5f5f5; border-radius: 14px; padding: 10px; display: flex; flex-wrap: wrap;
+            gap: 6px; justify-content: center; align-items: center; margin: 8px 0; border: 2px dashed #cfd8dc;
+        }
+        .scr-slots.scr-right { border-color: #66bb6a; background: #e8f5e9; }
+        .scr-slots.scr-wrong { border-color: #ef5350; background: #ffebee; }
+        .scr-slot { background: #fff; border-radius: 10px; padding: 6px 10px; font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; border: 2px solid #b39ddb; }
+        .scr-hint { color: #b0bec5; font-weight: 700; font-size: 0.85em; }
+        .scr-answer { width: 100%; text-align: center; color: #2e7d32; font-weight: 800; font-family: 'Noto Sans JP', sans-serif; }
+        .scr-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0; }
+        .scr-chip {
+            border: 2px solid #80deea; background: #fff; border-radius: 14px; padding: 9px 13px;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 800; font-size: 1.05em; color: #00697b; cursor: pointer;
+        }
+        .scr-chip.used { opacity: 0.25; pointer-events: none; }
+        .blank-sent { font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; font-weight: 800; color: #311b92; }
+        .blank-gap { color: #e91e63; letter-spacing: 0.1em; }
+
+        .trace-wrap { display: flex; justify-content: center; margin: 8px 0; }
+        .trace-canvas { border-radius: 16px; border: 2px solid #cfd8dc; touch-action: none; background: #fff; max-width: 100%; }
+        .trace-char-label { font-family: 'Noto Sans JP', sans-serif; font-size: 1.4em; color: #e65100; }
+        .trace-msg { text-align: center; color: #78909c; font-weight: 700; min-height: 1.4em; margin-top: 8px; }
+
+        .sort-card { text-align: center; background: #fff; border: 2px solid #e1bee7; border-radius: 16px; padding: 18px; font-size: 1.2em; font-family: 'Noto Sans JP', 'Nunito', sans-serif; margin: 10px 0; color: #311b92; }
+        .sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .bingo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .bingo-cell { border: 2px solid #b2dfdb; background: #fff; border-radius: 14px; padding: 10px 4px; cursor: pointer; font-family: inherit; }
+        .bingo-cell .bingo-emoji { display: block; font-size: 1.5em; }
+        .bingo-cell .bingo-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #00695c; font-size: 0.95em; }
+        .bingo-cell.marked { background: #b2dfdb; border-color: #26a69a; }
+        .bingo-cell.bingo-hot { border-color: #ffca28; box-shadow: 0 0 0 3px rgba(255,202,40,0.3); animation: pulse 1s ease-in-out infinite; }
+        .bingo-cell.bingo-win { background: #ffe082; border-color: #ffb300; animation: cellBounce 0.6s; }
+        @keyframes cellBounce { 30% { transform: translateY(-8px) scale(1.12); } }
+
+        .whack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .whack-hole {
+            background: radial-gradient(circle at 50% 70%, #8d6e63, #5d4037); border: none; border-radius: 50%;
+            aspect-ratio: 1.25; cursor: pointer; overflow: hidden;
+        }
+        .whack-mole {
+            display: inline-block; background: #fff; border-radius: 12px; padding: 6px 8px;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.05em;
+            animation: molePop 0.3s ease-out;
+        }
+        @keyframes molePop { from { transform: translateY(28px); } to { transform: translateY(0); } }
+        .whack-timebar { margin-top: 10px; height: 6px; }
+        .whack-timebar .act-bar-fill { background: linear-gradient(90deg, #ffb74d, #ff7043); }
+        .shake { animation: shakeX 0.35s; }
+        @keyframes shakeX { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        .speak-card { text-align: center; background: #fff; border: 2px solid #e1bee7; border-radius: 16px; padding: 16px; margin: 8px 0; }
+        .shop-items { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+        .shop-item { background: #fff; border: 2px solid #ffe0b2; border-radius: 14px; padding: 10px 14px; text-align: center; font-family: 'Noto Sans JP', 'Nunito', sans-serif; font-weight: 800; color: #5d4037; }
+        .shop-plus { font-size: 1.4em; font-weight: 800; color: #90a4ae; }
+        .count-field { text-align: center; font-size: 1.7em; background: #fff; border-radius: 14px; border: 2px solid #c5e1a5; padding: 12px; margin: 8px 0; line-height: 1.5; }
+        .count-field .count-emoji { display: inline-block; opacity: 0; transform: scale(0.3); }
+        .count-field .count-emoji.pop-in { animation: popIn 0.3s ease-out forwards; }
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+
+        .story-title { text-align: center; font-size: 1.25em; font-weight: 800; color: #5d4037; margin-bottom: 10px; }
+        .story-line { display: flex; gap: 10px; align-items: flex-start; background: #fff; border-radius: 14px; padding: 10px; margin-bottom: 8px; border: 2px solid #ffecb3; }
+        .story-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.05em; }
+        .story-rom { color: #ab47bc; font-size: 0.75em; font-weight: 700; }
+        .story-en { color: #90a4ae; font-size: 0.8em; font-weight: 700; }
+        .story-line.playing { background: #fff8e1; border-color: #ffb300; }
+
+        .km-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+        .km-col { display: flex; flex-direction: column; gap: 8px; }
+        .km-card { border: 2px solid #ffe0b2; background: #fff; border-radius: 14px; padding: 10px; font-family: inherit; font-weight: 800; color: #5d4037; cursor: pointer; font-size: 0.95em; }
+        .km-kanji { font-family: 'Noto Sans JP', sans-serif; font-size: 1.9em; color: #e65100; }
+        .km-card.sel { border-color: #7e57c2; background: #ede7f6; }
+        .km-card.done { opacity: 0.35; pointer-events: none; }
+
+        .diary-text { width: 100%; border: 2px solid #cfd8dc; border-radius: 14px; padding: 10px; font-family: 'Noto Sans JP', sans-serif; font-size: 1.1em; margin-top: 8px; }
+        .diary-entry { background: #fff; border-radius: 12px; border: 2px solid #f0f4c3; padding: 8px 12px; margin-top: 8px; font-family: 'Noto Sans JP', 'Nunito', sans-serif; font-weight: 700; color: #55606a; font-size: 0.9em; }
+
+        .karuta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .karuta-card {
+            border: 2px solid #ffcc80; background: linear-gradient(160deg, #fff8e1, #fff); border-radius: 14px;
+            min-height: 76px; padding: 8px 6px; cursor: pointer; font-family: inherit;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        }
+        .karuta-card:disabled { opacity: 0.5; }
+        .karuta-card.grabbed { background: #c8e6c9; border-color: #66bb6a; opacity: 1; animation: cellBounce 0.6s; }
+        .karuta-emoji { font-size: 1.5em; }
+        .karuta-en { font-weight: 800; color: #78909c; font-size: 0.75em; }
+        .karuta-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #311b92; font-size: 1.15em; }
+        .karuta-fast { text-align: center; min-height: 1.5em; margin-top: 6px; }
+        .karuta-zap { display: inline-block; font-weight: 800; color: #f57f17; font-size: 1.05em; animation: streakPop 0.25s ease-out; }
+
+        .train {
+            display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 8px 8px 10px; margin: 8px 0;
+            background: linear-gradient(180deg, #e0f7fa, #fff); border: 2px solid #b2ebf2; border-radius: 14px;
+        }
+        .train-car {
+            flex: 0 0 auto; background: #fff; border: 2px solid #80deea; border-radius: 12px; padding: 6px 10px;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #00697b; font-size: 0.92em;
+        }
+        .train-car.newest { border-color: #ffb300; background: #fff8e1; animation: cellBounce 0.6s; }
+        .train-station { flex: 0 0 auto; font-size: 1.3em; }
+        .train-engine { flex: 0 0 auto; font-size: 1.4em; }
+        .train-station-big { text-align: center; font-size: 2.6em; margin-top: 6px; animation: tilePop 0.3s ease-out; }
+
+        .kb-word { text-align: center; font-weight: 800; color: #455a64; font-size: 1.05em; margin: 8px 0; }
+        .kb-slots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+        .kb-slot {
+            width: 46px; height: 46px; border: 2px dashed #b39ddb; border-radius: 12px; background: #f6f3fb;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Noto Sans JP', sans-serif; font-size: 1.35em; font-weight: 800; color: #311b92;
+        }
+        .kb-slot.filled { border-style: solid; background: #fff; animation: tilePop 0.25s ease-out; }
+        .kb-slots.kb-done .kb-slot { border-color: #66bb6a; background: #e8f5e9; }
+        @keyframes tilePop { from { transform: scale(0.4); } }
+        .kb-tiles { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+        .kb-tile {
+            width: 52px; height: 52px; border: 2px solid #80deea; background: #fff; border-radius: 14px;
+            font-family: 'Noto Sans JP', sans-serif; font-size: 1.4em; font-weight: 800; color: #00697b; cursor: pointer;
+        }
+        .kb-tile.used { opacity: 0.25; pointer-events: none; }
+
+        .boss-arena { position: relative; text-align: center; padding: 4px 0; }
+        .boss-face { display: inline-block; font-size: 3em; }
+        .boss-name { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #6a1b9a; }
+        .boss-hp { margin-top: 2px; font-size: 0.9em; letter-spacing: 1px; }
+        .boss-heart.lost, .boss-shield.lost { filter: grayscale(1); opacity: 0.3; }
+        .boss-shields { margin-top: 3px; font-size: 1em; color: #78909c; font-weight: 800; }
+        .boss-hit { animation: bossHit 0.45s; }
+        @keyframes bossHit { 30% { transform: translateX(-7px) rotate(-8deg); } 60% { transform: translateX(7px) rotate(8deg); } }
+        .boss-wobble { animation: bossWobble 0.7s; }
+        @keyframes bossWobble { 25% { transform: rotate(-10deg) scale(1.12); } 75% { transform: rotate(10deg) scale(1.12); } }
+        .boss-attack {
+            position: absolute; left: 50%; top: 56px; font-size: 1.6em; pointer-events: none;
+            animation: attackFly 0.5s ease-in forwards;
+        }
+        @keyframes attackFly {
+            from { transform: translate(-50%, 90px) scale(0.6); opacity: 0.9; }
+            to { transform: translate(-50%, -40px) scale(1.25); opacity: 0; }
+        }
+        .boss-end { text-align: center; padding: 30px 8px; }
+        .boss-end .boss-face { font-size: 4em; }
+        .boss-spin { animation: bossSpin 1.5s ease-in forwards; }
+        @keyframes bossSpin { to { transform: rotate(720deg) translateY(-140px) scale(0.1); opacity: 0; } }
+        .boss-fly { animation: bossFly 1.3s ease-in forwards; }
+        @keyframes bossFly { to { transform: translate(230px, -70px) scale(0.4); opacity: 0; } }
+        .boss-endmsg { font-weight: 800; color: #5e35b1; font-size: 1.15em; margin-top: 8px; }
+
+        @media (max-width: 560px) {
+            .weeks-grid { grid-template-columns: repeat(2, 1fr); }
+            .act-options { grid-template-columns: 1fr; }
+            .mem-grid { grid-template-columns: repeat(3, 1fr); }
+            .karuta-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .nav-row, .lesson-nav, .act-cards, .modal-back, .year-tabs, .complete-row, .spk-btn, .act-speaker { display: none !important; }
+            .panel { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🗺️ Fiona's 5-Year Japanese Journey</h1>
+        <div class="totals" id="totals"></div>
+        <div class="mascot-row">
+            <span class="mascot" id="konkon">🦊</span>
+            <div class="mascot-bubble"><span class="mb-jp" id="konkonJp"></span><span class="mb-en" id="konkonEn"></span></div>
+        </div>
+        <div class="nav-row">
+            <a class="nav-btn" href="index.html">🏠 Flashcards</a>
+            <a class="nav-btn teal" href="ebook.html">📖 Workbook Vol. 1</a>
+            <a class="nav-btn" href="arcade.html" style="background: linear-gradient(135deg, #ab47bc, #7e57c2);">🎮 Arcade</a>
+            <a class="nav-btn" href="kanjiride.html" style="background: linear-gradient(135deg, #8d6e63, #6d4c41);">🐴 Trail Ride</a>
+            <button class="nav-btn pink" id="jumpNow">⭐ Jump to This Week</button>
+        </div>
+    </div>
+
+    <div id="journey">
+        <div class="year-tabs" id="yearTabs"></div>
+        <div class="year-head" id="yearHead"></div>
+        <div id="terms"></div>
+    </div>
+
+    <div class="lesson" id="lesson"></div>
+</div>
+
+<div class="modal-back" id="modalBack">
+    <div class="modal">
+        <div class="modal-head">
+            <span class="m-title" id="modalTitle"></span>
+            <button class="modal-close" id="modalClose">✕</button>
+        </div>
+        <div class="act-host" id="actHost"></div>
+    </div>
+</div>
+
+<script src="kanjivg_data.js"></script>
+<script src="curriculum.js"></script>
+<script src="curriculum_y1.js"></script>
+<script src="curriculum_y2.js"></script>
+<script src="curriculum_y3.js"></script>
+<script src="curriculum_y4.js"></script>
+<script src="curriculum_y5.js"></script>
+<script src="activities.js"></script>
+<script>
+(() => {
+    const $ = id => document.getElementById(id);
+    let viewYear = 1;
+    let activeRun = null;
+
+    const now = Journey.currentPos();
+
+    function renderTotals() {
+        const t = Journey.totals();
+        $('totals').innerHTML = `⭐ ${t.stars} stars · ✔ ${t.weeks} weeks finished · You are on <b>Year ${now.year}, Week ${now.week}</b>`;
+    }
+
+    // ---------- journey view ----------
+    function renderTabs() {
+        $('yearTabs').innerHTML = [1, 2, 3, 4, 5].map(y => {
+            const meta = Journey.yearMeta(y);
+            const yt = Journey.yearTotals(y);
+            return `<button class="year-tab${y === viewYear ? ' active' : ''}" data-y="${y}">
+                Year ${y}${yt.weeks ? ' · ' + yt.weeks + '✔' : ''}${!meta ? ' 🔒' : ''}</button>`;
+        }).join('');
+        document.querySelectorAll('.year-tab').forEach(b => b.onclick = () => { viewYear = +b.dataset.y; location.hash = 'y' + viewYear; });
+    }
+
+    function renderJourney() {
+        renderTabs();
+        const meta = Journey.yearMeta(viewYear);
+        if (!meta) {
+            $('yearHead').innerHTML = '';
+            $('terms').innerHTML = '<div class="coming-soon">This year of the journey is still being written... ✨</div>';
+            return;
+        }
+        $('yearHead').innerHTML = `<h2>${escHtml(meta.title || 'Year ' + viewYear)}</h2><p>${escHtml(meta.tagline || '')}</p>`;
+        let html = '';
+        for (let t = 1; t <= 4; t++) {
+            const term = (meta.terms || [])[t - 1] || { name: 'Term ' + t, jp: '', theme: '' };
+            const weeks = (meta.weeks || []).filter(w => Journey.termOf(w.w) === t);
+            html += `<div class="term"><h3>🌸 ${escHtml(term.name)} <span class="term-jp">${escHtml(term.jp)}</span>
+                <span style="color:#b0bec5;font-size:0.8em;font-weight:700"> — ${escHtml(term.theme)}</span></h3>
+                <div class="weeks-grid">` +
+                weeks.map(w => {
+                    const p = Journey.weekProgress(viewYear, w.w);
+                    const isNow = viewYear === now.year && w.w === now.week;
+                    const d = Journey.weekDates(viewYear, w.w);
+                    return `<div class="week-card kind-${w.kind}${p.complete ? ' done' : ''}${isNow ? ' current' : ''}" data-w="${w.w}">
+                        <div class="wk-emoji">${w.emoji}</div>
+                        <div class="wk-num">WEEK ${w.w}</div>
+                        <div class="wk-title">${escHtml(w.title)}</div>
+                        ${w.kind !== 'lesson' ? `<span class="kind-badge ${w.kind}">${w.kind === 'review' ? '🎯 REVIEW' : '🎊 SPECIAL'}</span>` : ''}
+                        <div class="wk-dates">${d.label}</div>
+                        <div class="wk-stars">${p.stars ? '⭐' + p.stars : ''}</div>
+                    </div>`;
+                }).join('') + '</div></div>';
+        }
+        $('terms').innerHTML = html;
+        document.querySelectorAll('.week-card').forEach(c => c.onclick = () => { location.hash = 'y' + viewYear + 'w' + c.dataset.w; });
+    }
+
+    // ---------- lesson view ----------
+    function renderLesson(y, w) {
+        const wk = Journey.getWeek(y, w);
+        if (!wk) { location.hash = 'y' + y; return; }
+        const d = Journey.weekDates(y, w);
+        const p = Journey.weekProgress(y, w);
+        const prev = w > 1 ? w - 1 : null, next = w < 52 ? w + 1 : null;
+
+        let html = `
+        <div class="lesson-nav">
+            <button class="nav-btn" data-nav="map">🗺️ Journey Map</button>
+            <div>
+                ${prev ? `<button class="nav-btn" data-nav="prev">◀ W${prev}</button>` : ''}
+                ${next ? `<button class="nav-btn" data-nav="next">W${next} ▶</button>` : ''}
+            </div>
+        </div>
+        <div class="panel lesson-head">
+            <div class="big-emoji">${wk.emoji}</div>
+            <h2>Week ${w}: ${escHtml(wk.title)}</h2>
+            <div class="jp-title">${escHtml(wk.jp || '')}</div>
+            <div class="goal">🎯 ${escHtml(wk.goal || '')}</div>
+            <div class="meta">Year ${y} · ${d.label}${wk.kind !== 'lesson' ? ' · ' + wk.kind.toUpperCase() + ' week' : ''}</div>
+        </div>`;
+
+        if (wk.vocab && wk.vocab.length) {
+            html += `<div class="panel"><div class="section-title">✨ Words of the Week <span class="st-jp">こんしゅうの ことば</span></div>
+            <div class="vocab-grid">` + wk.vocab.map((v, i) => `
+                <div class="vocab-card" data-vi="${i}">
+                    <div class="v-emoji">${v.emoji}</div>
+                    <div class="v-jp">${escHtml(v.jp)}</div>
+                    <div class="v-rom">${escHtml(v.romaji)}</div>
+                    <div class="v-en">${escHtml(v.en)}</div>
+                    <div class="v-pos">${escHtml(v.pos)}</div>
+                </div>`).join('') + '</div></div>';
+        }
+
+        if (wk.grammar) {
+            html += `<div class="panel"><div class="section-title">🧠 Grammar Power-Up</div>
+            <div class="grammar-box"><h4>${escHtml(wk.grammar.title)}</h4>
+            <div class="explain">${escHtml(wk.grammar.explain)}</div>` +
+            (wk.grammar.examples || []).map((ex, i) => `
+                <div class="example"><button class="spk-btn" data-ex="${i}">🔊</button>
+                <div><div class="ex-jp">${escHtml(ex.jp)}</div>
+                <div class="ex-rom">${escHtml(ex.romaji)}</div>
+                <div class="ex-en">${escHtml(ex.en)}</div></div></div>`).join('') + '</div></div>';
+        }
+
+        if (wk.phrases && wk.phrases.length) {
+            html += `<div class="panel"><div class="section-title">💬 Handy Phrases</div>` +
+            wk.phrases.map((ph, i) => `
+                <div class="example"><button class="spk-btn" data-ph="${i}">🔊</button>
+                <div><div class="ex-jp">${escHtml(ph.jp)}</div>
+                <div class="ex-rom">${escHtml(ph.romaji)}</div>
+                <div class="ex-en">${escHtml(ph.en)}</div></div></div>`).join('') + '</div>';
+        }
+
+        if (wk.kanji && wk.kanji.length) {
+            html += `<div class="panel"><div class="section-title">🀄 New Kanji <span class="st-jp">かんじ</span></div>
+            <div class="kanji-grid">` + wk.kanji.map((k, i) => `
+                <div class="kanji-card" data-ki="${i}">
+                    <div class="k-char">${escHtml(k.char)}</div>
+                    <div class="k-read">${escHtml(k.read)}</div>
+                    <div class="k-mean">${escHtml(k.mean)}</div>
+                </div>`).join('') + '</div></div>';
+        }
+
+        if (wk.writing && wk.writing.chars && wk.writing.chars.length) {
+            html += `<div class="panel"><div class="section-title">✍️ Writing Practice <span class="st-jp">${escHtml(wk.writing.type)}</span></div>
+            <div class="writing-chars">` + wk.writing.chars.map(c =>
+                `<button class="write-chip" data-wc="${escHtml(c)}">${escHtml(c)}</button>`).join('') +
+            `</div><div style="margin-top:10px"><a class="nav-btn teal" href="writing.html">Open the full Writing page ✍️</a></div></div>`;
+        }
+
+        if (wk.story) {
+            html += `<div class="panel"><div class="section-title">📖 Story Time <span class="st-jp">おはなし</span></div>
+            <div class="scr-en" style="text-align:left">${escHtml(wk.story.title)} — open it in Activities below to read and answer questions!</div></div>`;
+        }
+
+        if (wk.culture) {
+            html += `<div class="panel culture-box"><b>🎌 Japan Corner:</b> ${escHtml(wk.culture)}</div>`;
+        }
+
+        const acts = (wk.activities || []).filter(a => Activities.defs[a]);
+        if (acts.length) {
+            html += `<div class="panel"><div class="section-title">🎮 This Week's Games & Activities</div>
+            <div class="act-cards">` + acts.map(a => {
+                const def = Activities.defs[a];
+                const st = (p.starsBy || {})[a] || 0;
+                return `<div class="act-card" data-act="${a}">
+                    <div class="a-icon">${def.icon}</div>
+                    <div class="a-name">${def.name}</div>
+                    <div class="a-jp">${def.jp}</div>
+                    <div class="a-stars">${st ? '⭐'.repeat(st) : '<span style="color:#cfd8dc">not played yet</span>'}</div>
+                </div>`;
+            }).join('') + '</div></div>';
+        }
+
+        if (wk.review && wk.review.length) {
+            html += `<div class="panel"><div class="section-title">🔁 Remember these weeks?</div>
+            <div class="review-chips">` + wk.review.map(rw => {
+                const r = Journey.getWeek(y, rw);
+                return r ? `<button class="review-chip" data-rw="${rw}">${r.emoji} W${rw} ${escHtml(r.title)}</button>` : '';
+            }).join('') + '</div></div>';
+        }
+
+        html += `<div class="panel complete-row">
+            <div class="big-stars">${p.stars ? '⭐ ' + p.stars + ' stars this week!' : 'Play 3 activities to finish this week! 💪'}</div>
+            ${p.complete ? '<div style="color:#43a047;font-weight:800;font-size:1.15em">✔ Week complete! すごい!</div>'
+                        : '<button class="nav-btn pink" data-nav="complete">Mark week done anyway ✔</button>'}
+        </div>`;
+
+        const L = $('lesson');
+        L.innerHTML = html;
+        $('journey').style.display = 'none';
+        L.style.display = 'block';
+        window.scrollTo(0, 0);
+
+        L.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => {
+            const nv = b.dataset.nav;
+            if (nv === 'map') location.hash = 'y' + y;
+            else if (nv === 'prev') location.hash = 'y' + y + 'w' + prev;
+            else if (nv === 'next') location.hash = 'y' + y + 'w' + next;
+            else if (nv === 'complete') { Journey.markComplete(y, w); renderLesson(y, w); renderTotals(); }
+        });
+        L.querySelectorAll('[data-vi]').forEach(c => c.onclick = () => { JpSpeech.speak(wk.vocab[+c.dataset.vi].jp); Sfx.pop(); });
+        L.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => JpSpeech.speak(wk.grammar.examples[+b.dataset.ex].jp));
+        L.querySelectorAll('[data-ph]').forEach(b => b.onclick = () => JpSpeech.speak(wk.phrases[+b.dataset.ph].jp));
+        L.querySelectorAll('[data-ki]').forEach(c => c.onclick = () => {
+            const k = wk.kanji[+c.dataset.ki];
+            JpSpeech.speak(k.char + '、' + k.read);
+        });
+        L.querySelectorAll('[data-wc]').forEach(b => b.onclick = () => openTraceChar(y, w, b.dataset.wc));
+        L.querySelectorAll('[data-act]').forEach(c => c.onclick = () => openActivity(y, w, c.dataset.act));
+        L.querySelectorAll('[data-rw]').forEach(b => b.onclick = () => { location.hash = 'y' + y + 'w' + b.dataset.rw; });
+    }
+
+    // ---------- activity modal ----------
+    function openActivity(y, w, key) {
+        const def = Activities.defs[key];
+        $('modalTitle').textContent = def.icon + ' ' + def.name;
+        $('modalBack').classList.add('open');
+        if (activeRun) activeRun.teardown();
+        activeRun = Activities.start(key, $('actHost'), y, w,
+            (stars) => { Journey.recordActivity(y, w, key, stars); renderTotals(); },
+            () => closeModal(y, w));
+    }
+    function openTraceChar(y, w, ch) {
+        $('modalTitle').textContent = '✍️ Trace: ' + ch;
+        $('modalBack').classList.add('open');
+        if (activeRun) activeRun.teardown();
+        const wk = Journey.getWeek(y, w);
+        const saveWriting = wk && wk.writing;
+        const restore = saveWriting ? wk.writing.chars : null;
+        if (saveWriting) wk.writing = { type: wk.writing.type, chars: [ch] };
+        // chip practice is just for fun: recording it would award real Writing Time
+        // stars and count toward week completion, so no completion callback
+        // (null also tells finish() to skip the NEW RECORD banner)
+        activeRun = Activities.start('trace', $('actHost'), y, w,
+            null,
+            () => closeModal(y, w));
+        if (saveWriting) wk.writing = { type: wk.writing.type, chars: restore };
+    }
+    function closeModal(y, w) {
+        $('modalBack').classList.remove('open');
+        if (activeRun) { activeRun.teardown(); activeRun = null; }
+        $('actHost').innerHTML = '';
+        JpSpeech.stop();
+        if (y) renderLesson(y, w);
+    }
+    $('modalClose').onclick = () => {
+        const m = location.hash.match(/^#y(\d)w(\d+)$/);
+        closeModal(m ? +m[1] : null, m ? +m[2] : null);
+    };
+    $('modalBack').addEventListener('click', e => { if (e.target === $('modalBack')) $('modalClose').click(); });
+
+    // ---------- routing ----------
+    function route() {
+        // browser Back while a game is open should dismiss the game, not run it under the new view
+        if ($('modalBack').classList.contains('open')) closeModal();
+        const h = location.hash;
+        let m = h.match(/^#y(\d)w(\d+)$/);
+        if (m) { viewYear = +m[1]; renderTabs(); renderLesson(+m[1], +m[2]); return; }
+        m = h.match(/^#y(\d)$/);
+        if (m) viewYear = +m[1];
+        else if (h === '#current' || !h) viewYear = now.year;
+        $('lesson').style.display = 'none';
+        $('journey').style.display = 'block';
+        renderJourney();
+        if (h === '#current') {
+            // replace (not push) so Back doesn't land on #current and bounce forward again
+            location.replace('#y' + now.year + 'w' + now.week);
+            return;
+        }
+        const cur = document.querySelector('.week-card.current');
+        if (cur) setTimeout(() => cur.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    }
+    window.addEventListener('hashchange', route);
+    $('jumpNow').onclick = () => { location.hash = 'y' + now.year + 'w' + now.week; };
+
+    // Kon-Kon Sensei greets on the journey map (tap = wiggle + hear the line)
+    const KONKON = [
+        ['いっしょに がんばろう！', "Let's do our best together!"],
+        ['きょうは なにを あそぶ？', 'What shall we play today?'],
+        ['まいにち すこしずつ、が いちばん！', 'A little every day is best!'],
+        ['フィオナちゃん、えらいね！', "Fiona, you're doing great!"],
+    ];
+    (function () {
+        const line = KONKON[Math.floor(Math.random() * KONKON.length)];
+        $('konkonJp').textContent = line[0];
+        $('konkonEn').textContent = line[1];
+        $('konkon').onclick = () => {
+            const m = $('konkon');
+            m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
+            if (!$('modalBack').classList.contains('open')) JpSpeech.speak($('konkonJp').textContent);
+        };
+    })();
+
+    renderTotals();
+    route();
+
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+})();
+</script>
+</body>
+</html>

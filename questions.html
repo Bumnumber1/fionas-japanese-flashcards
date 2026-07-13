@@ -216,6 +216,52 @@
             font-size: 1em;
         }
         .speak-inline:active { transform: scale(0.9); }
+
+        /* Saved-list extras: count line, quiz highlight, save confetti */
+        .saved-count {
+            text-align: center;
+            font-weight: 800;
+            color: #33691e;
+            margin-bottom: 10px;
+        }
+
+        .saved-item.quizzing {
+            box-shadow: 0 0 0 3px #ffb300, 0 4px 14px rgba(255,179,0,0.35);
+        }
+
+        @keyframes confettiFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-70px) scale(0.5); opacity: 0; }
+        }
+
+        .confetti-particle {
+            position: fixed;
+            font-size: 1.3em;
+            pointer-events: none;
+            z-index: 200;
+            animation: confettiFloat 1.2s ease forwards;
+        }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -223,6 +269,14 @@
         <h1>Ask &amp; Answer</h1>
         <div class="header-links">
             <a href="index.html" class="back-link">Back to Flashcards</a>
+        </div>
+    </div>
+
+    <div class="mascot-row">
+        <span class="mascot" id="konkonMascot" onclick="konkonTap()" role="button" aria-label="Kon-Kon Sensei">🦊</span>
+        <div class="mascot-bubble" id="konkonBubble">
+            <span class="mb-jp" id="konkonJp">いっしょに がんばろう！</span>
+            <span class="mb-en" id="konkonEn">Let's do our best together!</span>
         </div>
     </div>
 
@@ -268,13 +322,17 @@
             <div class="btn-row">
                 <button class="action btn-speak" onclick="speakInput('qInput')">&#x1F50A; Read question</button>
                 <button class="action btn-speak" onclick="speakInput('aInput')">&#x1F50A; Read answer</button>
-                <button class="action btn-save" onclick="saveExchange()">Save this pair</button>
+                <button class="action btn-save" id="saveBtn" onclick="saveExchange()">Save this pair</button>
                 <button class="action btn-clear" onclick="clearInputs()">Clear</button>
             </div>
         </div>
 
         <div class="panel">
             <h2>Saved question &amp; answer pairs</h2>
+            <div class="saved-count" id="savedCount"></div>
+            <div class="btn-row" style="margin-bottom: 10px;">
+                <button class="action btn-speak" onclick="quizMe()">&#x1F3A7; Quiz me!</button>
+            </div>
             <div class="saved-list" id="savedList"></div>
         </div>
 
@@ -455,8 +513,26 @@
             });
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 50))); } catch(e) {}
             renderSaved();
+            spawnSaveConfetti();
             document.getElementById('qInput').value = '';
             document.getElementById('aInput').value = '';
+        }
+
+        function spawnSaveConfetti() {
+            const btn = document.getElementById('saveBtn');
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const symbols = ['✨', '💌', '⭐'];
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'confetti-particle';
+                p.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                p.style.left = (rect.left + Math.random() * rect.width) + 'px';
+                p.style.top = (rect.top + Math.random() * rect.height) + 'px';
+                p.style.animationDelay = (Math.random() * 0.3) + 's';
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 1600);
+            }
         }
 
         function clearInputs() {
@@ -477,31 +553,121 @@
             renderSaved();
         }
 
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
+        // Build one Q/A line with DOM APIs so raw typed text is never parsed as HTML
+        function savedLine(cls, label, text) {
+            const line = document.createElement('div');
+            line.className = cls;
+            line.appendChild(document.createTextNode(label));
+            if (text) {
+                line.appendChild(document.createTextNode(text));
+                const btn = document.createElement('button');
+                btn.className = 'speak-inline';
+                btn.style.marginLeft = '6px';
+                btn.title = 'Listen';
+                btn.textContent = '\u{1F50A}';
+                btn.addEventListener('click', () => speakText(text));
+                line.appendChild(btn);
+            } else {
+                const empty = document.createElement('i');
+                empty.textContent = '(empty)';
+                line.appendChild(empty);
+            }
+            return line;
         }
 
         function renderSaved() {
             const el = document.getElementById('savedList');
+            const countEl = document.getElementById('savedCount');
             const list = loadSaved();
             if (list.length === 0) {
+                countEl.textContent = '';
                 el.innerHTML = '<div class="empty">Nothing saved yet. Write a question and answer, then tap <b>Save this pair</b>.</div>';
+                lastMedalLevel = 0;
                 return;
             }
-            el.innerHTML = list.map(item => `
-                <div class="saved-item">
-                    <button class="saved-delete" onclick="deleteSaved(${item.ts})" title="Delete">&times;</button>
-                    <div class="saved-q">Q: ${escapeHtml(item.q) || '<i>(empty)</i>'}
-                        ${item.q ? `<button class="speak-inline" style="margin-left:6px;" onclick="speakText(${JSON.stringify(item.q)})">&#x1F50A;</button>` : ''}
-                    </div>
-                    <div class="saved-a">A: ${escapeHtml(item.a) || '<i>(empty)</i>'}
-                        ${item.a ? `<button class="speak-inline" style="margin-left:6px;" onclick="speakText(${JSON.stringify(item.a)})">&#x1F50A;</button>` : ''}
-                    </div>
-                    <div class="saved-meta">${item.word ? escapeHtml(item.word) + ' &middot; ' : ''}${escapeHtml(item.prompt)}</div>
-                </div>
-            `).join('');
+            let medal = '';
+            let medalLevel = 0;
+            if (list.length >= 30) { medal = ' 🥇'; medalLevel = 3; }
+            else if (list.length >= 15) { medal = ' 🥈'; medalLevel = 2; }
+            else if (list.length >= 5) { medal = ' 🥉'; medalLevel = 1; }
+            countEl.textContent = 'You have written ' + list.length + ' question pair' + (list.length === 1 ? '' : 's') + '!' + medal;
+            if (lastMedalLevel !== null && medalLevel > lastMedalLevel) {
+                konkonSay('フィオナちゃん、えらいね！', "Fiona, you're doing great!");
+                konkonWiggle();
+            }
+            lastMedalLevel = medalLevel;
+            el.innerHTML = '';
+            list.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'saved-item';
+                card.dataset.ts = item.ts;
+
+                const del = document.createElement('button');
+                del.className = 'saved-delete';
+                del.title = 'Delete';
+                del.textContent = '×';
+                del.addEventListener('click', () => deleteSaved(item.ts));
+                card.appendChild(del);
+
+                card.appendChild(savedLine('saved-q', 'Q: ', item.q));
+                card.appendChild(savedLine('saved-a', 'A: ', item.a));
+
+                const meta = document.createElement('div');
+                meta.className = 'saved-meta';
+                meta.textContent = (item.word ? item.word + ' · ' : '') + (item.prompt || '');
+                card.appendChild(meta);
+
+                el.appendChild(card);
+            });
+        }
+
+        // --- Kon-Kon Sensei mascot (cute kit) ---
+        let lastMedalLevel = null;
+
+        function konkonSay(jp, en) {
+            document.getElementById('konkonJp').textContent = jp;
+            document.getElementById('konkonEn').textContent = en;
+        }
+
+        function konkonWiggle() {
+            const m = document.getElementById('konkonMascot');
+            if (!m) return;
+            m.classList.remove('wiggle');
+            void m.offsetWidth; // restart animation
+            m.classList.add('wiggle');
+            setTimeout(() => m.classList.remove('wiggle'), 500);
+        }
+
+        function konkonTap() {
+            konkonWiggle();
+            // guarded: never talk over quiz playback or other speech
+            if (!('speechSynthesis' in window)) return;
+            if (speechSynthesis.speaking || speechSynthesis.pending || quizTimer) return;
+            speakText(document.getElementById('konkonJp').textContent);
+        }
+
+        let quizTimer = null;
+        let quizClearTimer = null;
+        function quizMe() {
+            const list = loadSaved();
+            if (list.length === 0) return;
+            const item = list[Math.floor(Math.random() * list.length)];
+            if (quizTimer) { clearTimeout(quizTimer); quizTimer = null; }
+            if (quizClearTimer) { clearTimeout(quizClearTimer); quizClearTimer = null; }
+            document.querySelectorAll('.saved-item.quizzing').forEach(c => c.classList.remove('quizzing'));
+            const card = document.querySelector('.saved-item[data-ts="' + item.ts + '"]');
+            if (card) {
+                card.classList.add('quizzing');
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            speakText(item.q);
+            // wait long enough for the (child-typed, any-length) question to finish
+            const answerDelay = Math.max(2500, 600 + item.q.length * 170);
+            quizTimer = setTimeout(() => {
+                quizTimer = null;
+                speakText(item.a);
+                quizClearTimer = setTimeout(() => { if (card) card.classList.remove('quizzing'); }, 2500);
+            }, answerDelay);
         }
 
         renderQwGrid();

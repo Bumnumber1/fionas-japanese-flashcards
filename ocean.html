@@ -225,6 +225,15 @@
             margin-bottom: 4px;
         }
 
+        .ocean-message.danger-near {
+            animation: dangerBorderPulse 1s ease-in-out 2;
+        }
+
+        @keyframes dangerBorderPulse {
+            0%, 100% { border-color: rgba(0,229,255,0.08); box-shadow: none; }
+            50% { border-color: rgba(239,83,80,0.7); box-shadow: 0 0 12px rgba(239,83,80,0.25); }
+        }
+
         /* Scene card system */
         .scene-card {
             background: linear-gradient(180deg, #001428 0%, #003366 40%, #004d66 100%);
@@ -471,6 +480,13 @@
 
         .btn-surface.visible {
             display: block;
+            animation: surfaceGlow 2s ease-in-out infinite;
+        }
+        /* gentle glow instead of heartPulse - scale(1.4) on a full-width button
+           overlapped the Map/Sonar buttons and could swallow their taps */
+        @keyframes surfaceGlow {
+            0%, 100% { box-shadow: 0 0 4px rgba(255, 213, 79, 0.3); transform: scale(1); }
+            50% { box-shadow: 0 0 16px rgba(255, 213, 79, 0.8); transform: scale(1.02); }
         }
 
         /* Center panel: writing canvas */
@@ -703,6 +719,24 @@
             padding: 12px;
             border: 1px solid rgba(0,229,255,0.15);
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sonar-ripple {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            margin: -10px 0 0 -10px;
+            border-radius: 50%;
+            border: 2px solid rgba(0,229,255,0.7);
+            pointer-events: none;
+            animation: sonarRipple 1s ease-out forwards;
+        }
+
+        @keyframes sonarRipple {
+            0% { transform: scale(0.2); opacity: 0.9; }
+            100% { transform: scale(10); opacity: 0; }
         }
 
         .minimap-title {
@@ -743,6 +777,15 @@
 
         .minimap-cell.warning {
             background: rgba(255,87,34,0.3);
+        }
+
+        .minimap-cell.just-revealed {
+            animation: cellReveal 0.8s ease forwards;
+        }
+
+        @keyframes cellReveal {
+            0% { background: rgba(0,229,255,0.6); }
+            100% { background: rgba(0,80,120,0.5); }
         }
 
         .minimap-cell.treasure {
@@ -912,6 +955,25 @@
             color: #ef5350;
         }
 
+        /* Treasure trophy shelf on the result screen */
+        .trophy-shelf {
+            margin: 10px 0 4px;
+            font-size: 1.6em;
+            line-height: 1.4;
+        }
+
+        .trophy-shelf.trophy-empty {
+            font-size: 0.95em;
+            font-weight: 700;
+            color: #80deea;
+        }
+
+        .trophy-item {
+            display: inline-block;
+            opacity: 0;
+            animation: bounceIn 0.4s ease forwards;
+        }
+
         .result-stats {
             text-align: left;
             margin: 16px 0;
@@ -1065,6 +1127,14 @@
             margin-bottom: 16px;
         }
 
+        .intro-best {
+            display: none;
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #ffd700;
+            margin: -8px 0 12px;
+        }
+
         .intro-diver {
             font-size: 4em;
             margin: 10px 0;
@@ -1138,6 +1208,37 @@
         .treasure-flash {
             animation: treasureFlash 0.8s ease;
         }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.static { cursor: default; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: rgba(255,255,255,0.92); border: 2px solid rgba(0,229,255,0.6); border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: rgba(0,229,255,0.6); }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: rgba(255,255,255,0.92); }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
+
+        /* Pen-Pen text-only cameos (treasure finds & danger warnings) */
+        .penpen-cameo {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            margin-left: 10px; animation: cameoPop 0.4s ease;
+        }
+        .penpen-cameo .cameo-text { color: #80deea; font-weight: 700; font-size: 0.9em; }
+        @keyframes cameoPop { 0% { opacity: 0; transform: scale(0.7); } 100% { opacity: 1; transform: scale(1); } }
+        .penpen-warning { color: #80deea; font-weight: 700; font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -1149,7 +1250,12 @@
         <div class="intro-content">
             <div class="intro-title">Yuna's Ocean Adventure</div>
             <div class="intro-subtitle">A Deep-Sea Kanji Treasure Hunt</div>
+            <div class="intro-best" id="introBest"></div>
             <div class="intro-diver">🤿</div>
+            <div class="mascot-row">
+                <span class="mascot" id="penpenMascot" onclick="penpenTap()">🐧</span>
+                <div class="mascot-bubble"><span class="mb-jp">うみへ いこう！</span><span class="mb-en">Let's go to the sea!</span></div>
+            </div>
             <div class="intro-rules">
                 <div class="rule-item">🗺️ Explore a 16x16 underwater grid searching for treasure!</div>
                 <div class="rule-item">✍️ <strong>Write kanji</strong> to move through the ocean depths.</div>
@@ -1289,6 +1395,7 @@
         <div class="result-content">
             <div class="result-title" id="resultTitle"></div>
             <div style="font-size:3em;" id="resultEmoji"></div>
+            <div id="trophyShelf"></div>
             <div class="result-stats" id="resultStats"></div>
             <button class="result-btn" onclick="restartGame()">Play Again 🌊</button>
         </div>
@@ -1950,14 +2057,17 @@ let isMoving = false;     // Guard against double-move
 let gameActive = false;
 let kanjiAttempts = 0;
 let kanjiCorrect = 0;
+let streak = 0;           // Consecutive correct kanji (combo)
 let treasuresFound = [];
 let kanjiPracticed = new Set();
+let dangerAttackedThisTick = false; // Set by handleDanger so its message wins over the generic wrong-answer one
 
 // For writing system
 let userStrokes = [];
 let currentStroke = null;
 let isDrawing = false;
 let showingAnimation = false;
+let showMeGen = 0;        // Bumped to cancel a running Show Me animation
 let guidePixelCache = { char: null, mask: null, w: 0 };
 const kvgCache = {};
 let guideKvgMainCache = {};
@@ -2063,8 +2173,10 @@ function startGame() {
     currentKanji = null;
     isMoving = false;
     gameActive = true;
+    diveRecorded = false;
     kanjiAttempts = 0;
     kanjiCorrect = 0;
+    streak = 0;
     treasuresFound = [];
     kanjiPracticed = new Set();
 
@@ -2100,8 +2212,10 @@ function restartGame() {
     currentKanji = null;
     isMoving = false;
     gameActive = true;
+    diveRecorded = false;
     kanjiAttempts = 0;
     kanjiCorrect = 0;
+    streak = 0;
     treasuresFound = [];
     kanjiPracticed = new Set();
 
@@ -2233,7 +2347,7 @@ function showKanjiPanel(kanji) {
 // =========================================================================
 // MINIMAP
 // =========================================================================
-function updateMinimap() {
+function updateMinimap(justRevealed) {
     const container = document.getElementById('minimapGrid');
     let html = '';
     for (let r = 0; r < GRID_SIZE; r++) {
@@ -2248,6 +2362,9 @@ function updateMinimap() {
                 }
                 if (DANGER_TYPES.includes(grid[r][c])) {
                     cls += ' danger-vis';
+                }
+                if (justRevealed && justRevealed.has(r + ',' + c)) {
+                    cls += ' just-revealed';
                 }
             } else if (isAdjacentToPlayer(r, c) && hasDangerAt(r, c)) {
                 cls += ' warning';
@@ -2357,20 +2474,32 @@ function useSonar() {
     sonarCharges--;
     playSfx('sonar');
 
-    // Reveal 3x3 area around player
+    // Reveal 3x3 area around player, tracking newly revealed cells
+    const justRevealed = new Set();
     for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
             const nr = playerRow + dr;
             const nc = playerCol + dc;
             if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                if (!visited[nr][nc]) justRevealed.add(nr + ',' + nc);
                 visited[nr][nc] = true;
             }
         }
     }
 
+    spawnSonarRipple();
     updateSonarCount();
-    updateMinimap();
+    updateMinimap(justRevealed);
     setOceanMessage('📡', 'Sonar pulse! Nearby cells revealed on your map.');
+}
+
+function spawnSonarRipple() {
+    const container = document.querySelector('.minimap-container');
+    if (!container) return;
+    const ring = document.createElement('div');
+    ring.className = 'sonar-ripple';
+    container.appendChild(ring);
+    setTimeout(() => ring.remove(), 1000);
 }
 
 // =========================================================================
@@ -2378,8 +2507,19 @@ function useSonar() {
 // =========================================================================
 function selectDirection(dir) {
     if (!gameActive) return;
-    if (currentKanji) return; // Already in a challenge
+    // In a challenge: allow picking a new direction only before the first stroke
+    if (currentKanji && (userStrokes.length > 0 || isDrawing || showingAnimation)) return;
     if (isMoving) return;     // Already moving
+    // Mid-challenge, a new direction keeps the SAME kanji (no re-rolling for an easy
+    // one) and can't shortcut onto a walked cell - it just changes where she'll go
+    if (currentKanji) {
+        const d = { 'north': { r: -1, c: 0 }, 'south': { r: 1, c: 0 }, 'east': { r: 0, c: 1 }, 'west': { r: 0, c: -1 } }[dir];
+        const rr = playerRow + d.r, cc = playerCol + d.c;
+        if (rr < 0 || rr >= GRID_SIZE || cc < 0 || cc >= GRID_SIZE) return;
+        selectedDirection = dir;
+        updateDirectionButtons();
+        return;
+    }
 
     const dirs = {
         'north': { r: -1, c: 0 },
@@ -2426,6 +2566,7 @@ function selectDirection(dir) {
 
     setOceanMessage('✏️', `Write "${currentKanji.char}" (${currentKanji.english}) — ${currentKanji.strokes} strokes`);
     showKanjiPanel(currentKanji);
+    speakJapanese(currentKanji.char);
     clearCanvas();
 
     // Trigger KanjiVG preload for this character
@@ -2465,6 +2606,7 @@ function movePlayer() {
     currentKanji = null;
     hideKanjiPanel();
     updateAllUI();
+    isMoving = false;
 }
 
 // Detect nearby dangers and return a warning string
@@ -2510,12 +2652,28 @@ function getNearbyDangerWarning() {
         dangerImgEl.src = 'ocean_images/' + closestDangerImg;
         dangerContainer.style.display = 'block';
     }
-    return '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>';
+    // Pen-Pen names sharks only when a shark is actually nearby
+    const hasShark = warnings.some(w => /shark/i.test(w));
+    return '<br><span style="color:#ff5252;">⚠️ ' + warnings.join(' ') + '</span>' +
+        '<br><span class="penpen-warning">🐧 ' + (hasShark ? 'きをつけて！サメだ！' : 'きをつけて！') + '</span>';
 }
 
 function processEncounter(cellType, r, c) {
     const panel = document.querySelector('.scene-panel') || document.body;
     const warning = getNearbyDangerWarning();
+
+    // Danger lurking next door - soft heartbeat and pulse the message border
+    if (warning !== '') {
+        playSfx('tension');
+        const msgEl = document.getElementById('oceanMessage');
+        if (msgEl) {
+            msgEl.classList.remove('danger-near');
+            void msgEl.offsetWidth;
+            msgEl.classList.add('danger-near');
+            if (msgEl._dangerTimer) clearTimeout(msgEl._dangerTimer);
+            msgEl._dangerTimer = setTimeout(() => msgEl.classList.remove('danger-near'), 2000);
+        }
+    }
 
     function withWarning(scene, glow) {
         showScene({emoji: scene.emoji, image: scene.image, title: scene.title, text: scene.text + warning}, glow);
@@ -2540,6 +2698,10 @@ function processEncounter(cellType, r, c) {
             withWarning(treasureScenes.minor, 'treasure-glow');
             setOceanMessage('🪙', `Ancient coin found! +${pts} points!`);
         }
+
+        // Pen-Pen pops up now and then to cheer the find (text only -
+        // never talks over the kanji/praise speech)
+        if (Math.random() < 1 / 3) showPenPenTreasureCameo();
     } else if (cellType === CELL_TYPES.SHIELD) {
         shields++;
         collected[r][c] = true;
@@ -2581,6 +2743,8 @@ function processEncounter(cellType, r, c) {
 }
 
 function handleDanger(cellType) {
+    if (!gameActive) return;   // a fatal attack this pass already ended the game
+    dangerAttackedThisTick = true;
     const panel = document.querySelector('.scene-panel') || document.body;
     panel.classList.add('danger-flash');
     setTimeout(() => panel.classList.remove('danger-flash'), 600);
@@ -2638,21 +2802,31 @@ function handleDanger(cellType) {
 // =========================================================================
 function moveDangers() {
     // Move sharks 1 step, sea serpents up to 2 steps
+    // Snapshot positions first so a danger that moves south/east
+    // isn't re-encountered and moved again later in the same scan
+    const sharks = [];
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             if (grid[r][c] === CELL_TYPES.SHARK) {
-                moveDanger(r, c, 1);
+                sharks.push([r, c]);
             }
         }
     }
+    sharks.forEach(([r, c]) => {
+        if (grid[r][c] === CELL_TYPES.SHARK) moveDanger(r, c, 1);
+    });
     // Second pass for sea serpents (after sharks moved)
+    const serpents = [];
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             if (grid[r][c] === CELL_TYPES.SEA_SERPENT) {
-                moveDanger(r, c, 2);
+                serpents.push([r, c]);
             }
         }
     }
+    serpents.forEach(([r, c]) => {
+        if (grid[r][c] === CELL_TYPES.SEA_SERPENT) moveDanger(r, c, 2);
+    });
     updateMinimap();
 }
 
@@ -2708,9 +2882,61 @@ function surfaceGame() {
     }
 }
 
+// Personal bests and dive log (localStorage; try/catch for file:// safety)
+function loadDiveLog() {
+    try {
+        return {
+            best: parseInt(localStorage.getItem('oceanBestScore'), 10) || 0,
+            dives: parseInt(localStorage.getItem('oceanTotalDives'), 10) || 0,
+            total: parseInt(localStorage.getItem('oceanGrandTotal'), 10) || 0,
+        };
+    } catch (e) {
+        return { best: 0, dives: 0, total: 0 };
+    }
+}
+
+let diveRecorded = false;
+function recordDive() {
+    // one dive = one log entry, even if two dangers end the game in the same pass
+    if (diveRecorded) return false;
+    diveRecorded = true;
+    const log = loadDiveLog();
+    const isRecord = score > log.best;
+    try {
+        localStorage.setItem('oceanBestScore', String(Math.max(score, log.best)));
+        localStorage.setItem('oceanTotalDives', String(log.dives + 1));
+        localStorage.setItem('oceanGrandTotal', String(log.total + score));
+    } catch (e) {
+        // Storage unavailable - the dive log just skips this dive
+    }
+    return isRecord;
+}
+
+function updateIntroDiveLog() {
+    const el = document.getElementById('introBest');
+    if (!el) return;
+    const log = loadDiveLog();
+    if (log.dives > 0) {
+        el.textContent = `Best dive: ${log.best} pts · Dives: ${log.dives}`;
+        el.style.display = 'block';
+    }
+}
+
+// Emoji trophy shelf of every treasure collected this dive
+function buildTrophyShelf() {
+    if (treasuresFound.length === 0) {
+        return '<div class="trophy-shelf trophy-empty">The ocean keeps its secrets... 🐚</div>';
+    }
+    const items = treasuresFound.map((t, i) =>
+        `<span class="trophy-item" style="animation-delay:${(i * 0.12).toFixed(2)}s">${CELL_DISPLAY[t]}</span>`
+    ).join(' ');
+    return `<div class="trophy-shelf">${items}</div>`;
+}
+
 function showVictory() {
     stopBgMusic();
     playSfx('victory');
+    const isRecord = recordDive();
     const overlay = document.getElementById('resultOverlay');
     document.getElementById('resultTitle').textContent = 'You Surfaced!';
     document.getElementById('resultTitle').className = 'result-title victory';
@@ -2721,7 +2947,12 @@ function showVictory() {
     const minorCount = treasuresFound.filter(t => t === CELL_TYPES.MINOR_TREASURE).length;
     const accuracy = kanjiAttempts > 0 ? Math.round((kanjiCorrect / kanjiAttempts) * 100) : 0;
 
+    // Pen-Pen celebrates beside the trophy shelf
+    document.getElementById('trophyShelf').innerHTML = buildTrophyShelf() +
+        '<div class="mascot-row"><span class="mascot small static">🐧</span>' +
+        '<div class="mascot-bubble"><span class="mb-jp">たからものを さがそう！</span><span class="mb-en">Let\'s hunt for treasure!</span></div></div>';
     document.getElementById('resultStats').innerHTML = `
+        ${isRecord ? '<div><span class="stat-label" style="color:#ffd700;">⭐ NEW RECORD!</span><span class="stat-value">Best dive yet!</span></div>' : ''}
         <div><span class="stat-label">Final Score</span><span class="stat-value">${score}</span></div>
         <div><span class="stat-label">🏆 Grand Treasures</span><span class="stat-value">${grandCount} / 1</span></div>
         <div><span class="stat-label">💎 Gems</span><span class="stat-value">${majorCount} / 4</span></div>
@@ -2739,7 +2970,8 @@ function showVictory() {
 
 function showGameOver() {
     stopBgMusic();
-    playSfx('gameover');
+    const isRecord = recordDive();
+    playSfx(isRecord ? 'victory' : 'gameover');
     const overlay = document.getElementById('resultOverlay');
     document.getElementById('resultTitle').textContent = 'Game Over';
     document.getElementById('resultTitle').className = 'result-title gameover';
@@ -2747,7 +2979,9 @@ function showGameOver() {
 
     const accuracy = kanjiAttempts > 0 ? Math.round((kanjiCorrect / kanjiAttempts) * 100) : 0;
 
+    document.getElementById('trophyShelf').innerHTML = buildTrophyShelf();
     document.getElementById('resultStats').innerHTML = `
+        ${isRecord ? '<div><span class="stat-label" style="color:#ffd700;">⭐ NEW RECORD!</span><span class="stat-value">Best dive yet!</span></div>' : ''}
         <div><span class="stat-label">Final Score</span><span class="stat-value">${score}</span></div>
         <div><span class="stat-label">Treasures Found</span><span class="stat-value">${treasuresFound.length}</span></div>
         <div><span class="stat-label">Depth Reached</span><span class="stat-value">${depth} moves</span></div>
@@ -2777,10 +3011,18 @@ function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     const size = Math.floor(rect.width);
     if (size <= 0) return;
+    const oldSize = drawCanvas.width;
     drawCanvas.width = size;
     drawCanvas.height = size;
     drawCanvas.style.width = size + 'px';
     drawCanvas.style.height = size + 'px';
+    // Rescale in-progress strokes so they stay aligned with the guide
+    if (oldSize > 0 && oldSize !== size) {
+        const ratio = size / oldSize;
+        const scalePoint = pt => ({ x: pt.x * ratio, y: pt.y * ratio });
+        userStrokes = userStrokes.map(stroke => stroke.map(scalePoint));
+        if (currentStroke) currentStroke = currentStroke.map(scalePoint);
+    }
     canvasRect = drawCanvas.getBoundingClientRect();
     redrawCanvas();
 }
@@ -2971,6 +3213,7 @@ function clearCanvas() {
     currentStroke = null;
     isDrawing = false;
     showingAnimation = false;
+    showMeGen++; // Cancel any running Show Me animation
     guidePixelCache = { char: null, mask: null, w: 0 };
     redrawCanvas();
     hideFeedback();
@@ -3146,13 +3389,13 @@ async function checkDrawing() {
     const userCount = userStrokes.length;
     const w = drawCanvas.width;
 
-    kanjiAttempts++;
-
     if (userCount === 0) {
         showFeedback('Draw the character first!', 'tryagain');
         playSfx('wrong');
         return;
     }
+
+    kanjiAttempts++;
 
     const kvgRaw = await getKvgPaths(kanji.char);
     // Bail if the kanji changed while we awaited the fetch
@@ -3194,17 +3437,22 @@ async function checkDrawing() {
     if (pixelScore >= 0.45) {
         // CORRECT!
         kanjiCorrect++;
-        score += 10;
-        showFeedback('Correct! (' + Math.round(pixelScore * 100) + '%) +10 pts', 'great');
+        streak++;
+        const pts = 10 + Math.min(streak - 1, 5) * 5; // +5 combo bonus per streak step, capped at +25
+        score += pts;
+        showFeedback('Correct! (' + Math.round(pixelScore * 100) + '%) ' + (streak >= 2 ? '🔥 ' + streak + ' in a row! ' : '') + '+' + pts + ' pts', 'great');
         playSfx('correct');
         spawnStars();
+        speakPraise();
 
         // Prevent double-trigger by clearing currentKanji immediately
         const pendingDirection = selectedDirection;
         currentKanji = null;
+        isMoving = true;
 
         // Move player after brief delay
         setTimeout(() => {
+            if (!gameActive) return;
             selectedDirection = pendingDirection;
             movePlayer();
         }, 600);
@@ -3220,10 +3468,15 @@ async function checkDrawing() {
 }
 
 function handleWrongAnswer() {
+    streak = 0;
     // Move dangers on wrong answer
+    dangerAttackedThisTick = false;
     moveDangers();
-    playSfx('sharkMove');
-    setOceanMessage('⚠️', 'Wrong! Dangers are moving closer... Try again!');
+    // If a danger attacked during the move, its message and sfx win
+    if (!dangerAttackedThisTick) {
+        playSfx('sharkMove');
+        setOceanMessage('⚠️', 'Wrong! Dangers are moving closer... Try again!');
+    }
 }
 
 function showFeedback(msg, type) {
@@ -3245,7 +3498,8 @@ function hideFeedback() {
 function spawnStars() {
     const container = document.getElementById('canvasContainer');
     const symbols = ['\u2b50', '\u2728', '\ud83c\udf1f', '\ud83e\udeb8'];
-    for (let i = 0; i < 8; i++) {
+    const count = Math.min(8 + streak * 2, 20); // More stars as the combo grows
+    for (let i = 0; i < count; i++) {
         const star = document.createElement('div');
         star.className = 'star-particle';
         star.textContent = symbols[Math.floor(Math.random() * symbols.length)];
@@ -3255,6 +3509,56 @@ function spawnStars() {
         container.appendChild(star);
         setTimeout(() => star.remove(), 1500);
     }
+}
+
+// =========================================================================
+// SPOKEN READINGS & PRAISE (speechSynthesis)
+// Uses device-local voices, so it works offline; if no Japanese voice is
+// installed it silently no-ops.
+// =========================================================================
+const praiseWords = ['すごい！', 'やったね！', 'じょうず！'];
+let praiseIndex = 0;
+
+function speakJapanese(text) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+        speechSynthesis.cancel(); // Never queue utterances
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ja-JP';
+        speechSynthesis.speak(u);
+    } catch (e) {
+        // Speech not available
+    }
+}
+
+function speakPraise() {
+    speakJapanese(praiseWords[praiseIndex % praiseWords.length]);
+    praiseIndex++;
+}
+
+// =========================================================================
+// PEN-PEN 🐧 THE DIVING BUDDY (cute mascot cameos)
+// =========================================================================
+function penpenTap() {
+    const m = document.getElementById('penpenMascot');
+    if (m) {
+        m.classList.add('wiggle');
+        setTimeout(() => m.classList.remove('wiggle'), 500);
+    }
+    if (gameActive) return; // never talk over the kanji/praise speech mid-dive
+    speakJapanese('うみへ いこう！');
+}
+
+// Text-only cameo beside the ocean message after a treasure find
+// (no TTS here - the kanji/praise speech must not be cancelled)
+function showPenPenTreasureCameo() {
+    const msgEl = document.getElementById('oceanMessage');
+    if (!msgEl) return;
+    const cameo = document.createElement('div');
+    cameo.className = 'penpen-cameo';
+    cameo.innerHTML = '<span class="mascot small static">🐧</span><span class="cameo-text">たからものを さがそう！</span>';
+    msgEl.appendChild(cameo);
+    setTimeout(() => cameo.remove(), 4000); // no-op if the message already changed
 }
 
 // =========================================================================
@@ -3382,6 +3686,8 @@ function scaleKvgToCanvas(strokes, canvasW) {
 function showMe() {
     if (showingAnimation || !currentKanji) return;
     showingAnimation = true;
+    showMeGen++;
+    const gen = showMeGen; // Bail out below if Clear/Escape cancels this run
     userStrokes = [];
     currentStroke = null;
 
@@ -3391,6 +3697,7 @@ function showMe() {
     redrawCanvas();
 
     getKvgPaths(currentKanji.char).then(kvgStrokes => {
+        if (gen !== showMeGen) return;
         if (!kvgStrokes || kvgStrokes.length === 0) {
             drawCtx.save();
             drawCtx.globalAlpha = 0.6;
@@ -3412,6 +3719,7 @@ function showMe() {
         const animStrokes = [];
 
         function animateNextStroke() {
+            if (gen !== showMeGen) return;
             if (strokeIdx >= scaledStrokes.length) {
                 showingAnimation = false;
                 updateStrokeCounter();
@@ -3423,6 +3731,7 @@ function showMe() {
             const drawnPts = [];
 
             function drawNext() {
+                if (gen !== showMeGen) return;
                 if (ptIdx >= animPts.length) {
                     animStrokes.push(drawnPts.slice());
                     strokeIdx++;
@@ -3500,8 +3809,9 @@ function playSfx(type) {
         const now = ctx.currentTime;
 
         if (type === 'correct') {
-            // Happy ascending chime
-            [523, 659, 784].forEach((freq, i) => {
+            // Happy ascending chime - pitch climbs with the combo streak
+            const pitch = Math.pow(1.06, Math.min(streak, 6));
+            [523, 659, 784].map(f => f * pitch).forEach((freq, i) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
@@ -3568,6 +3878,19 @@ function playSfx(type) {
             osc.connect(gain).connect(ctx.destination);
             osc.start(now);
             osc.stop(now + 0.25);
+        } else if (type === 'tension') {
+            // Two soft heartbeat thumps - danger is close
+            [0, 0.25].forEach(offset => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 55;
+                gain.gain.setValueAtTime(0.06, now + offset);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.2);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.25);
+            });
         } else if (type === 'powerup') {
             // Bright ascending
             [660, 880].forEach((freq, i) => {
@@ -3744,6 +4067,7 @@ function waitForFont() {
 // Patch startGame/restartGame to save originalGrid
 const _startGame = startGame;
 startGame = function() {
+    originalGrid = []; // Clear stale data before updateAllUI reads it
     _startGame();
     // Deep copy grid to originalGrid
     originalGrid = grid.map(row => row.slice());
@@ -3751,6 +4075,7 @@ startGame = function() {
 
 const _restartGame = restartGame;
 restartGame = function() {
+    originalGrid = []; // Clear stale data before updateAllUI reads it
     _restartGame();
     originalGrid = grid.map(row => row.slice());
 };
@@ -3788,6 +4113,7 @@ document.addEventListener('click', function initAudio() {
 createBubbles();
 preloadKvg();
 waitForFont();
+updateIntroDiveLog();
 
 // Auto-resize canvas when it becomes visible
 setTimeout(() => {

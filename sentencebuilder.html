@@ -184,6 +184,39 @@
         }
         .listen-btn:active { transform: scale(0.95); }
 
+        .stage-btns {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        .stage-btns .listen-btn { display: inline-block; margin: 0; }
+        .surprise-btn { background: linear-gradient(135deg, #ce93d8, #ab47bc); }
+
+        /* New-sentence bounce */
+        @keyframes tokenPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        .token.pop { animation: tokenPop 0.25s ease; }
+
+        /* Sentence-discovery counter */
+        .discovery-line {
+            text-align: center;
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #78909c;
+            margin: 10px 0 2px;
+        }
+        @keyframes discoveryPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); color: #ff8f00; }
+            100% { transform: scale(1); }
+        }
+        .discovery-line.pulse { animation: discoveryPulse 0.6s ease; }
+
         /* Pickers */
         .picker { margin-top: 22px; }
         .picker-title {
@@ -215,6 +248,27 @@
         .chip.sel-desc-naadj  { border-color: #ab47bc; background: #f3e5f5; color: #8e24aa; }
         .chip.sel-desc-colors { border-color: #ffb300; background: #fff8e1; color: #ff8f00; }
 
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
+
         @media (max-width: 600px) {
             .token { min-width: 64px; padding: 10px 7px; }
             .token .t-jp { font-size: 1.25em; }
@@ -245,8 +299,21 @@
             <div class="token-row" id="tokenRow"></div>
             <div class="full-en" id="fullEn"></div>
             <div class="full-romaji" id="fullRomaji"></div>
-            <button class="listen-btn" onclick="speakSentence()">&#x1F50A; Listen</button>
+            <div class="stage-btns">
+                <button class="listen-btn" onclick="speakSentence()">&#x1F50A; Listen</button>
+                <button class="listen-btn surprise-btn" onclick="surpriseMe()">&#x1F3B2; Surprise me!</button>
+            </div>
         </div>
+
+        <div class="mascot-row">
+            <span class="mascot small" id="takoMascot" onclick="takoTap()" role="button" aria-label="Tako-chan">🐙</span>
+            <div class="mascot-bubble" id="takoBubble">
+                <span class="mb-jp" id="takoJp"></span>
+                <span class="mb-en" id="takoEn"></span>
+            </div>
+        </div>
+
+        <div class="discovery-line" id="discoveryLine"></div>
 
         <div class="picker">
             <div class="picker-title">1. Pick a thing</div>
@@ -337,11 +404,14 @@
             speechSynthesis.onvoiceschanged = loadVoice;
             loadVoice();
         }
-        function speak(text) {
-            if (!text || !('speechSynthesis' in window)) return;
+        // Returns true only when an utterance was actually queued (tap-while-talking toggles off).
+        // force=true always interrupts and speaks (Chromium keeps .speaking true briefly
+        // after cancel(), so a cancel-then-speak pair would otherwise toggle off).
+        function speak(text, force) {
+            if (!text || !('speechSynthesis' in window)) return false;
             if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
                 window.speechSynthesis.cancel();
-                return;
+                if (!force) return false;
             }
             if (!jaVoice) loadVoice();
             const u = new SpeechSynthesisUtterance(text);
@@ -350,6 +420,7 @@
             u.pitch = 1.2;
             if (jaVoice) u.voice = jaVoice;
             window.speechSynthesis.speak(u);
+            return true;
         }
 
         function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -427,11 +498,83 @@
             `;
             document.getElementById('fullEn').textContent = cap(s.en) + ' ' + d.full + '.';
             document.getElementById('fullRomaji').textContent = `${s.romaji} wa ${d.romaji} desu.`;
+            row.querySelectorAll('.token').forEach(t => t.classList.add('pop'));
         }
 
-        function speakSentence() {
+        function surpriseMe() {
+            subjectIdx = Math.floor(Math.random() * subjects.length);
+            descIdx[mode] = Math.floor(Math.random() * describers[mode].length);
+            renderSubjectGrid();
+            renderDescGrid();
+            render();
+            // force so the surprise sentence always plays, even mid-speech
+            speakSentence(true);
+            // Tako-chan giggles — text only, the sentence itself is being spoken
+            takoSay(takoLines[1]);
+            takoWiggle();
+        }
+
+        // --- Tako-chan mascot (cute kit) ---
+        const takoLines = [
+            { jp: 'こんどは まけないぞ〜！', en: "I won't lose this time!" },
+            { jp: 'あそぼう あそぼう！',     en: "Let's play, let's play!" },
+            { jp: 'うわー、つよいね！',       en: "Whoa, you're strong!" },
+            { jp: 'もう いっかい？',         en: 'One more time?' }
+        ];
+
+        function takoSay(line) {
+            document.getElementById('takoJp').textContent = line.jp;
+            document.getElementById('takoEn').textContent = line.en;
+        }
+
+        function takoWiggle() {
+            const m = document.getElementById('takoMascot');
+            if (!m) return;
+            m.classList.remove('wiggle');
+            void m.offsetWidth; // restart animation
+            m.classList.add('wiggle');
+            setTimeout(() => m.classList.remove('wiggle'), 500);
+        }
+
+        function takoTap() {
+            takoWiggle();
+            // guarded: never talk over a sentence that is being spoken
+            if (!('speechSynthesis' in window)) return;
+            if (speechSynthesis.speaking || speechSynthesis.pending) return;
+            speak(document.getElementById('takoJp').textContent);
+        }
+
+        // --- Sentence-discovery counter (persisted across visits) ---
+        const HEARD_KEY = 'fiona-sentences-heard';
+        const totalSentences = subjects.length * Object.values(describers).reduce((n, list) => n + list.length, 0);
+        let heard = new Set();
+        try {
+            const raw = localStorage.getItem(HEARD_KEY);
+            if (raw) heard = new Set(JSON.parse(raw));
+        } catch(e) {}
+
+        function renderDiscovery(pulse) {
+            const el = document.getElementById('discoveryLine');
+            el.textContent = `✨ Sentences discovered: ${heard.size} / ${totalSentences}`;
+            if (pulse) {
+                el.classList.remove('pulse');
+                void el.offsetWidth; // restart animation
+                el.classList.add('pulse');
+            }
+        }
+
+        function recordHeard() {
+            const key = `${mode}:${subjectIdx}:${descIdx[mode]}`;
+            if (heard.has(key)) return;
+            heard.add(key);
+            try { localStorage.setItem(HEARD_KEY, JSON.stringify([...heard])); } catch(e) {}
+            renderDiscovery(heard.size % 10 === 0);
+        }
+
+        function speakSentence(force) {
             const { s, d } = currentParts();
-            speak(`${s.jp}は${d.jp}です`);
+            // only count the sentence as "discovered" if it was actually spoken
+            if (speak(`${s.jp}は${d.jp}です`, force)) recordHeard();
         }
 
         window.addEventListener('pagehide', () => { try { speechSynthesis.cancel(); } catch(e){} });
@@ -439,6 +582,8 @@
         // init
         renderSubjectGrid();
         setMode('iadj');
+        renderDiscovery(false);
+        takoSay(takoLines[Math.floor(Math.random() * takoLines.length)]);
     </script>
     <script>
         // Offline support: caches all course assets after the first visit

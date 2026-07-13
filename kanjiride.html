@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Kanji Trail Ride">
+    <title>Kanji Trail Ride 🐴</title>
+    <style>
+        @import url('fonts/fonts.css');
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 30%, #e0f7fa 60%, #fff3e0 100%);
+            min-height: 100vh; padding: 16px; background-attachment: fixed; color: #37474f;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* ---------- header ---------- */
+        .header {
+            text-align: center; margin-bottom: 14px; padding: 18px 16px;
+            background: rgba(255,255,255,0.72); backdrop-filter: blur(10px);
+            border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .header h1 {
+            font-size: 1.8em; font-weight: 800;
+            background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5, #00bcd4);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .header .jp-sub { color: #ab47bc; font-weight: 800; font-family: 'Noto Sans JP', sans-serif; margin-top: 2px; }
+        .nav-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+        .nav-btn {
+            border: none; border-radius: 18px; padding: 9px 16px; font-family: inherit; font-weight: 800;
+            font-size: 0.92em; cursor: pointer; color: #fff; text-decoration: none; display: inline-block;
+            background: linear-gradient(135deg, #7986cb, #5c6bc0); box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+        }
+        .nav-btn.pink { background: linear-gradient(135deg, #f06292, #ec407a); }
+        .nav-btn:active { transform: scale(0.96); }
+
+        /* ---------- game panel ---------- */
+        .panel {
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); border-radius: 22px;
+            padding: 14px; margin-bottom: 16px; border: 2px solid rgba(255,255,255,0.6);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        }
+        .game-wrap { position: relative; padding: 0; overflow: hidden; }
+        #world { display: block; width: 100%; touch-action: none; cursor: grab; background: #bde3ff; }
+        #world:active { cursor: grabbing; }
+
+        /* ---------- HUD ---------- */
+        .hud-chip {
+            position: absolute; background: rgba(255,255,255,0.88); border: 2px solid rgba(255,255,255,0.8);
+            border-radius: 18px; padding: 6px 12px; font-weight: 800; color: #455a64;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12); font-size: 0.95em; z-index: 5; user-select: none;
+        }
+        .hud-compass { top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; }
+        .hud-compass .c-arrow { display: inline-block; font-size: 1.15em; color: #7e57c2; transition: transform 0.12s linear; }
+        .hud-compass .c-dots { font-size: 0.7em; letter-spacing: 2px; color: #ab47bc; }
+        .hud-compass.near { border-color: #ffca28; box-shadow: 0 0 0 3px rgba(255,202,40,0.45), 0 3px 10px rgba(0,0,0,0.12); }
+        .hud-compass.near .c-arrow { color: #f9a825; }
+        .hud-bag { top: 10px; right: 10px; }
+        .hud-book { top: 54px; right: 10px; border: none; cursor: pointer; font-family: inherit; font-size: 1.05em; }
+        .hud-trails { top: 10px; left: 10px; border: none; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+        .hud-book:active, .hud-trails:active { transform: scale(0.94); }
+        .bag-pop { animation: bagPop 0.5s ease-out; }
+        @keyframes bagPop { 40% { transform: scale(1.3) rotate(-6deg); } }
+
+        .neigh-bubble {
+            position: absolute; bottom: 128px; left: 50%; transform: translateX(-50%) scale(0);
+            background: #fff; border: 2px solid #f8bbd0; border-radius: 16px; padding: 7px 14px;
+            font-weight: 800; color: #ad1457; font-family: 'Noto Sans JP', sans-serif; z-index: 6;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12); transition: transform 0.25s; pointer-events: none;
+        }
+        .neigh-bubble.show { transform: translateX(-50%) scale(1); }
+
+        /* ---------- controls ---------- */
+        .controls-bar { display: flex; gap: 10px; margin-top: 12px; }
+        .ctrl-btn {
+            border: none; border-radius: 18px; font-family: inherit; font-weight: 800; cursor: pointer;
+            color: #fff; font-size: 1.35em; padding: 14px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            touch-action: none; user-select: none; -webkit-user-select: none;
+        }
+        .ctrl-btn:active { transform: scale(0.96); filter: brightness(1.08); }
+        .ctrl-turn { flex: 0 0 76px; background: linear-gradient(135deg, #7986cb, #5c6bc0); }
+        .ctrl-gallop { flex: 1; background: linear-gradient(135deg, #ffb74d, #ff8a65); font-size: 1.15em; letter-spacing: 0.03em; }
+        .ctrl-hint { text-align: center; color: #90a4ae; font-weight: 700; font-size: 0.82em; margin-top: 8px; }
+
+        /* ---------- modals ---------- */
+        .modal-back {
+            display: none; position: fixed; inset: 0; background: rgba(38,50,56,0.55); z-index: 50;
+            padding: 14px; overflow-y: auto;
+        }
+        .modal-back.open { display: flex; align-items: flex-start; justify-content: center; }
+        .modal {
+            background: #fdfdfd; border-radius: 22px; max-width: 560px; width: 100%; margin: 3vh auto;
+            padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+        }
+        .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .modal-head .m-title { font-weight: 800; color: #37474f; font-size: 1.1em; }
+        .modal-close { border: none; background: #eceff1; border-radius: 50%; width: 34px; height: 34px; font-size: 1em; cursor: pointer; font-weight: 800; color: #607d8b; }
+        .act-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+        .act-btn {
+            border: 2px solid #cfd8dc; background: #fff; border-radius: 16px; padding: 10px 18px; font-family: inherit;
+            font-weight: 800; color: #546e7a; cursor: pointer; font-size: 0.95em;
+        }
+        .act-btn:active { transform: scale(0.96); }
+        .act-btn-primary { background: linear-gradient(135deg, #7e57c2, #ab47bc); color: #fff; border-color: transparent; }
+
+        /* ---------- cute mascot kit ---------- */
+        .mascot-row { display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin: 10px 0; }
+        .mascot {
+            font-size: 2.6em; display: inline-block; cursor: pointer;
+            animation: mascotBob 2.6s ease-in-out infinite; transform-origin: 50% 90%;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.12));
+        }
+        .mascot.small { font-size: 1.7em; }
+        .mascot.wiggle { animation: mascotWiggle 0.5s ease-in-out; }
+        @keyframes mascotBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        @keyframes mascotWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+        .mascot-bubble {
+            position: relative; background: #fff; border: 2px solid #f8bbd0; border-radius: 16px;
+            padding: 8px 14px; font-weight: 800; color: #ad1457; font-size: 0.92em;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); max-width: 340px; text-align: left;
+        }
+        .mascot-bubble::before { content: ''; position: absolute; left: -16px; bottom: 12px; border: 8px solid transparent; border-right-color: #f8bbd0; }
+        .mascot-bubble::after  { content: ''; position: absolute; left: -12px; bottom: 13px; border: 7px solid transparent; border-right-color: #fff; }
+        .mascot-bubble .mb-jp { color: #6a1b9a; display: block; font-family: 'Noto Sans JP', sans-serif; }
+        .mascot-bubble .mb-en { color: #ad1457; font-size: 0.85em; font-weight: 700; }
+
+        /* ---------- title overlay ---------- */
+        .title-modal { max-width: 640px; }
+        .title-h { color: #4527a0; font-size: 1.45em; }
+        .title-jp { color: #ab47bc; font-weight: 800; font-family: 'Noto Sans JP', sans-serif; margin-bottom: 6px; }
+        .title-how { color: #78909c; font-weight: 700; font-size: 0.9em; margin: 6px 12px 12px; }
+        .trail-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+        .trail-card {
+            border: 2px solid #ede7f6; background: #fff; border-radius: 16px; padding: 12px 10px;
+            font-family: inherit; cursor: pointer; text-align: center; transition: transform 0.15s;
+        }
+        .trail-card:hover { transform: translateY(-2px); }
+        .trail-card.sel { border-color: #7e57c2; background: #f3eefc; box-shadow: 0 0 0 3px rgba(126,87,194,0.2); }
+        .trail-card .tc-icon { font-size: 1.8em; }
+        .trail-card .tc-name { font-weight: 800; color: #37474f; }
+        .trail-card .tc-jp { color: #ab47bc; font-weight: 800; font-size: 0.8em; font-family: 'Noto Sans JP', sans-serif; }
+        .trail-card .tc-blurb { color: #90a4ae; font-weight: 700; font-size: 0.75em; }
+        .trail-card .tc-prog { margin-top: 4px; font-weight: 800; font-size: 0.82em; color: #7e57c2; }
+        .big-start { font-size: 1.15em; padding: 13px 26px; }
+        .title-stats { margin-top: 10px; color: #90a4ae; font-weight: 800; font-size: 0.9em; }
+
+        /* ---------- catch panel ---------- */
+        .catch-modal { max-width: 460px; }
+        .catch-emoji { font-size: 3.2em; line-height: 1.15; }
+        .catch-jp { font-family: 'Noto Sans JP', sans-serif; font-weight: 800; color: #4527a0; font-size: 1.35em; margin-top: 2px; }
+        .catch-en { color: #78909c; font-weight: 700; font-size: 0.95em; margin: 2px 0 4px; }
+        .catch-info { color: #ab47bc; font-weight: 800; font-size: 0.85em; margin-bottom: 8px; font-family: 'Noto Sans JP', 'Nunito', sans-serif; }
+        .draw-wrap { display: flex; justify-content: center; }
+        #drawCanvas { border-radius: 18px; border: 2px solid #e1bee7; background: #fffdfa; touch-action: none; }
+        .catch-tools { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 0 6px; }
+        .hint-btn {
+            border: 2px solid #ffe082; background: #fffde7; border-radius: 14px; padding: 6px 12px;
+            font-family: inherit; font-weight: 800; color: #f57f17; cursor: pointer; font-size: 0.85em;
+        }
+        .hint-btn.off { border-color: #cfd8dc; background: #f5f5f5; color: #90a4ae; }
+        .stroke-count { font-weight: 800; color: #90a4ae; font-size: 0.85em; }
+        .catch-msg { min-height: 1.5em; font-weight: 800; margin-top: 8px; font-size: 1em; color: #78909c; font-family: 'Noto Sans JP', 'Nunito', sans-serif; }
+        .catch-msg.yay { color: #43a047; }
+        .catch-msg.almost { color: #ef6c00; }
+        .shake { animation: shakeX 0.4s; }
+        @keyframes shakeX { 20% { transform: translateX(-7px) rotate(-1deg); } 50% { transform: translateX(7px) rotate(1deg); } 80% { transform: translateX(-4px); } }
+
+        /* ---------- collection book ---------- */
+        .book-modal { max-width: 640px; text-align: left; }
+        .book-trail { background: #fff; border: 2px solid #ede7f6; border-radius: 16px; padding: 10px; margin-bottom: 12px; }
+        .bt-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .bt-name { font-weight: 800; color: #4527a0; }
+        .bt-jp { color: #ab47bc; font-size: 0.85em; font-family: 'Noto Sans JP', sans-serif; }
+        .bt-count { font-weight: 800; color: #7e57c2; font-size: 0.9em; margin-left: auto; }
+        .bt-reset {
+            border: 2px solid #ffcdd2; background: #fff; border-radius: 12px; padding: 4px 10px;
+            font-family: inherit; font-weight: 800; color: #e57373; cursor: pointer; font-size: 0.72em;
+        }
+        .bt-reset.armed { background: #ffebee; border-color: #ef5350; color: #c62828; }
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+        .book-card {
+            position: relative; background: #fff; border: 2px solid #ffe0b2; border-radius: 14px;
+            padding: 8px 4px; text-align: center; min-height: 106px;
+        }
+        .book-card .bc-sticker { position: absolute; top: 3px; right: 5px; font-size: 0.95em; transform: rotate(8deg); }
+        .book-card .bc-char { display: block; font-size: 1.9em; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; color: #e65100; }
+        .book-card .bc-read { display: block; font-weight: 800; color: #6d4c41; font-size: 0.78em; font-family: 'Noto Sans JP', sans-serif; }
+        .book-card .bc-mean { display: block; color: #90a4ae; font-size: 0.68em; font-weight: 700; }
+        .book-card.unknown { border-color: #eceff1; background: #f7f9fa; }
+        .book-card.unknown .bc-char { color: #cfd8dc; }
+        .book-card.unknown .bc-read { color: #cfd8dc; }
+        .book-card.got { animation: cardIn 0.3s ease-out; }
+        @keyframes cardIn { from { transform: scale(0.7); opacity: 0; } }
+
+        /* ---------- celebration ---------- */
+        .cele-modal { max-width: 480px; }
+        .cele-title { font-size: 1.4em; font-weight: 800; color: #5e35b1; margin: 6px 0; }
+        .cele-sub { color: #90a4ae; font-weight: 700; margin-bottom: 8px; }
+
+        /* ---------- confetti + fly card ---------- */
+        #confettiHost { position: fixed; inset: 0; pointer-events: none; z-index: 220; overflow: hidden; }
+        .confetti-bit { position: absolute; animation: confettiFall 2.4s ease-in forwards; }
+        @keyframes confettiFall { to { transform: translateY(115vh) rotate(540deg); opacity: 0; } }
+        .fly-card {
+            position: fixed; z-index: 230; width: 110px; padding: 8px 4px; text-align: center;
+            background: #fff; border: 2px solid #ffe0b2; border-radius: 14px; pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            transition: transform 0.85s cubic-bezier(0.5, -0.1, 0.7, 1), opacity 0.85s;
+        }
+        .fly-card .fc-char { display: block; font-size: 2em; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; color: #e65100; }
+        .fly-card .fc-read { display: block; font-weight: 800; color: #6d4c41; font-size: 0.8em; font-family: 'Noto Sans JP', sans-serif; }
+        .fly-card .fc-mean { display: block; color: #90a4ae; font-size: 0.7em; font-weight: 700; }
+
+        @media (max-width: 560px) {
+            .header h1 { font-size: 1.4em; }
+            .ctrl-turn { flex: 0 0 64px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🐴 Kanji Trail Ride</h1>
+        <div class="jp-sub">パカラと かんじあつめ</div>
+        <div class="nav-row">
+            <a class="nav-btn" href="index.html">🏠 Flashcards</a>
+            <a class="nav-btn pink" href="workbook.html">🗺️ 5-Year Journey</a>
+        </div>
+    </div>
+
+    <div class="panel game-wrap" id="gameWrap">
+        <canvas id="world"></canvas>
+        <div class="hud-chip hud-compass" id="hudCompass"><span class="c-arrow" id="cArrow">➤</span><span class="c-dots" id="cDots"></span></div>
+        <div class="hud-chip hud-bag" id="hudBag">🎒 0/0</div>
+        <button class="hud-chip hud-book" id="hudBook">📖</button>
+        <button class="hud-chip hud-trails" id="hudTrails">🚩 Trails</button>
+        <div class="neigh-bubble" id="neighBubble">ヒヒーン！</div>
+    </div>
+
+    <div class="controls-bar">
+        <button class="ctrl-btn ctrl-turn" id="btnLeft">◀</button>
+        <button class="ctrl-btn ctrl-gallop" id="btnGallop">🥕 GALLOP!</button>
+        <button class="ctrl-btn ctrl-turn" id="btnRight">▶</button>
+    </div>
+    <div class="ctrl-hint">Hold 🥕 to gallop · ◀ ▶ or drag the field to steer · follow the compass to find kanji!</div>
+</div>
+
+<!-- ---------- title overlay ---------- -->
+<div class="modal-back open" id="titleBack">
+    <div class="modal title-modal">
+        <div class="mascot-row">
+            <span class="mascot" id="pakaraMascot">🐴</span>
+            <div class="mascot-bubble"><span class="mb-jp">「うまに のろう！」</span><span class="mb-en">Let's ride!</span></div>
+        </div>
+        <h2 class="title-h">🐴 Kanji Trail Ride</h2>
+        <div class="title-jp">パカラと かんじあつめ</div>
+        <p class="title-how">Ride Pakara across the big green field! When you find something real — a mountain, a dog, a flower — draw its kanji to catch it for your collection book.</p>
+        <div class="trail-cards" id="trailCards"></div>
+        <div class="act-row">
+            <button class="act-btn act-btn-primary big-start" id="startBtn">🥕 START RIDING</button>
+            <button class="act-btn" id="titleBookBtn">📖 Collection Book</button>
+        </div>
+        <div class="title-stats" id="titleStats"></div>
+    </div>
+</div>
+
+<!-- ---------- catch panel ---------- -->
+<div class="modal-back" id="catchBack">
+    <div class="modal catch-modal" id="catchModal">
+        <div class="catch-emoji" id="catchEmoji"></div>
+        <div class="catch-jp" id="catchJp"></div>
+        <div class="catch-en" id="catchEn"></div>
+        <div class="catch-info" id="catchInfo"></div>
+        <div class="draw-wrap"><canvas id="drawCanvas"></canvas></div>
+        <div class="catch-tools">
+            <button class="hint-btn" id="hintBtn">💡 Hint ON</button>
+            <span class="stroke-count" id="strokeCount"></span>
+        </div>
+        <div class="catch-msg" id="catchMsg"></div>
+        <div class="act-row">
+            <button class="act-btn act-btn-primary" id="checkBtn">Check ✔</button>
+            <button class="act-btn" id="clearBtn">Clear</button>
+            <button class="act-btn" id="skipBtn">Skip ▸</button>
+        </div>
+    </div>
+</div>
+
+<!-- ---------- collection book ---------- -->
+<div class="modal-back" id="bookBack">
+    <div class="modal book-modal">
+        <div class="modal-head">
+            <span class="m-title">📖 Fiona's Kanji Collection</span>
+            <button class="modal-close" id="bookClose">✕</button>
+        </div>
+        <div id="bookBody"></div>
+    </div>
+</div>
+
+<!-- ---------- trail complete celebration ---------- -->
+<div class="modal-back" id="celeBack">
+    <div class="modal cele-modal">
+        <div class="mascot-row">
+            <span class="mascot" id="mochiMascot">🐰</span>
+            <div class="mascot-bubble"><span class="mb-jp">「やったね！おいわい しよう！」</span><span class="mb-en">You did it! Let's celebrate!</span></div>
+            <span class="mascot small">🐴</span>
+        </div>
+        <div class="cele-title" id="celeTitle">Trail Complete! ⭐</div>
+        <div class="cele-sub" id="celeSub"></div>
+        <div class="act-row">
+            <button class="act-btn act-btn-primary" id="celeRideBtn">🐴 Keep Riding</button>
+            <button class="act-btn" id="celeBookBtn">📖 See the Book</button>
+        </div>
+    </div>
+</div>
+
+<div id="confettiHost"></div>
+
+<script src="kanjivg_data.js"></script>
+<script src="curriculum.js"></script>
+
+<script id="ridemath">
+// ---------- pure pseudo-3D engine math (unit-tested by the node harness) ----------
+window.RideMath = (function () {
+    'use strict';
+
+    // Camera cam = {x, z, th} looks along forward = (sin th, cos th) on the flat
+    // ground plane. Billboard at (ox, oz) -> camera space:
+    //   rz = dx*sin(th) + dz*cos(th)   (depth: rz > 0 means "in front")
+    //   rx = dx*cos(th) - dz*sin(th)   (lateral: + is to the right)
+    // view = {W, horizonY, focal, eyeH, sizeK, near, fogStart, fogEnd}
+    function project(cam, ox, oz, view) {
+        const dx = ox - cam.x, dz = oz - cam.z;
+        const s = Math.sin(cam.th), c = Math.cos(cam.th);
+        const rz = dx * s + dz * c;
+        if (rz < view.near) return null;            // near-clip / behind camera
+        const rx = dx * c - dz * s;
+        const x = view.W / 2 + (rx / rz) * view.focal;
+        const y = view.horizonY + (view.eyeH / rz) * view.focal;
+        const size = Math.max(8, Math.min(170, view.sizeK / rz));
+        let alpha = 1;
+        if (rz > view.fogStart) {
+            alpha = Math.max(0, 1 - (rz - view.fogStart) / Math.max(1, view.fogEnd - view.fogStart));
+        }
+        return { x: x, y: y, size: size, rz: rz, alpha: alpha };
+    }
+
+    // Signed bearing of (ox,oz) relative to the camera heading: 0 = dead ahead,
+    // + = to the right, range (-PI, PI]. Drives the HUD compass arrow.
+    function bearing(cam, ox, oz) {
+        const dx = ox - cam.x, dz = oz - cam.z;
+        const s = Math.sin(cam.th), c = Math.cos(cam.th);
+        return Math.atan2(dx * c - dz * s, dx * s + dz * c);
+    }
+
+    function dist(cam, ox, oz) { return Math.hypot(ox - cam.x, oz - cam.z); }
+
+    // Advance the camera along its heading by speed v for dt seconds.
+    function advance(cam, v, dt) {
+        return { x: cam.x + Math.sin(cam.th) * v * dt, z: cam.z + Math.cos(cam.th) * v * dt, th: cam.th };
+    }
+
+    // Wrap a relative coordinate into [-R, R) so the deco field forms an endless
+    // torus around the camera.
+    function wrapRel(d, R) {
+        const span = 2 * R;
+        return ((d % span) + span + R) % span - R;
+    }
+
+    // Scatter n targets on a disc: base angles spread evenly around the full
+    // circle (never one clump behind the start line), radius minR..maxR,
+    // at least minGap apart. rand is injectable for deterministic tests.
+    function placeTargets(n, opts, rand) {
+        const minR = opts.minR, maxR = opts.maxR, minGap = opts.minGap;
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const baseA = (i / n) * Math.PI * 2;
+            let placed = null;
+            for (let att = 0; att < 80 && !placed; att++) {
+                const a = baseA + (rand() - 0.5) * (Math.PI * 2 / n) * 0.9;
+                const r = minR + Math.pow(rand(), 0.7) * (maxR - minR);
+                const x = Math.sin(a) * r, z = Math.cos(a) * r;
+                let ok = true;
+                for (let j = 0; j < pts.length; j++) {
+                    if (Math.hypot(pts[j].x - x, pts[j].z - z) < minGap) { ok = false; break; }
+                }
+                if (ok) placed = { x: x, z: z };
+            }
+            if (!placed) {
+                // Extremely unlucky rolls: step outward along the base angle until clear
+                for (let r = minR; r <= maxR + minGap * 4 && !placed; r += minGap) {
+                    const x = Math.sin(baseA) * r, z = Math.cos(baseA) * r;
+                    let ok = true;
+                    for (let j = 0; j < pts.length; j++) {
+                        if (Math.hypot(pts[j].x - x, pts[j].z - z) < minGap) { ok = false; break; }
+                    }
+                    if (ok) placed = { x: x, z: z };
+                }
+                if (!placed) placed = { x: Math.sin(baseA) * (maxR + minGap * 5), z: Math.cos(baseA) * (maxR + minGap * 5) };
+            }
+            pts.push(placed);
+        }
+        return pts;
+    }
+
+    return { project: project, bearing: bearing, dist: dist, advance: advance, wrapRel: wrapRel, placeTargets: placeTargets };
+})();
+</script>
+
+<script id="kanjidata">
+// ---------- the kanji world (verified by the node kanji-table harness) ----------
+// read/mean come from the curriculum kanji entries (they are cross-checked);
+// say = the natural word Fiona shouts (みて！〜だ！), en = the English call-out.
+window.KANJI_WORLD = (function () {
+    'use strict';
+    const K = [
+        // 🌼 Meadow Trail — nature
+        { char: '日', emoji: '🌅', read: 'にち', mean: 'day / sun', say: 'おひさま', en: 'The sun', trail: 'meadow' },
+        { char: '月', emoji: '🌙', read: 'げつ', mean: 'month / moon', say: 'おつきさま', en: 'The moon', trail: 'meadow' },
+        { char: '山', emoji: '⛰️', read: 'やま', mean: 'mountain', say: 'やま', en: 'A mountain', trail: 'meadow' },
+        { char: '川', emoji: '🏞️', read: 'かわ', mean: 'river', say: 'かわ', en: 'A river', trail: 'meadow' },
+        { char: '木', emoji: '🌳', read: 'もく', mean: 'tree / wood', say: 'き', en: 'A tree', trail: 'meadow' },
+        { char: '花', emoji: '🌸', read: 'はな', mean: 'flower', say: 'はな', en: 'A flower', trail: 'meadow' },
+        { char: '空', emoji: '🌤️', read: 'そら', mean: 'sky', say: 'そら', en: 'The sky', trail: 'meadow' },
+        { char: '雨', emoji: '🌧️', read: 'あめ', mean: 'rain', say: 'あめ', en: 'Rain', trail: 'meadow' },
+        { char: '田', emoji: '🌾', read: 'た', mean: 'rice field', say: 'たんぼ', en: 'A rice field', trail: 'meadow' },
+        { char: '石', emoji: '🪨', read: 'いし', mean: 'stone', say: 'いし', en: 'A stone', trail: 'meadow' },
+        { char: '天', emoji: '🌌', read: 'てん', mean: 'sky / heavens', say: 'よぞら', en: 'The starry heavens', trail: 'meadow' },
+        { char: '星', emoji: '⭐', read: 'ほし', mean: 'star', say: 'ほし', en: 'A star', trail: 'meadow' },
+        { char: '雪', emoji: '❄️', read: 'ゆき', mean: 'snow', say: 'ゆき', en: 'Snow', trail: 'meadow' },
+        { char: '草', emoji: '🍀', read: 'くさ', mean: 'grass', say: 'くさ', en: 'Grass', trail: 'meadow' },
+        { char: '林', emoji: '🌲', multi: 2, read: 'はやし', mean: 'woods', say: 'はやし', en: 'Woods', trail: 'meadow' },
+        { char: '森', emoji: '🌲', multi: 3, read: 'もり', mean: 'forest', say: 'もり', en: 'A forest', trail: 'meadow' },
+
+        // 🐾 Friends Trail — animals, people & body
+        { char: '犬', emoji: '🐕', read: 'いぬ', mean: 'dog', say: 'いぬ', en: 'A dog', trail: 'friends' },
+        { char: '鳥', emoji: '🐦', read: 'とり', mean: 'bird', say: 'とり', en: 'A bird', trail: 'friends' },
+        { char: '魚', emoji: '🐟', read: 'さかな', mean: 'fish', say: 'さかな', en: 'A fish', trail: 'friends' },
+        { char: '虫', emoji: '🐛', read: 'むし', mean: 'bug', say: 'むし', en: 'A bug', trail: 'friends' },
+        { char: '貝', emoji: '🐚', read: 'かい', mean: 'shellfish / shell', say: 'かいがら', en: 'A shell', trail: 'friends' },
+        { char: '人', emoji: '🧑', read: 'ひと', mean: 'person', say: 'ひと', en: 'A person', trail: 'friends' },
+        { char: '子', emoji: '🧒', read: 'こ', mean: 'child', say: 'こども', en: 'A child', trail: 'friends' },
+        { char: '女', emoji: '👧', read: 'おんな', mean: 'woman', say: 'おんなのこ', en: 'A girl', trail: 'friends' },
+        { char: '男', emoji: '👦', read: 'おとこ', mean: 'man', say: 'おとこのこ', en: 'A boy', trail: 'friends' },
+        { char: '王', emoji: '👑', read: 'おう', mean: 'king', say: 'おうさま', en: 'A king', trail: 'friends' },
+        { char: '手', emoji: '✋', read: 'て', mean: 'hand', say: 'て', en: 'A hand', trail: 'friends' },
+        { char: '目', emoji: '👁️', read: 'め', mean: 'eye', say: 'め', en: 'An eye', trail: 'friends' },
+        { char: '口', emoji: '👄', read: 'くち', mean: 'mouth', say: 'くち', en: 'A mouth', trail: 'friends' },
+        { char: '耳', emoji: '👂', read: 'みみ', mean: 'ear', say: 'みみ', en: 'An ear', trail: 'friends' },
+        { char: '足', emoji: '🦶', read: 'あし', mean: 'foot / leg', say: 'あし', en: 'A foot', trail: 'friends' },
+        { char: '心', emoji: '💗', read: 'こころ', mean: 'heart / mind', say: 'こころ', en: 'A heart', trail: 'friends' },
+
+        // 🏘️ Village Trail — things & places (糸 and 米 skipped: no KanjiVG data)
+        { char: '車', emoji: '🚗', read: 'くるま', mean: 'car / vehicle', say: 'くるま', en: 'A car', trail: 'village' },
+        { char: '本', emoji: '📕', read: 'ほん', mean: 'book / origin', say: 'ほん', en: 'A book', trail: 'village' },
+        { char: '金', emoji: '💰', read: 'きん', mean: 'gold / money', say: 'きん', en: 'Gold', trail: 'village' },
+        { char: '円', emoji: '🪙', read: 'えん', mean: 'yen / circle', say: 'おかね', en: 'A yen coin', trail: 'village' },
+        { char: '火', emoji: '🔥', read: 'か', mean: 'fire', say: 'ひ', en: 'Fire', trail: 'village' },
+        { char: '水', emoji: '💧', read: 'すい', mean: 'water', say: 'みず', en: 'Water', trail: 'village' },
+        // 土 (soil) is skipped: no emoji honestly shows "dirt", and a picture-hunt
+        // game must never show one thing while teaching another
+        { char: '学', emoji: '📚', read: 'がく', mean: 'study / learning', say: 'べんきょう', en: 'Study time', trail: 'village' },
+        { char: '校', emoji: '🏫', read: 'こう', mean: 'school', say: 'がっこう', en: 'A school', trail: 'village' },
+        { char: '竹', emoji: '🎋', read: 'たけ', mean: 'bamboo', say: 'たけ', en: 'Bamboo', trail: 'village' },
+        { char: '力', emoji: '💪', read: 'ちから', mean: 'power', say: 'ちから', en: 'Power', trail: 'village' },
+        { char: '中', emoji: '🎯', read: 'なか', mean: 'middle / inside', say: 'まんなか', en: 'The middle', trail: 'village' },
+        { char: '上', emoji: '🎈', read: 'うえ', mean: 'up / above', say: 'うえ', en: 'Up above', trail: 'village' },
+        { char: '下', emoji: '🕳️', read: 'した', mean: 'down / below', say: 'した', en: 'Down below', trail: 'village' }
+    ];
+
+    const TRAILS = [
+        { id: 'meadow', icon: '🌼', name: 'Meadow Trail', jp: 'のはらコース', blurb: 'Nature kanji in the fields' },
+        { id: 'friends', icon: '🐾', name: 'Friends Trail', jp: 'なかまコース', blurb: 'Animals, people & body' },
+        { id: 'village', icon: '🏘️', name: 'Village Trail', jp: 'むらコース', blurb: 'Things & places' },
+        { id: 'big', icon: '🌈', name: 'Big Adventure', jp: 'だいぼうけん', blurb: 'Every kanji at once!', big: true }
+    ];
+
+    const byChar = {};
+    K.forEach(function (k) { byChar[k.char] = k; });
+
+    function trailChars(id) {
+        if (id === 'big') return K.map(function (k) { return k.char; });
+        return K.filter(function (k) { return k.trail === id; }).map(function (k) { return k.char; });
+    }
+
+    return { K: K, TRAILS: TRAILS, byChar: byChar, trailChars: trailChars };
+})();
+</script>
+
+<script id="game">
+(() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const RM = window.RideMath;
+    const KW = window.KANJI_WORLD;
+    const EMOJI_FONT = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji","Noto Sans JP",sans-serif';
+
+    // ---------------- persistence ----------------
+    const COLLECT_KEY = 'kanjiride-collected';
+    const STATS_KEY = 'kanjiride-stats';
+    const TRAIL_KEY = 'kanjiride-trail';
+    function loadJSON(key, def) {
+        try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? def : v; }
+        catch (e) { return def; }
+    }
+    function saveJSON(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+    let collected = loadJSON(COLLECT_KEY, {});
+    let stats = loadJSON(STATS_KEY, { caught: 0, rides: 0 });
+    if (typeof stats.caught !== 'number') stats.caught = 0;
+    if (typeof stats.rides !== 'number') stats.rides = 0;
+    let selectedTrail = loadJSON(TRAIL_KEY, 'meadow');
+    if (!KW.TRAILS.some(t => t.id === selectedTrail)) selectedTrail = 'meadow';
+
+    function gotSet(trailId) { return new Set(collected[trailId] || []); }
+
+    // ---------------- world state ----------------
+    // state: 'title' | 'riding' | 'catch' | 'book' | 'celebrate'
+    let state = 'title';
+    let bookFrom = 'title';                    // where to return when the book closes
+    const cam = { x: 0, z: 0, th: 0 };
+    const held = { left: false, right: false, gallop: false };
+    let simT = 0;                              // world time (only advances while riding)
+    let boostUntil = -1;                       // gallop boost after a catch (simT-based)
+    let targets = [];                          // {k, x, z, collected, skipUntil, phase}
+    let rideTrail = 'meadow';
+    let currentTarget = null;
+
+    const WALK = 6, GALLOP = 14, TURN = 1.6;
+    const ENCOUNTER_R = 10, COMPASS_GLOW = 25;
+    const DECO_R = 160;
+
+    // ---------------- canvas ----------------
+    const canvas = $('world');
+    const ctx = canvas.getContext('2d');
+    let W = 300, H = 300, view = null;
+
+    function resizeWorld() {
+        const wrap = $('gameWrap');
+        const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+        W = Math.max(280, wrap.clientWidth);
+        H = Math.max(300, Math.round(window.innerHeight * 0.6));
+        canvas.style.height = H + 'px';
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        view = {
+            W: W, horizonY: H * 0.42, focal: H * 0.95, eyeH: 1.6,
+            sizeK: H * 2.3, near: 0.5, fogStart: 120, fogEnd: 185
+        };
+        if (!running) render(simT);
+    }
+    window.addEventListener('resize', resizeWorld);
+
+    // ---------------- scenery ----------------
+    const deco = [];
+    (function () {
+        // scenery only - deliberately disjoint from every collectible target glyph
+        // (no flowers/grass/stones: 花・草・田・石 are things Fiona hunts for)
+        const decoEmoji = ['🍄', '🍂', '⛺', '🪵'];
+        for (let i = 0; i < 140; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * DECO_R;
+            deco.push({
+                x: Math.sin(a) * r, z: Math.cos(a) * r,
+                emoji: decoEmoji[i % decoEmoji.length],
+                s: 0.35 + Math.random() * 0.45
+            });
+        }
+    })();
+    const clouds = [];
+    for (let i = 0; i < 5; i++) {
+        clouds.push({ x0: Math.random() * 1400, yF: 0.06 + Math.random() * 0.2, s: 26 + Math.random() * 26, v: 4 + Math.random() * 6 });
+    }
+    const dust = [];
+
+    function mod(a, m) { return ((a % m) + m) % m; }
+
+    function drawSky(t) {
+        const hy = view.horizonY;
+        const sky = ctx.createLinearGradient(0, 0, 0, hy);
+        sky.addColorStop(0, '#8ecdf5');
+        sky.addColorStop(0.7, '#c9e9fd');
+        sky.addColorStop(1, '#eaf8ff');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, hy + 2);
+
+        // sun (gentle parallax against heading)
+        const sunX = mod(W * 0.78 - cam.th * 60, W + 160) - 80;
+        ctx.font = '44px ' + EMOJI_FONT;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('☀️', sunX, hy * 0.28);
+
+        // drifting clouds
+        for (const cl of clouds) {
+            const x = mod(cl.x0 + t * cl.v - cam.th * 140, W + 260) - 130;
+            ctx.font = Math.round(cl.s) + 'px ' + EMOJI_FONT;
+            ctx.globalAlpha = 0.9;
+            ctx.fillText('☁️', x, hy * cl.yF + 14);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function drawHills() {
+        const hy = view.horizonY;
+        const layers = [
+            { par: W * 0.22, amp: H * 0.035, base: H * 0.055, col: '#b9dfc0', k1: 2.1, k2: 5.3 },
+            { par: W * 0.45, amp: H * 0.05, base: H * 0.028, col: '#a3d6a0', k1: 3.2, k2: 7.9 }
+        ];
+        for (const L of layers) {
+            ctx.fillStyle = L.col;
+            ctx.beginPath();
+            ctx.moveTo(0, hy + 2);
+            for (let x = 0; x <= W; x += 8) {
+                const u = (x + cam.th * L.par) / W;
+                const y = hy - L.base - L.amp * (Math.sin(u * L.k1 * Math.PI) * 0.7 + Math.sin(u * L.k2 * Math.PI + 1.3) * 0.3 + 1) / 2 * 2;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(W, hy + 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    function drawGrass() {
+        const hy = view.horizonY;
+        const g = ctx.createLinearGradient(0, hy, 0, H);
+        g.addColorStop(0, '#93d478');
+        g.addColorStop(1, '#54a854');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, hy, W, H - hy);
+    }
+
+    function drawBillboardEmoji(item, x, y, size, alpha) {
+        ctx.globalAlpha = alpha;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        if (item.multi === 2) {
+            ctx.font = Math.round(size * 0.78) + 'px ' + EMOJI_FONT;
+            ctx.fillText('🌲', x - size * 0.24, y);
+            ctx.fillText('🌲', x + size * 0.24, y);
+        } else if (item.multi === 3) {
+            ctx.font = Math.round(size * 0.72) + 'px ' + EMOJI_FONT;
+            ctx.fillText('🌲', x, y - size * 0.32);
+            ctx.fillText('🌲', x - size * 0.3, y);
+            ctx.fillText('🌲', x + size * 0.3, y);
+        } else {
+            ctx.font = Math.round(size) + 'px ' + EMOJI_FONT;
+            ctx.fillText(item.emoji, x, y);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function drawTargetGlow(tg, p, t) {
+        const pulse = 0.32 + 0.16 * Math.sin(t * 3 + tg.phase);
+        ctx.save();
+        ctx.globalAlpha = p.alpha * pulse;
+        ctx.fillStyle = '#ffd54f';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + p.size * 0.06, p.size * 0.62, Math.max(4, p.size * 0.16), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // orbiting sparkles
+        const a = t * 2 + tg.phase;
+        ctx.font = Math.round(Math.max(9, p.size * 0.22)) + 'px ' + EMOJI_FONT;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.globalAlpha = p.alpha * 0.95;
+        ctx.fillText('✨', p.x + Math.cos(a) * p.size * 0.55, p.y - p.size * 0.45 + Math.sin(a) * p.size * 0.2);
+        ctx.fillText('✨', p.x + Math.cos(a + Math.PI) * p.size * 0.55, p.y - p.size * 0.45 + Math.sin(a + Math.PI) * p.size * 0.2);
+        ctx.globalAlpha = 1;
+    }
+
+    function drawHorse(t, speed) {
+        const galloping = speed > WALK + 1;
+        const stepHz = galloping ? 3.4 : 1.8;
+        const bob = Math.sin(t * Math.PI * 2 * stepHz) * (galloping ? 6 : 3);
+        const lean = (held.right ? 1 : 0) - (held.left ? 1 : 0);
+        const size = Math.min(112, H * 0.3);
+        ctx.save();
+        ctx.translate(W / 2, H - 14 + bob);
+        ctx.rotate(lean * 0.08);
+        ctx.font = Math.round(size) + 'px ' + EMOJI_FONT;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('🏇', 0, 0);
+        ctx.restore();
+    }
+
+    function drawDust(dt) {
+        for (let i = dust.length - 1; i >= 0; i--) {
+            const d = dust[i];
+            d.life -= dt;
+            if (d.life <= 0) { dust.splice(i, 1); continue; }
+            d.x += d.vx * dt; d.y += d.vy * dt;
+            ctx.globalAlpha = Math.max(0, d.life / 0.7) * 0.7;
+            ctx.font = Math.round(14 + (0.7 - d.life) * 26) + 'px ' + EMOJI_FONT;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('💨', d.x, d.y);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function render(t) {
+        if (!view) return;
+        ctx.clearRect(0, 0, W, H);
+        drawSky(t);
+        drawHills();
+        drawGrass();
+
+        // billboards, painter's algorithm far -> near
+        const list = [];
+        for (const d of deco) {
+            const wx = cam.x + RM.wrapRel(d.x - cam.x, DECO_R);
+            const wz = cam.z + RM.wrapRel(d.z - cam.z, DECO_R);
+            const p = RM.project(cam, wx, wz, view);
+            if (!p || p.alpha <= 0.01) continue;
+            list.push({ rz: p.rz, deco: d, p: p });
+        }
+        for (const tg of targets) {
+            if (tg.collected) continue;
+            const p = RM.project(cam, tg.x, tg.z, view);
+            if (!p || p.alpha <= 0.01) continue;
+            list.push({ rz: p.rz, target: tg, p: p });
+        }
+        list.sort((a, b) => b.rz - a.rz);
+        for (const it of list) {
+            if (it.deco) {
+                drawBillboardEmoji(it.deco, it.p.x, it.p.y, it.p.size * it.deco.s, it.p.alpha * 0.95);
+            } else {
+                drawTargetGlow(it.target, it.p, t);
+                drawBillboardEmoji(it.target.k, it.p.x, it.p.y, it.p.size, it.p.alpha);
+            }
+        }
+
+        drawDust(lastDt);
+        drawHorse(t, curSpeed);
+    }
+
+    // ---------------- audio (hoofbeats + neigh) ----------------
+    let AC = null;
+    function audio() {
+        if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+        if (AC && AC.state === 'suspended') AC.resume();
+        return AC;
+    }
+    document.addEventListener('pointerdown', audio, { once: true });
+    document.addEventListener('keydown', audio, { once: true });
+
+    function hoofThump(when, alt) {
+        const c = AC; if (!c) return;
+        const t = when;
+        const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(alt ? 150 : 104, t);
+        o.frequency.exponentialRampToValueAtTime(52, t + 0.09);
+        f.type = 'lowpass'; f.frequency.value = 420;
+        g.gain.setValueAtTime(0.06, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        o.connect(f); f.connect(g); g.connect(c.destination);
+        o.start(t); o.stop(t + 0.12);
+    }
+    let hoofTimer = 0;
+    function hoofbeats(dt, speed) {
+        if (!AC) return;
+        hoofTimer -= dt;
+        if (hoofTimer > 0) return;
+        const now = AC.currentTime;
+        if (speed > WALK + 1) {
+            // パ・カ・ラッ gallop triplet
+            hoofThump(now, false);
+            hoofThump(now + 0.09, true);
+            hoofThump(now + 0.18, false);
+            hoofTimer = 6.5 / speed;         // ~0.46s between triplets at full gallop
+        } else {
+            hoofThump(now, hoofAlt = !hoofAlt);
+            hoofTimer = 2.2 / speed;         // ~0.37s walking clip-clop
+        }
+    }
+    let hoofAlt = false;
+
+    function neigh() {
+        const c = audio(); if (!c) return;
+        const t = c.currentTime;
+        [[1180, 0, 0.16], [880, 0.14, 0.32]].forEach(n => {
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(n[0], t + n[1]);
+            o.frequency.exponentialRampToValueAtTime(n[0] * 0.62, t + n[1] + n[2]);
+            g.gain.setValueAtTime(0.001, t + n[1]);
+            g.gain.linearRampToValueAtTime(0.09, t + n[1] + 0.03);
+            g.gain.exponentialRampToValueAtTime(0.001, t + n[1] + n[2]);
+            o.connect(g); g.connect(c.destination);
+            o.start(t + n[1]); o.stop(t + n[1] + n[2] + 0.02);
+        });
+    }
+
+    // ---------------- game loop ----------------
+    let running = false, rafId = 0, lastTs = 0, lastDt = 0.016, curSpeed = WALK;
+    let dustTimer = 0;
+
+    function frame(ts) {
+        if (!running) return;
+        rafId = requestAnimationFrame(frame);
+        const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
+        lastTs = ts;
+        lastDt = dt;
+        update(dt);
+        render(simT);
+    }
+    function startLoop() {
+        if (running || state !== 'riding') return;
+        running = true;
+        lastTs = performance.now();
+        rafId = requestAnimationFrame(frame);
+    }
+    function stopLoop() {
+        running = false;
+        cancelAnimationFrame(rafId);
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopLoop();
+        else if (state === 'riding') startLoop();
+    });
+
+    function update(dt) {
+        simT += dt;
+        if (held.left) cam.th -= TURN * dt;
+        if (held.right) cam.th += TURN * dt;
+
+        curSpeed = (held.gallop || simT < boostUntil) ? GALLOP : WALK;
+        const next = RM.advance(cam, curSpeed, dt);
+        cam.x = next.x; cam.z = next.z;
+
+        // dust while galloping
+        if (curSpeed > WALK + 1) {
+            dustTimer -= dt;
+            if (dustTimer <= 0) {
+                dustTimer = 0.09;
+                dust.push({
+                    x: W / 2 + (Math.random() * 56 - 28), y: H - 22 + Math.random() * 8,
+                    vx: (Math.random() * 60 - 30), vy: 14 + Math.random() * 22, life: 0.7
+                });
+                if (dust.length > 30) dust.shift();
+            }
+        }
+
+        hoofbeats(dt, curSpeed);
+        updateCompass();
+
+        // encounters
+        for (const tg of targets) {
+            if (tg.collected || simT < tg.skipUntil) continue;
+            if (RM.dist(cam, tg.x, tg.z) < ENCOUNTER_R) { openCatch(tg); break; }
+        }
+    }
+
+    // ---------------- HUD ----------------
+    const hudCompass = $('hudCompass'), cArrow = $('cArrow'), cDots = $('cDots'), hudBag = $('hudBag');
+
+    function nearestTarget() {
+        let best = null, bd = Infinity;
+        for (const tg of targets) {
+            if (tg.collected) continue;
+            const d = RM.dist(cam, tg.x, tg.z);
+            if (d < bd) { bd = d; best = tg; }
+        }
+        return best ? { tg: best, d: bd } : null;
+    }
+    function updateCompass() {
+        const n = nearestTarget();
+        if (!n) {
+            cArrow.style.transform = 'none';
+            cArrow.textContent = '✔';
+            cDots.textContent = 'all caught!';
+            hudCompass.classList.remove('near');
+            return;
+        }
+        cArrow.textContent = '➤';
+        const rel = RM.bearing(cam, n.tg.x, n.tg.z);
+        cArrow.style.transform = 'rotate(' + Math.round(rel * 180 / Math.PI - 90) + 'deg)';
+        const d = n.d;
+        cDots.textContent = d < 25 ? '●●●●●' : d < 60 ? '●●●●○' : d < 100 ? '●●●○○' : d < 150 ? '●●○○○' : '●○○○○';
+        hudCompass.classList.toggle('near', d < COMPASS_GLOW);
+    }
+    function updateBag() {
+        const got = gotSet(rideTrail).size;
+        const total = KW.trailChars(rideTrail).length;
+        hudBag.textContent = '🎒 ' + got + '/' + total;
+    }
+
+    // ---------------- ride setup ----------------
+    function placeRideTargets() {
+        const chars = shuffleArr(KW.trailChars(rideTrail));
+        const big = rideTrail === 'big';
+        const pos = RM.placeTargets(chars.length,
+            { minR: 40, maxR: big ? 320 : 220, minGap: 25 }, Math.random);
+        const got = gotSet(rideTrail);
+        targets = chars.map((ch, i) => ({
+            k: KW.byChar[ch],
+            x: pos[i].x, z: pos[i].z,
+            collected: got.has(ch),
+            skipUntil: -1,
+            phase: Math.random() * Math.PI * 2
+        }));
+    }
+    function syncTargetsWithBook() {
+        const got = gotSet(rideTrail);
+        for (const tg of targets) tg.collected = got.has(tg.k.char);
+    }
+
+    function startRide() {
+        rideTrail = selectedTrail;
+        cam.x = 0; cam.z = 0; cam.th = 0;
+        simT = 0; boostUntil = -1;
+        dust.length = 0;
+        stats.rides++;
+        saveJSON(STATS_KEY, stats);
+        placeRideTargets();
+        updateBag();
+        $('titleBack').classList.remove('open');
+        state = 'riding';
+        JpSpeech.stop();
+        startLoop();
+    }
+
+    function backToTitle() {
+        stopLoop();
+        state = 'title';
+        held.left = held.right = held.gallop = false;
+        renderTitle();
+        $('titleBack').classList.add('open');
+    }
+
+    // ---------------- title overlay ----------------
+    function renderTitle() {
+        $('trailCards').innerHTML = KW.TRAILS.map(tr => {
+            const total = KW.trailChars(tr.id).length;
+            const got = gotSet(tr.id).size;
+            const full = got >= total;
+            return '<button class="trail-card' + (tr.id === selectedTrail ? ' sel' : '') + '" data-trail="' + tr.id + '">' +
+                '<div class="tc-icon">' + tr.icon + '</div>' +
+                '<div class="tc-name">' + escHtml(tr.name) + '</div>' +
+                '<div class="tc-jp">' + escHtml(tr.jp) + '</div>' +
+                '<div class="tc-blurb">' + escHtml(tr.blurb) + '</div>' +
+                '<div class="tc-prog">' + (full ? '⭐ Complete! ' : '') + got + '/' + total + ' caught</div>' +
+                '</button>';
+        }).join('');
+        document.querySelectorAll('.trail-card').forEach(b => b.onclick = () => {
+            selectedTrail = b.dataset.trail;
+            saveJSON(TRAIL_KEY, selectedTrail);
+            Sfx.pop();
+            renderTitle();
+        });
+        $('titleStats').textContent = '🎒 ' + stats.caught + ' kanji caught all-time · 🐴 ' + stats.rides + ' rides';
+    }
+    $('startBtn').onclick = () => { Sfx.coin(); startRide(); };
+    $('titleBookBtn').onclick = () => openBook('title');
+    $('pakaraMascot').onclick = () => {
+        const m = $('pakaraMascot');
+        m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
+        JpSpeech.speak('うまに のろう！');
+        Sfx.pop();
+    };
+
+    // ---------------- controls ----------------
+    function bindHold(btn, key) {
+        btn.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+            held[key] = true;
+        });
+        const off = e => { held[key] = false; };
+        btn.addEventListener('pointerup', off);
+        btn.addEventListener('pointercancel', off);
+        btn.addEventListener('lostpointercapture', off);
+        btn.addEventListener('contextmenu', e => e.preventDefault());
+    }
+    bindHold($('btnLeft'), 'left');
+    bindHold($('btnRight'), 'right');
+    bindHold($('btnGallop'), 'gallop');
+
+    window.addEventListener('keydown', e => {
+        if (state !== 'riding') return;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { held.left = true; e.preventDefault(); }
+        else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { held.right = true; e.preventDefault(); }
+        else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') { held.gallop = true; e.preventDefault(); }
+    });
+    window.addEventListener('keyup', e => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') held.left = false;
+        else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') held.right = false;
+        else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') held.gallop = false;
+    });
+    window.addEventListener('blur', () => { held.left = held.right = held.gallop = false; });
+
+    // drag steering on the world canvas (one tracked touch id, targetTouches)
+    let dragTouchId = null, dragLastX = 0, mouseDrag = false;
+    canvas.addEventListener('touchstart', e => {
+        if (state !== 'riding' || dragTouchId !== null) return;
+        const t = e.changedTouches[0];
+        dragTouchId = t.identifier;
+        dragLastX = t.clientX;
+    }, { passive: true });
+    canvas.addEventListener('touchmove', e => {
+        if (dragTouchId === null) return;
+        for (let i = 0; i < e.targetTouches.length; i++) {
+            const t = e.targetTouches[i];
+            if (t.identifier === dragTouchId) {
+                cam.th -= (t.clientX - dragLastX) * 0.006;
+                dragLastX = t.clientX;
+                e.preventDefault();
+                break;
+            }
+        }
+    }, { passive: false });
+    const endTouchDrag = e => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === dragTouchId) { dragTouchId = null; break; }
+        }
+    };
+    canvas.addEventListener('touchend', endTouchDrag);
+    canvas.addEventListener('touchcancel', endTouchDrag);
+    canvas.addEventListener('mousedown', e => { if (state === 'riding') { mouseDrag = true; dragLastX = e.clientX; } });
+    window.addEventListener('mousemove', e => {
+        if (!mouseDrag) return;
+        cam.th -= (e.clientX - dragLastX) * 0.006;
+        dragLastX = e.clientX;
+    });
+    window.addEventListener('mouseup', () => { mouseDrag = false; });
+
+    $('hudBook').onclick = () => openBook('ride');
+    $('hudTrails').onclick = backToTitle;
+
+    // ---------------- KanjiVG parsing / guide ----------------
+    const kvgCache = {};
+    function parseSvgPath(d, steps) {
+        const pts = [];
+        const tokens = d.match(/[a-zA-Z]|[-+]?[0-9]*\.?[0-9]+/g) || [];
+        let i = 0, cx = 0, cy = 0, lastCx2 = 0, lastCy2 = 0, lastCmd = '';
+        function num() { return parseFloat(tokens[i++]); }
+        function cubicBezier(x0, y0, x1, y1, x2, y2, x3, y3, n) {
+            for (let s = 1; s <= n; s++) {
+                const t = s / n, u = 1 - t;
+                pts.push({
+                    x: u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+                    y: u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3
+                });
+            }
+        }
+        while (i < tokens.length) {
+            const cmd = /[a-zA-Z]/.test(tokens[i]) ? tokens[i++] : lastCmd;
+            lastCmd = cmd;
+            if (cmd === 'M') { cx = num(); cy = num(); pts.push({ x: cx, y: cy }); }
+            else if (cmd === 'm') { cx += num(); cy += num(); pts.push({ x: cx, y: cy }); }
+            else if (cmd === 'L') { const x = num(), y = num(); cubicBezier(cx, cy, cx, cy, x, y, x, y, steps); cx = x; cy = y; }
+            else if (cmd === 'l') { const x = cx + num(), y = cy + num(); cubicBezier(cx, cy, cx, cy, x, y, x, y, steps); cx = x; cy = y; }
+            else if (cmd === 'C') {
+                const x1 = num(), y1 = num(), x2 = num(), y2 = num(), x3 = num(), y3 = num();
+                cubicBezier(cx, cy, x1, y1, x2, y2, x3, y3, steps);
+                lastCx2 = x2; lastCy2 = y2; cx = x3; cy = y3;
+            } else if (cmd === 'c') {
+                const x1 = cx + num(), y1 = cy + num(), x2 = cx + num(), y2 = cy + num(), x3 = cx + num(), y3 = cy + num();
+                cubicBezier(cx, cy, x1, y1, x2, y2, x3, y3, steps);
+                lastCx2 = x2; lastCy2 = y2; cx = x3; cy = y3;
+            } else if (cmd === 'S') {
+                const x1 = 2 * cx - lastCx2, y1 = 2 * cy - lastCy2;
+                const x2 = num(), y2 = num(), x3 = num(), y3 = num();
+                cubicBezier(cx, cy, x1, y1, x2, y2, x3, y3, steps);
+                lastCx2 = x2; lastCy2 = y2; cx = x3; cy = y3;
+            } else if (cmd === 's') {
+                const x1 = 2 * cx - lastCx2, y1 = 2 * cy - lastCy2;
+                const x2 = cx + num(), y2 = cy + num(), x3 = cx + num(), y3 = cy + num();
+                cubicBezier(cx, cy, x1, y1, x2, y2, x3, y3, steps);
+                lastCx2 = x2; lastCy2 = y2; cx = x3; cy = y3;
+            } else if (cmd === 'Z' || cmd === 'z') {
+                // close path - ignore
+            } else { i++; }
+        }
+        return pts;
+    }
+    function kvgStrokes(ch) {
+        if (kvgCache[ch]) return kvgCache[ch];
+        const raw = (window.KVG_DATA || {})[ch];
+        if (!raw) return null;
+        const s = raw.map(d => parseSvgPath(d, 8)).filter(p => p.length > 0);
+        if (!s.length) return null;
+        kvgCache[ch] = s;
+        return s;
+    }
+    function scaleKvg(strokes, w) {
+        const pad = w * 0.08, scale = (w - pad * 2) / 109;
+        return strokes.map(st => st.map(p => ({ x: pad + p.x * scale, y: pad + p.y * scale })));
+    }
+
+    // ---------------- stroke scoring (lenient, adapted from writing.html) ----------------
+    function resamplePoints(pts, n) {
+        if (pts.length === 0) return [];
+        if (pts.length === 1) return Array.from({ length: n }, () => ({ x: pts[0].x, y: pts[0].y }));
+        const dists = [0];
+        let total = 0;
+        for (let i = 1; i < pts.length; i++) {
+            total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+            dists.push(total);
+        }
+        if (total === 0) return Array.from({ length: n }, () => ({ x: pts[0].x, y: pts[0].y }));
+        const out = [];
+        let seg = 0;
+        for (let s = 0; s < n; s++) {
+            const target = total * s / (n - 1);
+            while (seg < pts.length - 2 && dists[seg + 1] < target) seg++;
+            const span = dists[seg + 1] - dists[seg];
+            const t = span > 0 ? (target - dists[seg]) / span : 0;
+            out.push({
+                x: pts[seg].x + (pts[seg + 1].x - pts[seg].x) * t,
+                y: pts[seg].y + (pts[seg + 1].y - pts[seg].y) * t
+            });
+        }
+        return out;
+    }
+    function meanMinDist(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) {
+            let best = Infinity;
+            for (let j = 0; j < b.length; j++) {
+                const dx = a[i].x - b[j].x, dy = a[i].y - b[j].y;
+                const d = dx * dx + dy * dy;
+                if (d < best) best = d;
+            }
+            sum += Math.sqrt(best);
+        }
+        return sum / a.length;
+    }
+    function strokeScore(userStroke, guideStroke, w) {
+        const u = resamplePoints(userStroke, 24);
+        const g = resamplePoints(guideStroke, 24);
+        if (!u.length || !g.length) return 0;
+        const stray = meanMinDist(u, g);
+        const missed = meanMinDist(g, u);
+        const gEnd = g[g.length - 1], uEnd = u[u.length - 1];
+        const forward = Math.hypot(u[0].x - g[0].x, u[0].y - g[0].y) + Math.hypot(uEnd.x - gEnd.x, uEnd.y - gEnd.y);
+        const reversed = Math.hypot(u[0].x - gEnd.x, u[0].y - gEnd.y) + Math.hypot(uEnd.x - g[0].x, uEnd.y - g[0].y);
+        const endDist = Math.min(forward, reversed) / 2;
+        const d = Math.max(stray, missed, endDist);
+        const free = w * 0.07;   // riding game: kid-sized wobble is free
+        const range = w * 0.30;  // and the fade-out is gentle
+        return Math.max(0, Math.min(1, 1 - Math.max(0, d - free) / range));
+    }
+    // Lenient whole-drawing score: every guide stroke is matched with the user's
+    // best stroke for it (order does not matter in a riding game).
+    function scoreDrawing(strokes, guide, w) {
+        let sum = 0;
+        for (const g of guide) {
+            let best = 0;
+            for (const u of strokes) {
+                const s = strokeScore(u, g, w);
+                if (s > best) best = s;
+            }
+            sum += best;
+        }
+        return sum / guide.length;
+    }
+
+    // ---------------- catch panel ----------------
+    const drawCanvas = $('drawCanvas');
+    const dctx = drawCanvas.getContext('2d');
+    let userStrokes = [], currentStroke = null, isDrawing = false;
+    let hintOn = true, catchBusy = false, catchGuide = null;
+
+    function sizeDrawCanvas() {
+        const s = Math.min(320, Math.floor(window.innerWidth * 0.86));
+        const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+        drawCanvas.style.width = s + 'px';
+        drawCanvas.style.height = s + 'px';
+        drawCanvas.width = Math.round(s * dpr);
+        drawCanvas.height = Math.round(s * dpr);
+    }
+
+    function redrawCatch() {
+        const w = drawCanvas.width;
+        dctx.setTransform(1, 0, 0, 1, 0, 0);
+        dctx.clearRect(0, 0, w, w);
+
+        // light grid cross
+        dctx.strokeStyle = '#f3e5f5';
+        dctx.lineWidth = Math.max(1, w * 0.006);
+        dctx.setLineDash([w * 0.02, w * 0.02]);
+        dctx.beginPath();
+        dctx.moveTo(w / 2, 0); dctx.lineTo(w / 2, w);
+        dctx.moveTo(0, w / 2); dctx.lineTo(w, w / 2);
+        dctx.stroke();
+        dctx.setLineDash([]);
+
+        // dashed KanjiVG guide + stroke numbers
+        if (hintOn && catchGuide) {
+            dctx.save();
+            dctx.globalAlpha = 0.4;
+            dctx.strokeStyle = '#b39ddb';
+            dctx.lineWidth = Math.max(4, w * 0.016);
+            dctx.lineCap = 'round';
+            dctx.lineJoin = 'round';
+            dctx.setLineDash([w * 0.025, w * 0.018]);
+            for (const st of catchGuide) {
+                if (st.length < 2) continue;
+                dctx.beginPath();
+                dctx.moveTo(st[0].x, st[0].y);
+                for (let j = 1; j < st.length; j++) dctx.lineTo(st[j].x, st[j].y);
+                dctx.stroke();
+            }
+            dctx.setLineDash([]);
+            dctx.restore();
+            catchGuide.forEach((st, i) => {
+                if (!st.length) return;
+                const r = Math.max(10, w * 0.032);
+                dctx.fillStyle = 'rgba(126,87,194,0.55)';
+                dctx.beginPath();
+                dctx.arc(st[0].x, st[0].y, r, 0, Math.PI * 2);
+                dctx.fill();
+                dctx.fillStyle = '#fff';
+                dctx.font = 'bold ' + Math.max(9, w * 0.03) + 'px Nunito, sans-serif';
+                dctx.textAlign = 'center';
+                dctx.textBaseline = 'middle';
+                dctx.fillText('' + (i + 1), st[0].x, st[0].y);
+            });
+        }
+
+        // crayon strokes
+        const drawStroke = pts => {
+            if (!pts.length) return;
+            if (pts.length < 2) {
+                dctx.fillStyle = '#f06292';
+                dctx.beginPath();
+                dctx.arc(pts[0].x, pts[0].y, w * 0.018, 0, Math.PI * 2);
+                dctx.fill();
+                return;
+            }
+            dctx.strokeStyle = '#f06292';
+            dctx.lineWidth = w * 0.034;
+            dctx.lineCap = 'round';
+            dctx.lineJoin = 'round';
+            dctx.globalAlpha = 0.92;
+            dctx.beginPath();
+            dctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) dctx.lineTo(pts[i].x, pts[i].y);
+            dctx.stroke();
+            // crayon core highlight
+            dctx.strokeStyle = '#f8bbd0';
+            dctx.lineWidth = w * 0.012;
+            dctx.stroke();
+            dctx.globalAlpha = 1;
+        };
+        userStrokes.forEach(drawStroke);
+        if (currentStroke) drawStroke(currentStroke);
+
+        const expected = catchGuide ? catchGuide.length : 0;
+        $('strokeCount').textContent = 'Strokes: ' + (userStrokes.length + (currentStroke ? 1 : 0)) + ' / ' + expected;
+    }
+
+    // Track one drawing finger by identifier (palm rejection, like writing.html):
+    // other touches never move, end, or discard the in-progress stroke.
+    let drawTouchIdent = null;
+    function trackedTouch(e, list) {
+        if (!e.touches && !e.changedTouches) return e; // mouse
+        for (const t of (list || e.touches)) if (t.identifier === drawTouchIdent) return t;
+        return null;
+    }
+    function getDrawPos(pt) {
+        const rect = drawCanvas.getBoundingClientRect();
+        return {
+            x: (pt.clientX - rect.left) * (drawCanvas.width / rect.width),
+            y: (pt.clientY - rect.top) * (drawCanvas.height / rect.height)
+        };
+    }
+    function startDraw(e) {
+        if (state !== 'catch' || catchBusy) return;
+        e.preventDefault();
+        if (isDrawing) return; // a second finger/palm must not restart the stroke
+        if (e.changedTouches && e.changedTouches.length > 0) drawTouchIdent = e.changedTouches[0].identifier;
+        const pt = e.changedTouches ? e.changedTouches[0] : e;
+        isDrawing = true;
+        currentStroke = [getDrawPos(pt)];
+        redrawCatch();
+    }
+    function moveDraw(e) {
+        if (!isDrawing || !currentStroke) return;
+        e.preventDefault();
+        const pt = e.touches ? trackedTouch(e) : e;
+        if (!pt) return; // only the finger that started the stroke may draw
+        currentStroke.push(getDrawPos(pt));
+        redrawCatch();
+    }
+    function endDraw(e) {
+        if (!isDrawing || !currentStroke) return;
+        e.preventDefault();
+        if (e.changedTouches && !trackedTouch(e, e.changedTouches)) return; // another finger lifted
+        drawTouchIdent = null;
+        isDrawing = false;
+        if (currentStroke.length >= 1) userStrokes.push(currentStroke);
+        currentStroke = null;
+        redrawCatch();
+    }
+    drawCanvas.addEventListener('touchstart', startDraw, { passive: false });
+    drawCanvas.addEventListener('touchmove', moveDraw, { passive: false });
+    drawCanvas.addEventListener('touchend', endDraw, { passive: false });
+    drawCanvas.addEventListener('touchcancel', endDraw, { passive: false });
+    drawCanvas.addEventListener('mousedown', startDraw);
+    drawCanvas.addEventListener('mousemove', moveDraw);
+    drawCanvas.addEventListener('mouseup', endDraw);
+    drawCanvas.addEventListener('mouseleave', e => { if (isDrawing) endDraw(e); });
+
+    function openCatch(tg) {
+        stopLoop();
+        state = 'catch';
+        held.left = held.right = held.gallop = false;
+        dragTouchId = null; mouseDrag = false;
+        currentTarget = tg;
+        const k = tg.k;
+        userStrokes = []; currentStroke = null; isDrawing = false;
+        hintOn = true; catchBusy = false;
+        $('hintBtn').textContent = '💡 Hint ON';
+        $('hintBtn').classList.remove('off');
+        $('catchEmoji').textContent = k.multi ? '🌲'.repeat(k.multi) : k.emoji;
+        $('catchJp').textContent = '「みて！ ' + k.say + 'だ！」';
+        $('catchEn').textContent = k.en + '! Draw ' + k.char + ' to catch it!';
+        $('catchInfo').textContent = k.char + '・' + k.read + '・' + k.mean;
+        const msg = $('catchMsg');
+        msg.textContent = '';
+        msg.className = 'catch-msg';
+        sizeDrawCanvas();
+        const raw = kvgStrokes(k.char);
+        catchGuide = raw ? scaleKvg(raw, drawCanvas.width) : null;
+        redrawCatch();
+        $('catchBack').classList.add('open');
+        Sfx.pop();
+        JpSpeech.speak('みて！' + k.say + 'だ！');
+    }
+
+    function closeCatch(resume, boost) {
+        $('catchBack').classList.remove('open');
+        if (resume) {
+            state = 'riding';
+            if (boost) boostUntil = simT + 2;
+            startLoop();
+        }
+    }
+
+    $('hintBtn').onclick = () => {
+        hintOn = !hintOn;
+        $('hintBtn').textContent = hintOn ? '💡 Hint ON' : '💡 Hint OFF';
+        $('hintBtn').classList.toggle('off', !hintOn);
+        redrawCatch();
+    };
+    $('clearBtn').onclick = () => {
+        userStrokes = []; currentStroke = null;
+        $('catchMsg').textContent = '';
+        $('catchMsg').className = 'catch-msg';
+        redrawCatch();
+    };
+    $('skipBtn').onclick = () => {
+        if (catchBusy) return;
+        if (currentTarget) currentTarget.skipUntil = simT + 6; // stays in the world for later
+        JpSpeech.stop();
+        closeCatch(true, false);
+    };
+    $('checkBtn').onclick = () => {
+        if (state !== 'catch' || catchBusy || !currentTarget) return;
+        const k = currentTarget.k;
+        const w = drawCanvas.width;
+        const msg = $('catchMsg');
+        if (userStrokes.length === 0) {
+            msg.textContent = 'Draw ' + k.char + ' first!';
+            msg.className = 'catch-msg';
+            return;
+        }
+        if (!catchGuide || !catchGuide.length) return; // table harness guarantees strokes exist
+        const expected = catchGuide.length;
+        const n = userStrokes.length;
+        // Lenient: within one stroke of the real count is close enough to judge
+        if (Math.abs(n - expected) > 1) {
+            failCatch(k.char + ' has ' + expected + ' strokes — you drew ' + n + '. Try again!');
+            return;
+        }
+        const avg = scoreDrawing(userStrokes, catchGuide, w);
+        if (avg >= 0.45) successCatch();
+        else failCatch('Trace the dashed lines and try again — you can do it!');
+    };
+
+    function failCatch(hint) {
+        const msg = $('catchMsg');
+        msg.textContent = '「おしい！」 Almost! ' + hint;
+        msg.className = 'catch-msg almost';
+        const modal = $('catchModal');
+        modal.classList.remove('shake'); void modal.offsetWidth; modal.classList.add('shake');
+        if (!hintOn) {
+            hintOn = true;
+            $('hintBtn').textContent = '💡 Hint ON';
+            $('hintBtn').classList.remove('off');
+            redrawCatch();
+        }
+        Sfx.wrong();
+    }
+
+    function successCatch() {
+        catchBusy = true;
+        const tg = currentTarget, k = tg.k;
+        tg.collected = true;
+        const arr = collected[rideTrail] || (collected[rideTrail] = []);
+        if (!arr.includes(k.char)) {
+            arr.push(k.char);
+            stats.caught++;
+        }
+        saveJSON(COLLECT_KEY, collected);
+        saveJSON(STATS_KEY, stats);
+
+        const msg = $('catchMsg');
+        msg.textContent = '「すごい！」 Caught it!';
+        msg.className = 'catch-msg yay';
+        Sfx.win();
+        confettiBurst(26);
+        flyCard(k);
+        hudBag.classList.remove('bag-pop'); void hudBag.offsetWidth; hudBag.classList.add('bag-pop');
+        updateBag();
+
+        setTimeout(() => {
+            catchBusy = false;
+            $('catchBack').classList.remove('open');
+            neigh();
+            showNeighBubble();
+            JpSpeech.speak('すごい！');
+            const got = gotSet(rideTrail);
+            const total = KW.trailChars(rideTrail).length;
+            if (got.size >= total) {
+                openCelebrate();
+            } else {
+                state = 'riding';
+                boostUntil = simT + 2;   // 2s victory gallop
+                startLoop();
+            }
+        }, 1000);
+    }
+
+    function showNeighBubble() {
+        const b = $('neighBubble');
+        b.classList.add('show');
+        setTimeout(() => b.classList.remove('show'), 1500);
+    }
+
+    function flyCard(k) {
+        const from = drawCanvas.getBoundingClientRect();
+        const to = hudBag.getBoundingClientRect();
+        const el = document.createElement('div');
+        el.className = 'fly-card';
+        el.innerHTML = '<span class="fc-char">' + escHtml(k.char) + '</span>' +
+            '<span class="fc-read">' + escHtml(k.read) + '</span>' +
+            '<span class="fc-mean">' + escHtml(k.mean) + '</span>';
+        document.body.appendChild(el);
+        const fx = from.left + from.width / 2 - 55, fy = from.top + from.height / 2 - 40;
+        el.style.left = fx + 'px';
+        el.style.top = fy + 'px';
+        const tx = to.left + to.width / 2 - 55 - fx, ty = to.top + to.height / 2 - 40 - fy;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(0.12)';
+            el.style.opacity = '0.2';
+        }));
+        setTimeout(() => el.remove(), 950);
+    }
+
+    function confettiBurst(n) {
+        const host = $('confettiHost');
+        const syms = ['🎉', '✨', '🌸', '⭐', '🎊', '💮'];
+        for (let i = 0; i < n; i++) {
+            const s = document.createElement('span');
+            s.className = 'confetti-bit';
+            s.textContent = syms[i % syms.length];
+            s.style.left = (4 + Math.random() * 92) + 'vw';
+            s.style.top = (-12 - Math.random() * 10) + 'vh';
+            s.style.fontSize = (13 + Math.random() * 15) + 'px';
+            s.style.animationDuration = (1.7 + Math.random() * 1.3) + 's';
+            s.style.animationDelay = (Math.random() * 0.3) + 's';
+            host.appendChild(s);
+            setTimeout(() => s.remove(), 3400);
+        }
+    }
+
+    // ---------------- celebration ----------------
+    function openCelebrate() {
+        state = 'celebrate';
+        const tr = KW.TRAILS.find(t => t.id === rideTrail);
+        $('celeTitle').textContent = tr.icon + ' ' + tr.name + ' Complete! ⭐';
+        $('celeSub').textContent = 'Fiona and Pakara caught every kanji on this trail!';
+        $('celeBack').classList.add('open');
+        confettiBurst(40);
+        Sfx.win();
+        setTimeout(() => JpSpeech.speak('やったね！おいわい しよう！'), 900);
+    }
+    $('celeRideBtn').onclick = () => {
+        $('celeBack').classList.remove('open');
+        state = 'riding';
+        startLoop();
+    };
+    $('celeBookBtn').onclick = () => {
+        $('celeBack').classList.remove('open');
+        openBook('ride');
+    };
+    $('mochiMascot').onclick = () => {
+        const m = $('mochiMascot');
+        m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
+        JpSpeech.speak('やったね！おいわい しよう！');
+    };
+
+    // ---------------- collection book ----------------
+    function openBook(from) {
+        bookFrom = from;
+        if (from === 'ride') stopLoop();
+        state = 'book';
+        renderBook();
+        $('bookBack').classList.add('open');
+    }
+    function closeBook() {
+        $('bookBack').classList.remove('open');
+        if (bookFrom === 'ride') {
+            syncTargetsWithBook();
+            updateBag();
+            state = 'riding';
+            startLoop();
+        } else {
+            state = 'title';
+            renderTitle();
+            $('titleBack').classList.add('open');
+        }
+    }
+    $('bookClose').onclick = closeBook;
+    $('bookBack').addEventListener('click', e => { if (e.target === $('bookBack')) closeBook(); });
+
+    let resetArmTimer = null;
+    function renderBook() {
+        let html = '';
+        for (const tr of KW.TRAILS) {
+            const chars = KW.trailChars(tr.id);
+            const got = gotSet(tr.id);
+            const full = got.size >= chars.length;
+            html += '<div class="book-trail"><div class="bt-head">' +
+                '<span class="bt-name">' + tr.icon + ' ' + escHtml(tr.name) + ' <span class="bt-jp">' + escHtml(tr.jp) + '</span></span>' +
+                '<span class="bt-count">' + got.size + '/' + chars.length + (full ? ' ⭐' : '') + '</span>' +
+                '<button class="bt-reset" data-reset="' + tr.id + '">Ride again from zero</button>' +
+                '</div><div class="book-grid">' +
+                chars.map(ch => {
+                    const k = KW.byChar[ch];
+                    if (got.has(ch)) {
+                        return '<div class="book-card got">' +
+                            '<span class="bc-sticker">' + (k.multi ? '🌲'.repeat(k.multi) : k.emoji) + '</span>' +
+                            '<span class="bc-char">' + escHtml(ch) + '</span>' +
+                            '<span class="bc-read">' + escHtml(k.read) + '</span>' +
+                            '<span class="bc-mean">' + escHtml(k.mean) + '</span></div>';
+                    }
+                    return '<div class="book-card unknown"><span class="bc-char">?</span><span class="bc-read">？？？</span><span class="bc-mean">not caught yet</span></div>';
+                }).join('') +
+                '</div></div>';
+        }
+        $('bookBody').innerHTML = html;
+        document.querySelectorAll('[data-reset]').forEach(btn => {
+            btn.onclick = () => {
+                const id = btn.dataset.reset;
+                if (!btn.classList.contains('armed')) {
+                    // two-tap confirm
+                    document.querySelectorAll('.bt-reset.armed').forEach(b => {
+                        b.classList.remove('armed');
+                        b.textContent = 'Ride again from zero';
+                    });
+                    btn.classList.add('armed');
+                    btn.textContent = 'Really reset? Tap again!';
+                    clearTimeout(resetArmTimer);
+                    resetArmTimer = setTimeout(() => {
+                        btn.classList.remove('armed');
+                        btn.textContent = 'Ride again from zero';
+                    }, 3000);
+                    return;
+                }
+                clearTimeout(resetArmTimer);
+                collected[id] = [];
+                saveJSON(COLLECT_KEY, collected);
+                Sfx.pop();
+                renderBook();
+            };
+        });
+    }
+
+    // book cards read the kanji aloud when tapped
+    $('bookBody').addEventListener('click', e => {
+        const card = e.target.closest('.book-card.got');
+        if (!card) return;
+        const ch = card.querySelector('.bc-char').textContent;
+        const k = KW.byChar[ch];
+        if (k) { JpSpeech.speak(k.char + '、' + k.read); Sfx.pop(); }
+    });
+
+    // ---------------- boot ----------------
+    resizeWorld();
+    placeRideTargetsForTitle();
+    function placeRideTargetsForTitle() {
+        // pretty static frame behind the title overlay
+        rideTrail = selectedTrail;
+        placeRideTargets();
+        updateBag();
+        render(0);
+    }
+    renderTitle();
+
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+})();
+</script>
+</body>
+</html>
