@@ -564,9 +564,11 @@ function playSfx(type) {
         else if (type === 'fanfare') [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.12, 0.3, 'triangle', 0.15));
     } catch (e) {}
 }
-function speak(textJa) {
+function speak(textJa, queue) {
+    // queue=true appends instead of cancelling, so back-to-back lines
+    // (captured kana, then the new target) both get heard
     try {
-        speechSynthesis.cancel();
+        if (!queue) speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(textJa);
         u.lang = 'ja-JP'; u.rate = 0.85;
         speechSynthesis.speak(u);
@@ -635,7 +637,7 @@ function newTarget(excludePod) {
     const pick = src[Math.floor(Math.random() * src.length)];
     hunted = activePool.find(c => c.k === pick.k) || hunted;
     updateHUD();
-    speak(hunted.k);
+    speak(hunted.k, true); // queued: the just-captured kana finishes speaking first
 }
 
 function dropPowerup(x, y, fromBoss) {
@@ -762,6 +764,7 @@ function fireLaser() {
 
 function fireBeam() {
     if (state !== 'playing' && state !== 'boss') return;
+    if (pendingNext) return; // between waves every pod is a decoy - firing is a guaranteed loss
     if (beamObj) return;
     beamObj = { until: now + 0.5, w: now < wideUntil ? 110 : 40, caught: false };
     playSfx('beam');
@@ -832,6 +835,7 @@ function shotHitsPod(pod) {
 }
 
 function gameOver() {
+    if (state === 'over') return; // two same-frame mistakes must not double-record stats
     state = 'over';
     pendingNext = null;
     // Record the final score next to the winner's name
@@ -1481,8 +1485,10 @@ function togglePause() {
 document.getElementById('pauseBtn').addEventListener('click', togglePause);
 document.getElementById('resumeBtn').addEventListener('click', togglePause);
 document.addEventListener('visibilitychange', () => {
+    keys.left = keys.right = false; // keyup never arrives on a hidden page - unlatch
     if (document.hidden && (state === 'playing' || state === 'boss')) togglePause();
 });
+window.addEventListener('blur', () => { keys.left = keys.right = false; });
 
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', startGame);

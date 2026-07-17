@@ -2120,12 +2120,11 @@
             const grids = document.querySelectorAll('.card-grid');
             grids.forEach(grid => {
                 const cards = Array.from(grid.children);
+                // Fisher-Yates on the array, then one append pass in the new order
                 for (let i = cards.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    grid.appendChild(cards[j]);
-                    cards.splice(j, 1, cards[i]);
+                    [cards[i], cards[j]] = [cards[j], cards[i]];
                 }
-                // Re-append all for proper order
                 cards.forEach(card => grid.appendChild(card));
             });
             resetAll();
@@ -2198,7 +2197,8 @@
 
             // Generate 4 options from the same pool
             const options = [word.english];
-            const otherWords = quizPool.filter(w => w.english !== word.english);
+            // exclude same-english AND same-japanese words (ご/に/じ each have two true meanings)
+            const otherWords = quizPool.filter(w => w.english !== word.english && w.japanese !== word.japanese);
             while (options.length < 4 && otherWords.length > 0) {
                 const randIdx = Math.floor(Math.random() * otherWords.length);
                 const picked = otherWords.splice(randIdx, 1)[0];
@@ -2467,6 +2467,7 @@
         let concP2Score = 0;
         let concStreak = 0;
         let concPraiseTimer = null;
+        let concGen = 0; // bumped on begin/close so stale flip timers become no-ops
         let concBonusPair = -1;
         let concBestRecord = null;
         const praise = ['すごい！', 'やったね！', 'じょうずだね！', 'すばらしい！'];
@@ -2490,6 +2491,7 @@
         function beginConcentration() {
             const selected = [...document.querySelectorAll('#concFilterGrid input:checked')].map(cb => cb.value);
             if (selected.length === 0) return;
+            concGen++; // invalidate any flip timers left over from a previous game
 
             concPairCount = parseInt(document.getElementById('concPairCount').value);
             concIs2P = document.getElementById('concMode').value === '2p';
@@ -2618,7 +2620,9 @@
 
                 if (cardA.pairId === cardB.pairId && cardA.type !== cardB.type) {
                     // Match!
+                    const gen = concGen; // stale resolution timers must not leak into a new game
                     setTimeout(() => {
+                        if (gen !== concGen) return;
                         concStreak++;
                         if (cardA.pairId === concBonusPair) {
                             // Secret bonus pair! Sparkle shower and fanfare (no score change);
@@ -2679,11 +2683,14 @@
                     concLocked = true;
                     concStreak = 0;
                     playSfx('wrong');
+                    const gen = concGen;
                     setTimeout(() => {
+                        if (gen !== concGen) return;
                         a.el.classList.add('wrong');
                         b.el.classList.add('wrong');
                     }, 300);
                     setTimeout(() => {
+                        if (gen !== concGen) return;
                         a.el.classList.remove('flipped', 'wrong');
                         b.el.classList.remove('flipped', 'wrong');
                         concFlipped = [];
@@ -2807,6 +2814,7 @@
             document.getElementById('concOverlay').classList.remove('active');
             clearInterval(concTimerInterval);
             clearTimeout(concPraiseTimer);
+            concGen++;
         }
 
         // Go Fish game
@@ -2922,6 +2930,9 @@
 
         function gfSelectCard(i) {
             if (gfTurn !== 'player' || !gfGameActive) return;
+            // changing cards mid-listen must cancel the old ask, or her speech
+            // would resolve against the previously selected card
+            if (gfRecognition) { try { gfRecognition.abort(); } catch (e) {} }
             gfSelectedCard = i;
             const card = gfPlayerCards[i];
             gfSetMsg('', `Ask for: <strong>${card.japanese}</strong>`, `"${card.japanese} を もっていますか？"`);
@@ -3128,8 +3139,8 @@
                     gfTurnTimer = setTimeout(() => {
                         if (!gfGameActive) return;
                         if (!gfCheckGameEnd()) gfStartAiTurn();
-                    }, 1200);
-                }, 3400); // after Tako-chan's reply, so the drawn card's speech doesn't cut it off
+                    }, 2000); // let the drawn word finish speaking
+                }, replyDelay + 2000); // after Tako-chan's reply finishes, so the draw's speech doesn't cut it off
             }
         }
 
@@ -3362,7 +3373,7 @@
         // Kon-Kon Sensei the fox greeter - picks one line per visit
         const konkonLines = [
             ['いっしょに がんばろう！', "Let's do our best together!"],
-            ['きょうは なにを あそぶ？', 'What shall we play today?'],
+            ['きょうは なにして あそぶ？', 'What shall we play today?'],
             ['まいにち すこしずつ、が いちばん！', 'A little every day is best!'],
             ['フィオナちゃん、えらいね！', "Fiona, you're doing great!"]
         ];

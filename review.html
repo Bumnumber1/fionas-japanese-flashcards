@@ -746,8 +746,8 @@
             { jp:'たんじょうび', romaji:'tanjoubi', en:'Birthday', cat:'time' },
             // Food & drinks
             { jp:'たべもの', romaji:'tabemono', en:'Food', cat:'food' },
-            { jp:'みず', romaji:'mizu', en:'Water', cat:'food' },
-            { jp:'おみず', romaji:'omizu', en:'Water (polite)', cat:'food' },
+            { jp:'みず', romaji:'mizu', en:'Water', cat:'food', group:'water' },
+            { jp:'おみず', romaji:'omizu', en:'Water (polite)', cat:'food', group:'water' },
             { jp:'ごはん', romaji:'gohan', en:'Rice / Meal', cat:'food' },
             { jp:'おにぎり', romaji:'onigiri', en:'Rice ball', cat:'food' },
             { jp:'ケーキ', romaji:'keeki', en:'Cake', cat:'food' },
@@ -808,8 +808,8 @@
             { jp:'だれ', romaji:'dare', en:'Who', cat:'q' },
             { jp:'どこ', romaji:'doko', en:'Where', cat:'q' },
             { jp:'いつ', romaji:'itsu', en:'When', cat:'q' },
-            { jp:'なぜ', romaji:'naze', en:'Why', cat:'q' },
-            { jp:'どうして', romaji:'doushite', en:'Why (how come)', cat:'q' },
+            { jp:'なぜ', romaji:'naze', en:'Why', cat:'q', group:'why' },
+            { jp:'どうして', romaji:'doushite', en:'Why (how come)', cat:'q', group:'why' },
             { jp:'どう', romaji:'dou', en:'How', cat:'q' },
             { jp:'どれ', romaji:'dore', en:'Which one', cat:'q' },
             { jp:'いくら', romaji:'ikura', en:'How much', cat:'q' },
@@ -823,8 +823,8 @@
             { jp:'はじめまして', romaji:'hajimemashite', en:'Nice to meet you', cat:'greet' },
             { jp:'よろしくおねがいします', romaji:'yoroshiku onegaishimasu', en:'Please treat me well', cat:'greet' },
             { jp:'ありがとう', romaji:'arigatou', en:'Thank you', cat:'greet' },
-            { jp:'ください', romaji:'kudasai', en:'Please give me', cat:'greet' },
-            { jp:'おねがいします', romaji:'onegaishimasu', en:'Please (polite)', cat:'greet' },
+            { jp:'ください', romaji:'kudasai', en:'Please give me', cat:'greet', group:'please' },
+            { jp:'おねがいします', romaji:'onegaishimasu', en:'Please (polite)', cat:'greet', group:'please' },
             { jp:'いただきます', romaji:'itadakimasu', en:'Before eating', cat:'greet' },
             { jp:'ごちそうさまでした', romaji:'gochisousama deshita', en:'After eating', cat:'greet' },
             { jp:'すみません', romaji:'sumimasen', en:'Excuse me / Sorry', cat:'greet' },
@@ -835,8 +835,8 @@
             { jp:'だいじょうぶです', romaji:'daijoubu desu', en:'I\'m okay', cat:'greet' },
             { jp:'いりません', romaji:'irimasen', en:'I don\'t need it', cat:'greet' },
             { jp:'とってください', romaji:'totte kudasai', en:'Please pass it', cat:'greet' },
-            { jp:'おかわり', romaji:'okawari', en:'Seconds / More please', cat:'greet' },
-            { jp:'もっとください', romaji:'motto kudasai', en:'More, please', cat:'greet' },
+            { jp:'おかわり', romaji:'okawari', en:'Seconds / More please', cat:'greet', group:'more' },
+            { jp:'もっとください', romaji:'motto kudasai', en:'More, please', cat:'greet', group:'more' },
             { jp:'もうけっこうです', romaji:'mou kekkou desu', en:'No more, thank you', cat:'greet' },
             { jp:'ただいま', romaji:'tadaima', en:'I\'m home!', cat:'greet' },
             { jp:'おかえり', romaji:'okaeri', en:'Welcome home', cat:'greet' },
@@ -1061,7 +1061,7 @@
         //  CUTE MASCOTS — Kon-Kon Sensei 🦊 hosts the hub, Mochi 🐰 cameos
         // ============================================================
         const konkonLines = [
-            { jp:'きょうは なにを あそぶ？', en:'What shall we play today?' },
+            { jp:'きょうは なにして あそぶ？', en:'What shall we play today?' },
             { jp:'いっしょに がんばろう！', en:'Let\'s do our best together!' },
             { jp:'まいにち すこしずつ、が いちばん！', en:'A little every day is best!' },
             { jp:'フィオナちゃん、えらいね！', en:'Fiona, you\'re doing great!' }
@@ -1149,10 +1149,12 @@
         function openModal(html) {
             modalBody.innerHTML = html;
             modal.classList.add('active');
+            modal.scrollTop = 0; // each question/activity starts at the top on small screens
         }
         function closeModal() {
             stopAllSpeech();
             pn.quiz = null; // stop a phone-quiz round from speaking after the modal is gone
+            if (mc && mc.autoTimer) clearTimeout(mc.autoTimer);
             modal.classList.remove('active');
             renderActivities(); // refresh stamps + best badges on the hub
         }
@@ -1222,9 +1224,12 @@
                 opts.appendChild(b);
             });
 
-            // auto-play for listening mode
+            // auto-play for listening mode - tracked so closing the modal
+            // within the 300ms window can't speak over the hub
+            clearTimeout(mc.autoTimer);
             if (mc.mode === 'listen') {
-                setTimeout(() => {
+                mc.autoTimer = setTimeout(() => {
+                    if (!modal.classList.contains('active')) return;
                     const btn = document.querySelector('.audio-btn.large');
                     if (btn) speak(it.audioText || it.jp, btn);
                 }, 300);
@@ -1307,7 +1312,7 @@
             const words = pick(wordPool, 9);
             const items = shuffle([...sents, ...words]).map(it => {
                 const sourcePool = it.kind === 'sentence' ? sentPool : wordPool;
-                const distractors = pick(sourcePool.filter(x => x.en !== it.en), 3).map(x => x.en);
+                const distractors = pick(sourcePool.filter(x => x.en !== it.en && (!x.group || x.group !== it.group)), 3).map(x => x.en);
                 return {
                     tag: it.kind === 'sentence' ? 'Sentence' : 'Word',
                     tagClass: it.kind === 'sentence' ? 'sentence' : 'word',
@@ -1327,7 +1332,7 @@
             const pool = uniqEn(vocab);
             const picks = pick(pool, 12);
             const items = picks.map(it => {
-                const distractors = pick(pool.filter(x => x.jp !== it.jp), 3).map(x => x.jp);
+                const distractors = pick(pool.filter(x => x.jp !== it.jp && (!x.group || x.group !== it.group)), 3).map(x => x.jp);
                 return {
                     tag: 'English &rarr; Japanese',
                     tagClass: 'reverse',
@@ -1352,7 +1357,7 @@
             const normEn = e => e.toLowerCase().replace(/[.!?]+$/, '');
             const items = shuffle([...wordPicks, ...sentPicks]).map(it => {
                 const sourcePool = it.kind === 'sentence' ? sentPool : wordPool;
-                const distractors = pick(sourcePool.filter(x => normEn(x.en) !== normEn(it.en)), 3).map(x => x.en);
+                const distractors = pick(sourcePool.filter(x => normEn(x.en) !== normEn(it.en) && (!x.group || x.group !== it.group)), 3).map(x => x.en);
                 return {
                     tag: 'Listen &amp; Pick',
                     tagClass: 'listen',
@@ -1639,12 +1644,12 @@
         //  ACTIVITY 7: POLITE REFUSAL SCENARIOS
         // ============================================================
         const refusalItems = [
-            { scenario:'Someone offers you cake but you\'re full.', correct:'もう けっこう です。', distractors:['ありがとう','おねがいします','こんにちは'] },
-            { scenario:'A friend offers you a snack you don\'t want.', correct:'いいえ、けっこう です。', distractors:['はい','すき です','すみません'] },
-            { scenario:'Mom asks if you need more juice.', correct:'だいじょうぶ です。', distractors:['ください','いただきます','ばいばい'] },
-            { scenario:'Someone offers you a toy you already have.', correct:'いりません。', distractors:['ほしい です','すき です','はい'] },
-            { scenario:'You\'re passed a plate of vegetables you don\'t want.', correct:'いいえ、けっこう です。', distractors:['おいしい です','もっと ください','おかわり'] },
-            { scenario:'Someone offers more rice but you\'re finished.', correct:'もう けっこう です。', distractors:['いただきます','ごちそうさま でした','ありがとう'] }
+            { scenario:'Someone offers you cake but you\'re full.', correct:'もう けっこう です', distractors:['ありがとう','おねがいします','こんにちは'] },
+            { scenario:'A friend offers you a snack you don\'t want.', correct:'いいえ、けっこう です', distractors:['はい','すき です','すみません'] },
+            { scenario:'Mom asks if you need more juice.', correct:'だいじょうぶ です', distractors:['ください','いただきます','ばいばい'] },
+            { scenario:'Someone offers you a toy you already have.', correct:'いりません', distractors:['ほしい です','すき です','はい'] },
+            { scenario:'You\'re passed a plate of vegetables you don\'t want.', correct:'いいえ、けっこう です', distractors:['おいしい です','もっと ください','おかわり'] },
+            { scenario:'Someone offers more rice but you\'re finished.', correct:'もう けっこう です', distractors:['いただきます','ごちそうさま でした','ありがとう'] }
         ];
 
         function actPoliteRefusal() {

@@ -2068,6 +2068,7 @@ let currentStroke = null;
 let isDrawing = false;
 let showingAnimation = false;
 let showMeGen = 0;        // Bumped to cancel a running Show Me animation
+let gameGen = 0;          // Bumped each new game so stale timers become no-ops
 let guidePixelCache = { char: null, mask: null, w: 0 };
 const kvgCache = {};
 let guideKvgMainCache = {};
@@ -2162,6 +2163,7 @@ function generateGrid() {
 // GAME INIT
 // =========================================================================
 function startGame() {
+    gameGen++;
     document.getElementById('introOverlay').classList.add('hidden');
     generateGrid();
     lives = 3;
@@ -2199,6 +2201,7 @@ function startGame() {
 }
 
 function restartGame() {
+    gameGen++;
     const resultOv = document.getElementById('resultOverlay');
     resultOv.classList.remove('active');
     resultOv.style.backgroundImage = '';
@@ -2218,6 +2221,9 @@ function restartGame() {
     streak = 0;
     treasuresFound = [];
     kanjiPracticed = new Set();
+
+    // wipe the previous dive's half-drawn kanji, feedback, and any Show Me run
+    clearCanvas();
 
     updateAllUI();
     hideKanjiPanel();
@@ -3146,12 +3152,18 @@ function updateStrokeCounter() {
 // =========================================================================
 // TOUCH / MOUSE INPUT
 // =========================================================================
+let oceanTouchId = null;   // identifier of the finger that started the stroke
+let drawingJudged = false; // this exact drawing was already checked - no re-judging
 function getPos(e) {
     canvasRect = drawCanvas.getBoundingClientRect();
     let clientX, clientY;
     if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
+        let t = e.touches[0];
+        if (oceanTouchId !== null) {
+            for (const tt of e.touches) if (tt.identifier === oceanTouchId) { t = tt; break; }
+        }
+        clientX = t.clientX;
+        clientY = t.clientY;
     } else {
         clientX = e.clientX;
         clientY = e.clientY;
@@ -3167,6 +3179,8 @@ function getPos(e) {
 function startStroke(e) {
     if (showingAnimation || !currentKanji) return;
     e.preventDefault();
+    if (isDrawing) return; // a resting palm/second finger must not restart the stroke
+    if (e.changedTouches && e.changedTouches.length > 0) oceanTouchId = e.changedTouches[0].identifier;
     isDrawing = true;
     const pos = getPos(e);
     currentStroke = [pos];
@@ -3175,6 +3189,8 @@ function startStroke(e) {
 function moveStroke(e) {
     if (!isDrawing || !currentStroke || showingAnimation) return;
     e.preventDefault();
+    // only the finger that started the stroke may draw
+    if (e.touches && oceanTouchId !== null && ![...e.touches].some(t => t.identifier === oceanTouchId)) return;
     const pos = getPos(e);
     currentStroke.push(pos);
     redrawCanvas();
@@ -3183,9 +3199,13 @@ function moveStroke(e) {
 function endStroke(e) {
     if (!isDrawing || !currentStroke || showingAnimation) return;
     e.preventDefault();
+    // only the tracked finger lifting ends the stroke
+    if (e.changedTouches && oceanTouchId !== null && ![...e.changedTouches].some(t => t.identifier === oceanTouchId)) return;
+    oceanTouchId = null;
     isDrawing = false;
     // Keep even 1-2 point strokes: quick taps are real "dot" strokes
     if (currentStroke.length >= 1) {
+        drawingJudged = false; // the drawing changed - it may be judged again
         userStrokes.push(currentStroke);
     }
     currentStroke = null;
@@ -3212,6 +3232,8 @@ function clearCanvas() {
     userStrokes = [];
     currentStroke = null;
     isDrawing = false;
+    oceanTouchId = null;
+    drawingJudged = false;
     showingAnimation = false;
     showMeGen++; // Cancel any running Show Me animation
     guidePixelCache = { char: null, mask: null, w: 0 };
@@ -3394,6 +3416,10 @@ async function checkDrawing() {
         playSfx('wrong');
         return;
     }
+    // re-tapping Check on an unchanged wrong drawing must not re-cost an
+    // attempt, reset the streak, or move the dangers again
+    if (drawingJudged) return;
+    drawingJudged = true;
 
     kanjiAttempts++;
 
@@ -3450,9 +3476,11 @@ async function checkDrawing() {
         currentKanji = null;
         isMoving = true;
 
-        // Move player after brief delay
+        // Move player after brief delay (generation-guarded: a quick
+        // Surface -> Play Again must not let this fire inside the new game)
+        const gen = gameGen;
         setTimeout(() => {
-            if (!gameActive) return;
+            if (!gameActive || gen !== gameGen) return;
             selectedDirection = pendingDirection;
             movePlayer();
         }, 600);
@@ -3994,6 +4022,13 @@ function createBubbles() {
 // =========================================================================
 document.addEventListener('keydown', function(e) {
     if (!gameActive) return;
+    // while the map overlay is open, keys must not drive the game underneath
+    const mapOv = document.getElementById('mapOverlay');
+    if (mapOv && mapOv.classList.contains('active')) {
+        if (e.key === 'Escape' || e.key === 'm' || e.key === 'M') { e.preventDefault(); closeMap(); }
+        return;
+    }
+    if (e.key === 'Enter' && e.repeat) return; // held Enter must not re-judge the drawing
 
     if (e.key === 'ArrowUp') {
         e.preventDefault();

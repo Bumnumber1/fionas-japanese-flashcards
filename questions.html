@@ -511,7 +511,13 @@
                 prompt: currentPrompt ? currentPrompt.en : '',
                 ts: Date.now()
             });
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 50))); } catch(e) {}
+            let ok = true;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 50))); } catch(e) { ok = false; }
+            if (!ok) {
+                // storage unavailable: keep her typed text instead of celebrating a save that never happened
+                alert('Hmm, I could not save that just now — your writing is still here, try again!');
+                return;
+            }
             renderSaved();
             spawnSaveConfetti();
             document.getElementById('qInput').value = '';
@@ -669,6 +675,17 @@
                 quizClearTimer = setTimeout(() => { if (card) card.classList.remove('quizzing'); }, 2500);
             }, answerDelay);
         }
+
+        // leaving/hiding the page must silence quiz speech and cancel its timers
+        function teardownQuiz() {
+            if (quizTimer) { clearTimeout(quizTimer); quizTimer = null; }
+            if (quizClearTimer) { clearTimeout(quizClearTimer); quizClearTimer = null; }
+            document.querySelectorAll('.saved-item.quizzing').forEach(c => c.classList.remove('quizzing'));
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+        window.addEventListener('pagehide', teardownQuiz);
+        window.addEventListener('beforeunload', teardownQuiz);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) teardownQuiz(); });
 
         renderQwGrid();
         renderSaved();

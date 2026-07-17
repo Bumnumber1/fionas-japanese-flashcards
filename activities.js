@@ -568,11 +568,13 @@ window.Activities = (() => {
             tfill.style.transition = 'width ' + ms + 'ms linear';
             void tfill.offsetWidth;
             tfill.style.width = '0%';
+            let missedThis = false; // elimination-tapping earns the advance, not the point
             host.querySelectorAll('.whack-hole').forEach((btn, i) => btn.onclick = () => {
                 const c = cells[i];
                 if (!c) return;
-                if (c === target) { score++; ctx.sfx.pop(); clearTimeout(timer); nextRound(); }
+                if (c === target) { if (!missedThis) score++; ctx.sfx.pop(); clearTimeout(timer); nextRound(); }
                 else {
+                    missedThis = true;
                     misses++; ctx.sfx.wrong();
                     btn.classList.add('shake'); ctx.after(() => btn.classList.remove('shake'), 400);
                     const lbl = host.querySelector('[data-score]');
@@ -613,6 +615,7 @@ window.Activities = (() => {
         function round() {
             if (i >= lines.length) return finish(host, ctx, stars, lines.length);
             const s = lines[i];
+            let graded = false; // each sentence may award a star and advance exactly once
             el(host, `
               ${bar(i, lines.length)}
               <div class="act-subtitle">🎤 Say it in Japanese!</div>
@@ -629,18 +632,23 @@ window.Activities = (() => {
               <div class="trace-msg" data-msg></div>`);
             host.querySelector('[data-listen]').onclick = () => ctx.speak(s.jp);
             host.querySelector('[data-said]').onclick = function () {
-                if (this.disabled) return;
+                if (graded || this.disabled) return;
+                graded = true;
                 this.disabled = true;
+                const mic = host.querySelector('[data-mic]');
+                if (mic) mic.disabled = true;
                 stars++; ctx.sfx.star();
                 host.querySelector('[data-msg]').textContent = 'Brave speaking! 🎤';
                 ctx.after(() => { i++; round(); }, 700);
             };
             if (SR) host.querySelector('[data-mic]').onclick = function () {
+                if (graded) return;
                 const msg = host.querySelector('[data-msg]');
                 try { rec && rec.stop(); } catch (e) {}
                 rec = new SR(); rec.lang = 'ja-JP'; rec.maxAlternatives = 3;
                 this.textContent = '👂 Listening...'; msg.textContent = '';
                 rec.onresult = ev => {
+                    if (graded) return; // a late result must not grade the round twice
                     let best = 0;
                     for (const alt of ev.results[0]) {
                         const a = normalizeJa(alt.transcript), b = normalizeJa(s.jp);
@@ -650,6 +658,11 @@ window.Activities = (() => {
                         if (sim > best) best = sim;
                     }
                     if (best >= 0.7) {
+                        graded = true;
+                        const said = host.querySelector('[data-said]'), mic = host.querySelector('[data-mic]');
+                        if (said) said.disabled = true;
+                        if (mic) mic.disabled = true;
+                        try { rec && rec.stop(); } catch (e) {}
                         stars++; ctx.sfx.correct(); msg.textContent = 'すごい! Perfect!';
                         ctx.after(() => ctx.speak(pickN(['すごい', 'じょうず', 'パーフェクト'], 1)[0]), 400);
                         ctx.after(() => { i++; round(); }, 1400);
@@ -709,16 +722,18 @@ window.Activities = (() => {
               <div class="act-options shop-opts">${options.map((o, j) => `<button class="act-opt" data-j="${j}">${o.html}</button>`).join('')}</div>`);
             host.querySelector('[data-spk]').onclick = () => ctx.speak('ぜんぶで いくらですか');
             if (i === 0) ctx.speak('いらっしゃいませ');
+            let missed = false; // stars reflect first-try accuracy, like every other game
             host.querySelectorAll('.act-opt').forEach(btn => btn.onclick = () => {
                 const ok = options[+btn.dataset.j].ok;
                 btn.classList.add(ok ? 'right' : 'wrong');
                 if (ok) {
-                    correct++; purse += total; ctx.sfx.coin(); ctx.speak(yenJp(total) + 'です。ありがとうございます!');
+                    if (!missed) correct++;
+                    purse += total; ctx.sfx.coin(); ctx.speak(yenJp(total) + 'です。ありがとうございます!');
                     host.querySelector('[data-purse]').textContent = '👛 おさいふ: ¥' + purse;
                     host.querySelectorAll('.act-opt').forEach(b => b.disabled = true);
                     // long enough for the whole price reading before the next round cancels it
                     ctx.after(() => { i++; round(); }, 2800);
-                } else { ctx.sfx.wrong(); btn.disabled = true; }
+                } else { missed = true; ctx.sfx.wrong(); btn.disabled = true; }
             });
         }
         round();
@@ -779,14 +794,16 @@ window.Activities = (() => {
               <div class="act-options">${options.map((o, j) => `<button class="act-opt" data-j="${j}">${o.html}</button>`).join('')}</div>`);
             host.querySelectorAll('.count-emoji').forEach((s, k2) =>
                 ctx.after(() => { s.classList.add('pop-in'); ctx.sfx.pop(); }, 150 * k2));
+            let missed = false; // stars reflect first-try accuracy, like every other game
             host.querySelectorAll('.act-opt').forEach(btn => btn.onclick = () => {
                 const ok = options[+btn.dataset.j].ok;
                 btn.classList.add(ok ? 'right' : 'wrong');
                 if (ok) {
-                    correct++; ctx.sfx.correct(); ctx.speak(answer);
+                    if (!missed) correct++;
+                    ctx.sfx.correct(); ctx.speak(answer);
                     host.querySelectorAll('.act-opt').forEach(b => b.disabled = true);
                     ctx.after(() => { i++; round(); }, 1000);
-                } else { ctx.sfx.wrong(); btn.disabled = true; }
+                } else { missed = true; ctx.sfx.wrong(); btn.disabled = true; }
             });
         }
         round();

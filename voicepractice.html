@@ -436,13 +436,25 @@
             currentUtter = null;
         }
 
-        function stopListening() {
+        // soft stop (the ⏹ button): stop() only, so the pending result still
+        // arrives and gets judged. hard stop (navigation/teardown): abort and
+        // reset the step so no stale result or "aborted" error surfaces.
+        function stopListening(hard) {
             if (recognizer) {
                 try { recognizer.stop(); } catch(e){}
-                try { recognizer.abort && recognizer.abort(); } catch(e){}
+                if (hard) { try { recognizer.abort && recognizer.abort(); } catch(e){} }
+            }
+            if (!hard) {
+                if (listeningKind) {
+                    const status = document.getElementById(listeningKind + '-status');
+                    if (status) { status.textContent = 'Checking...'; status.className = 'status-msg status-listen'; }
+                }
+                return; // onresult/onend finish the session
             }
             if (listeningKind) {
                 stopListenUI(listeningKind);
+                const status = document.getElementById(listeningKind + '-status');
+                if (status) { status.textContent = 'Tap “Speak” when ready, or Listen first to hear an example.'; status.className = 'status-msg'; }
             }
             recognizer = null;
             listeningKind = null;
@@ -468,12 +480,25 @@
         }
 
         // Normalize for comparison: strip spaces, punctuation, trailing ka, katakana->hiragana, diacritics kept
+        // Speech recognition returns standard orthography (kanji + Arabic numerals),
+        // but the targets are kana-only — map the forms the recognizer actually
+        // produces for these scenarios back to kana. Longest strings first.
+        const KANJI_TO_KANA = [
+            ['何時', 'なんじ'], ['学校', 'がっこう'], ['美味しい', 'おいしい'],
+            ['八時', 'はちじ'], ['何', 'なに'], ['本', 'ほん'], ['猫', 'ねこ'],
+            ['犬', 'いぬ'], ['誰', 'だれ'], ['今', 'いま'], ['時', 'じ'],
+            ['10', 'じゅう'], ['0', 'ぜろ'], ['1', 'いち'], ['2', 'に'], ['3', 'さん'],
+            ['4', 'よん'], ['5', 'ご'], ['6', 'ろく'], ['7', 'なな'], ['8', 'はち'], ['9', 'きゅう'],
+        ];
         function normalize(raw) {
             if (!raw) return '';
             let s = raw
                 .replace(/[\s　]+/g, '')
                 .replace(/[。、．，.!?！？]+/g, '')
                 .replace(/[？?]$/, '');
+            // full-width digits -> ASCII, then kanji/numerals -> kana
+            s = s.replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+            for (const [from, to] of KANJI_TO_KANA) s = s.split(from).join(to);
             // katakana -> hiragana
             s = s.replace(/[ァ-ヶ]/g, ch =>
                 String.fromCharCode(ch.charCodeAt(0) - 0x60)
@@ -554,18 +579,22 @@
                 judge(kind, bestScore);
             };
             rec.onerror = (ev) => {
+                if (recognizer !== rec) return;         // stale session may not touch the live UI
+                if (ev.error === 'aborted') return;     // page-initiated abort, not the child's fault
                 status.textContent = 'Mic error: ' + ev.error + '. Try tapping Reveal instead.';
                 status.className = 'status-msg status-miss';
                 stopListenUI(kind);
             };
             rec.onend = () => {
-                stopListenUI(kind);
-                // Only clear if this is still the active recognizer — a stale
-                // onend must not clobber a newly started session on the other step
-                if (recognizer === rec) {
-                    recognizer = null;
-                    if (listeningKind === kind) listeningKind = null;
+                // A stale onend must not clobber a newly started session: only tidy
+                // the old button when no new session took over this step.
+                if (recognizer !== rec) {
+                    if (listeningKind !== kind) stopListenUI(kind);
+                    return;
                 }
+                stopListenUI(kind);
+                recognizer = null;
+                if (listeningKind === kind) listeningKind = null;
             };
 
             try { rec.start(); } catch(e) { stopListenUI(kind); listeningKind = null; recognizer = null; }
@@ -768,7 +797,7 @@
         }
 
         function nextScenario() {
-            stopListening();
+            stopListening(true);
             stopAllSpeech();
             current++;
             if (current >= scenarios.length) {
@@ -781,7 +810,7 @@
 
         function prevScenario() {
             if (current === 0) return;
-            stopListening();
+            stopListening(true);
             stopAllSpeech();
             current--;
             renderScenario();
@@ -831,7 +860,7 @@
         }
 
         function restart() {
-            stopListening();
+            stopListening(true);
             stopAllSpeech();
             current = 0;
             initAttempts();
@@ -840,10 +869,10 @@
         }
 
         // Stop everything when navigating away or hiding the tab
-        window.addEventListener('pagehide', () => { stopListening(); stopAllSpeech(); });
-        window.addEventListener('beforeunload', () => { stopListening(); stopAllSpeech(); });
+        window.addEventListener('pagehide', () => { stopListening(true); stopAllSpeech(); });
+        window.addEventListener('beforeunload', () => { stopListening(true); stopAllSpeech(); });
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) { stopListening(); stopAllSpeech(); }
+            if (document.hidden) { stopListening(true); stopAllSpeech(); }
         });
 
         renderScenario();

@@ -1481,6 +1481,7 @@
     let activeTouchId = null; // identifier of the finger that started the stroke
     let showingAnimation = false;
     let animGen = 0; // generation counter - bumping it cancels a running Show Me animation
+    let scored = false; // this drawing already passed Check - block re-grading the same strokes
     let streak = 0; // consecutive correct checks - grows the celebration
     let rainbowInk = false; // display-only reward ink after finishing a whole row
 
@@ -1814,11 +1815,20 @@
         const container = document.getElementById('canvasContainer');
         const rect = container.getBoundingClientRect();
         const size = Math.floor(rect.width);
+        const oldSize = drawCanvas.width;
         drawCanvas.width = size;
         drawCanvas.height = size;
         drawCanvas.style.width = size + 'px';
         drawCanvas.style.height = size + 'px';
         canvasRect = drawCanvas.getBoundingClientRect();
+        // keep already-drawn strokes aligned with the rescaled guide, or a
+        // rotation mid-drawing would unfairly fail a correct trace
+        if (oldSize > 0 && oldSize !== size) {
+            const ratio = size / oldSize;
+            const scalePt = p => { p.x *= ratio; p.y *= ratio; };
+            userStrokes.forEach(st => st.forEach(scalePt));
+            if (currentStroke) currentStroke.forEach(scalePt);
+        }
         redrawCanvas();
     }
 
@@ -2023,6 +2033,7 @@
         // Keep even 1-2 point strokes: quick taps are real "dot" strokes
         // in characters like ふ - discarding them broke the stroke count.
         if (currentStroke.length >= 1) {
+            scored = false; // the drawing changed - it may be graded again
             userStrokes.push(currentStroke);
         }
         currentStroke = null;
@@ -2054,6 +2065,7 @@
         currentStroke = null;
         isDrawing = false;
         activeTouchId = null;
+        scored = false;
         showingAnimation = false;
         animGen++; // cancel any Show Me animation still running
         guidePixelCache = { char: null, mask: null, w: 0 };
@@ -2312,6 +2324,10 @@
             return;
         }
 
+        // A passing drawing can only be graded once (re-tapping Check or holding
+        // Enter must not inflate the streak or replay stars/speech)
+        if (scored) return;
+
         // Judge against the same KanjiVG strokes the guide displays.
         // KanjiVG is also the authority on stroke count (one path per stroke).
         const kvgRaw = await getKvgPaths(data.char);
@@ -2358,6 +2374,7 @@
         }
 
         if (avg >= 0.55 && backwardsCount <= expectedCount / 2) {
+            scored = true;
             streak++;
             // Speak the character on success
             setTimeout(() => speakCurrentChar(), 400);
@@ -2422,6 +2439,7 @@
         const dirPct = directionScore / expectedCount;
 
         if (pixelScore >= 0.45 && dirPct >= 0.4) {
+            scored = true;
             streak++;
             setTimeout(() => speakCurrentChar(), 400);
             const wasNewChar = !(currentMode.startsWith('kanji') ? practicedKanji
@@ -2703,6 +2721,10 @@
         const myGen = ++animGen;
         userStrokes = [];
         currentStroke = null;
+        // release any finger mid-stroke, or startStroke() would reject every
+        // future touch and permanently lock the canvas
+        isDrawing = false;
+        activeTouchId = null;
 
         const data = getCurrentChar();
         const w = drawCanvas.width;

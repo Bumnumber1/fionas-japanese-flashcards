@@ -849,7 +849,8 @@
         pageImage.onload = function () {
             pageLoading.style.display = 'none';
             pageImage.style.visibility = 'visible';
-            pageImage.style.opacity = '1';
+            // no inline opacity here - it would permanently outrank the
+            // .slide-in/.slide-out classes and kill every page-turn cross-fade
             isAnimating = false;
         };
         pageImage.onerror = function () {
@@ -876,6 +877,20 @@
         // Offline support: caches all course assets after the first visit
         if ('serviceWorker' in navigator && location.protocol !== 'file:') {
             navigator.serviceWorker.register('sw.js');
+            // Gently pre-warm every workbook page image (the service worker caches
+            // each successful fetch), one at a time so browsing stays smooth and a
+            // page Fiona never opened online still works offline. Already-cached
+            // pages resolve instantly from the cache.
+            window.addEventListener('load', () => {
+                let warm = 0;
+                function warmNext() {
+                    if (warm >= pages.length) return;
+                    const img = new Image();
+                    img.onload = img.onerror = () => { warm++; setTimeout(warmNext, 400); };
+                    img.src = IMAGE_BASE + pages[warm].file;
+                }
+                setTimeout(warmNext, 3000);
+            });
         }
     </script>
 </body>
