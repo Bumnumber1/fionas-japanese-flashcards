@@ -46,7 +46,14 @@ window.Activities = (() => {
             ctx.sfx.star();
         }, 350 + 250 * k);
         if (record) ctx.after(() => ctx.sfx.star(), 350 + 250 * stars);
-        ctx.after(() => ctx.speak(stars === 3 ? 'すごい' : stars === 2 ? 'よくできました' : 'がんばったね'), 1100);
+        // spoken praise - but never cut off the last answer's own speech mid-word
+        // (the final scramble/blank/shop sentence can still be playing); retry once
+        const praiseLine = stars === 3 ? 'すごい' : stars === 2 ? 'よくできました' : 'がんばったね';
+        const tryPraise = retry => {
+            if (!('speechSynthesis' in window) || !speechSynthesis.speaking) ctx.speak(praiseLine);
+            else if (retry) ctx.after(() => tryPraise(false), 1600);
+        };
+        ctx.after(() => tryPraise(true), 1100);
         host.querySelector('[data-again]').onclick = () => ctx._restart();
         host.querySelector('[data-done]').onclick = () => ctx._close();
     }
@@ -117,7 +124,9 @@ window.Activities = (() => {
 
     // ---------- 1. memory ----------
     function memory(host, ctx) {
-        const words = distinct(ctx.pool, 6, v => v.jp);
+        // unique meaning AND unique kana - twin-meaning words (ゆうしゃ/ヒーロー are
+        // both "🦸 hero") would make two indistinguishable face cards
+        const words = distinct(distinct(ctx.pool, ctx.pool.length, v => v.jp), 6, v => (v.en || '').toLowerCase());
         let cards = [];
         words.forEach((v, i) => {
             cards.push({ pid: i, face: `<span class="mem-jp">${escHtml(v.jp)}</span>`, say: v.jp });
@@ -409,14 +418,17 @@ window.Activities = (() => {
         'adverb': 'Adverbs', 'phrase': 'Phrases 💬', 'counter': 'Counters 🔢', 'expression': 'Phrases 💬', 'particle': 'Particles' };
     function sort(host, ctx) {
         const byPos = {};
-        ctx.pool.forEach(v => { (byPos[v.pos] = byPos[v.pos] || []).push(v); });
+        // phrase + expression share the "Phrases 💬" label, so they must be ONE
+        // team - otherwise both bins could be labeled identically (a blind 50/50)
+        const posClass = v => (v.pos === 'phrase' || v.pos === 'expression') ? 'phrase' : v.pos;
+        ctx.pool.forEach(v => { const c = posClass(v); (byPos[c] = byPos[c] || []).push(v); });
         const classes = Object.keys(byPos).filter(p => byPos[p].length >= 3);
         let mode, cards, binA, binB;
         if (classes.length >= 2) {
             const [a, b] = pickN(classes, 2);
             binA = { key: a, label: POS_LABEL[a] || a }; binB = { key: b, label: POS_LABEL[b] || b };
             cards = shuffleArr(pickN(byPos[a], 5).concat(pickN(byPos[b], 5)))
-                .map(v => ({ html: `${v.emoji} <b>${escHtml(v.jp)}</b><br><small>${escHtml(v.en)}</small>`, say: v.jp, bin: v.pos === a ? 'A' : 'B' }));
+                .map(v => ({ html: `${v.emoji} <b>${escHtml(v.jp)}</b><br><small>${escHtml(v.en)}</small>`, say: v.jp, bin: posClass(v) === a ? 'A' : 'B' }));
             mode = 'pos';
         } else {
             const words = distinct(ctx.pool, 10, v => v.jp);
@@ -466,8 +478,12 @@ window.Activities = (() => {
             const isParticle = bi >= 0;
             if (bi < 0) bi = Math.floor(Math.random() * tokens.length);
             const answer = tokens[bi];
+            // never offer a particle that would ALSO be correct in the sentence
+            // (は/が/も swap freely in many clozes; に/へ both mark direction)
+            const CONFUSABLE = { 'は': ['が', 'も'], 'が': ['は', 'も'], 'も': ['は', 'が'], 'に': ['へ'], 'へ': ['に'] };
+            const alsoOk = CONFUSABLE[answer] || [];
             const distract = isParticle
-                ? pickN(PARTICLES.filter(p => p !== answer), 3)
+                ? pickN(PARTICLES.filter(p => p !== answer && !alsoOk.includes(p)), 3)
                 : pickN(ctx.pool.map(v => v.jp).filter(t => t !== answer), 3);
             const shown = tokens.map((t, j) => j === bi ? '<span class="blank-gap">___</span>' : escHtml(t)).join(' ');
             return {
@@ -643,6 +659,9 @@ window.Activities = (() => {
             };
             if (SR) host.querySelector('[data-mic]').onclick = function () {
                 if (graded) return;
+                // stop any TTS first - the mic must never transcribe the app's own
+                // "Listen" audio of the target sentence and self-award the star
+                try { speechSynthesis.cancel(); } catch (e) {}
                 const msg = host.querySelector('[data-msg]');
                 try { rec && rec.stop(); } catch (e) {}
                 rec = new SR(); rec.lang = 'ja-JP'; rec.maxAlternatives = 3;
@@ -765,12 +784,23 @@ window.Activities = (() => {
         'こ': { re: /apple|ball|candy|egg|orange|onigiri|tomato|cookie|cake|strawberry|peach|melon|box|ball/i, emo: '🍎⚽🍬🥚🍊🍙🍅🍪🍰🍓🍑🍈📦', def: { jp: 'りんご', emoji: '🍎' } },
         'つ': { re: /./, emo: '', def: { jp: 'りんご', emoji: '🍎' } },
     };
+    // つ counts THINGS, never animals or people (those take ひき/にん) - so the
+    // generic fallback can never produce 「こどもは いくつ？」-style Japanese
+    function animateNoun(v) {
+        return COUNTER_NOUNS['ひき'].re.test(v.en) || COUNTER_NOUNS['にん'].re.test(v.en) ||
+            (v.emoji && (COUNTER_NOUNS['ひき'].emo.includes(v.emoji) || COUNTER_NOUNS['にん'].emo.includes(v.emoji)));
+    }
     function counters(host, ctx) {
         // pull counters from the pool (this week + reviewed weeks) so review weeks keep their counters
         const taught = ctx.pool.filter(v => v.pos === 'counter').map(v => v.jp);
         // undo rendaku/gemination on the last mora so voiced forms still match their key
         const norm = t => t.replace(/[ぱば]い$/, 'はい').replace(/[ぴび]き$/, 'ひき').replace(/[ぽぼ]ん$/, 'ほん');
-        const keys = Object.keys(COUNTERS).filter(k => taught.some(t => norm(t).endsWith(k)));
+        // がつ (calendar months) and 〜さつ must not switch on the generic つ counter
+        const keys = Object.keys(COUNTERS).filter(k => taught.some(t => {
+            const nt = norm(t);
+            if (k === 'つ' && /(がつ|さつ)$/.test(nt)) return false;
+            return nt.endsWith(k);
+        }));
         const useKeys = keys.length ? keys : ['つ'];
         const nouns = distinct(ctx.pool.filter(v => v.pos === 'noun' && v.emoji), 8, v => v.jp);
         let i = 0, correct = 0;
@@ -781,7 +811,8 @@ window.Activities = (() => {
             const n = Math.floor(Math.random() * (k === 'にん' ? 6 : 10)) + 1;
             // only count nouns this counter can grammatically count
             const cn = COUNTER_NOUNS[k];
-            const fit = nouns.filter(v => cn.re.test(v.en) || (v.emoji && cn.emo.includes(v.emoji)));
+            const fit = nouns.filter(v => (cn.re.test(v.en) || (v.emoji && cn.emo.includes(v.emoji)))
+                && !(k === 'つ' && animateNoun(v)));
             const noun = fit.length ? fit[i % fit.length] : cn.def;
             const answer = COUNTERS[k][n - 1];
             const distract = pickN(COUNTERS[k].filter(x => x !== answer), 3);
@@ -947,7 +978,8 @@ window.Activities = (() => {
         const usedT = new Set();
         function round() {
             if (i >= N) return finish(host, ctx, correct, N);
-            const cards = distinct(ctx.pool, 6, v => v.jp);
+            // unique meaning too - twin-meaning words would show identical faces
+            const cards = distinct(distinct(ctx.pool, ctx.pool.length, v => v.jp), 6, v => (v.en || '').toLowerCase());
             const fresh = cards.filter(c => !usedT.has(c.jp));
             const pickFrom = fresh.length ? fresh : cards;
             const target = pickFrom[Math.floor(Math.random() * pickFrom.length)];
@@ -1135,10 +1167,17 @@ window.Activities = (() => {
         let i = 0, correct = 0;
         function round() {
             if (i >= N) return finish(host, ctx, correct, N);
-            const [A, B] = pairs[Math.floor(Math.random() * pairs.length)];
-            const aJp = new Set(A.words.map(w => w.jp));
-            const three = distinct(A.words, 3, v => v.jp);
-            const odd = pickN(B.words.filter(w => !aJp.has(w.jp)), 1)[0];
+            // pick a pair whose "same team" trio has no cross-membership with the
+            // odd word's team (a word in BOTH baskets would make two right answers)
+            let three = null, odd = null, A = null, B = null;
+            for (const [pa, pb] of shuffleArr(pairs)) {
+                const aJp = new Set(pa.words.map(w => w.jp));
+                const bJp = new Set(pb.words.map(w => w.jp));
+                const trio = distinct(pa.words.filter(w => !bJp.has(w.jp)), 3, v => v.jp);
+                const o = pickN(pb.words.filter(w => !aJp.has(w.jp)), 1)[0];
+                if (trio.length === 3 && o) { A = pa; B = pb; three = trio; odd = o; break; }
+            }
+            if (!odd) return quiz(host, ctx);
             const cards = shuffleArr(three.concat([odd]));
             let missed = false;
             el(host, `

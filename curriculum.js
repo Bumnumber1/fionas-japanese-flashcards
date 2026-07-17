@@ -27,14 +27,18 @@ const Journey = (() => {
     function toGlobal(y, w) { return (y - 1) * WEEKS_PER_YEAR + (w - 1); }
 
     // Which week is "now"? Clamped to the journey range.
+    // Week math happens in CALENDAR space (whole days via UTC), not raw
+    // milliseconds, so DST transitions can never shift a week boundary.
     function currentPos(now) {
-        const t = (now || new Date()).getTime() - START.getTime();
-        return fromGlobal(Math.floor(t / MS_WEEK));
+        const n = now || new Date();
+        const days = Math.floor((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())
+            - Date.UTC(START.getFullYear(), START.getMonth(), START.getDate())) / 86400000);
+        return fromGlobal(Math.floor(days / 7));
     }
 
     function weekDates(y, w) {
-        const s = new Date(START.getTime() + toGlobal(y, w) * MS_WEEK);
-        const e = new Date(s.getTime() + 6 * 24 * 60 * 60 * 1000);
+        const s = new Date(START.getFullYear(), START.getMonth(), START.getDate() + toGlobal(y, w) * 7);
+        const e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6);
         const fmt = d => (d.getMonth() + 1) + '/' + d.getDate();
         return { start: s, end: e, label: fmt(s) + ' - ' + fmt(e) + ', ' + e.getFullYear() };
     }

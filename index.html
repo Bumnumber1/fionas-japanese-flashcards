@@ -2000,7 +2000,7 @@
             { japanese: 'ちょっとまって', romaji: 'chotto matte', english: 'Wait a moment', emoji: '&#x270B;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
             { japanese: 'がんばって', romaji: 'ganbatte', english: 'Do your best / Good luck', emoji: '&#x1F4AA;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
             { japanese: 'おつかれさま', romaji: 'otsukaresama', english: 'Good work / Thanks for your effort', emoji: '&#x1F44F;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
-            { japanese: 'きをつけて', romaji: 'ki wo tsukete', english: 'Take care / Be careful', emoji: '&#x1F340;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
+            { japanese: 'きをつけて', romaji: 'ki o tsukete', english: 'Take care / Be careful', emoji: '&#x1F340;', category: 'Greetings & Polite Phrases', theme: 'greetings' },
         ];
 
         const categoryEmojis = {
@@ -2286,6 +2286,7 @@
         function closeQuiz() {
             document.getElementById('quizOverlay').classList.remove('active');
             document.getElementById('scoreBar').classList.remove('active');
+            try { speechSynthesis.cancel(); } catch (e) {} // don't keep talking over the hub
         }
 
         // Print functionality
@@ -2550,7 +2551,7 @@
             else if (totalCards > 24) grid.classList.add('cols-5');
 
             // Live "beat the record" target: chase the current #1 time for this board size
-            const records = JSON.parse(localStorage.getItem(`conc_records_${concTotal}`) || '[]');
+            const records = lsGetJSON(`conc_records_${concTotal}`, []);
             concBestRecord = (!concIs2P && records.length > 0) ? records[0] : null;
             const timerEl = document.getElementById('concTimer');
             timerEl.classList.remove('gold-flash');
@@ -2755,14 +2756,14 @@
 
                 // Check if this is a record
                 const key = `conc_records_${concTotal}`;
-                const records = JSON.parse(localStorage.getItem(key) || '[]');
+                const records = lsGetJSON(key, []);
                 const isRecord = records.length < 10 || concSeconds < records[records.length - 1].time;
 
                 if (isRecord) {
                     nameInput.classList.add('active');
                     document.getElementById('concRecordMsg').textContent =
                         records.length === 0 ? 'First completion! Enter your name:' : 'New record! Enter your name:';
-                    document.getElementById('concNameField').value = localStorage.getItem('conc_last_name') || '';
+                    document.getElementById('concNameField').value = lsGetStr('conc_last_name', '');
                     document.getElementById('concNameField').focus();
                 } else {
                     nameInput.classList.remove('active');
@@ -2774,14 +2775,14 @@
 
         function saveRecord() {
             const name = document.getElementById('concNameField').value.trim() || 'Anonymous';
-            localStorage.setItem('conc_last_name', name);
+            lsSet('conc_last_name', name);
             const key = `conc_records_${concTotal}`;
-            const records = JSON.parse(localStorage.getItem(key) || '[]');
+            const records = lsGetJSON(key, []);
             const timeStr = `${Math.floor(concSeconds/60)}:${String(concSeconds%60).padStart(2,'0')}`;
             records.push({ name, time: concSeconds, timeStr, moves: concMoves, date: new Date().toLocaleDateString() });
             records.sort((a, b) => a.time - b.time || a.moves - b.moves);
             if (records.length > 10) records.length = 10;
-            localStorage.setItem(key, JSON.stringify(records));
+            lsSet(key, JSON.stringify(records));
 
             document.getElementById('concNameInput').classList.remove('active');
             playSfx('correct');
@@ -2791,9 +2792,14 @@
             renderLeaderboard(concTotal, idx);
         }
 
+        // storage helpers: degrade to defaults instead of crashing when site data
+        // is blocked or a stored value is corrupt (matches every other page)
+        function lsGetJSON(key, def) { try { return JSON.parse(localStorage.getItem(key)) || def; } catch (e) { return def; } }
+        function lsGetStr(key, def) { try { return localStorage.getItem(key) || def; } catch (e) { return def; } }
+        function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
         function renderLeaderboard(pairCount, highlightIdx) {
             const key = `conc_records_${pairCount}`;
-            const records = JSON.parse(localStorage.getItem(key) || '[]');
+            const records = lsGetJSON(key, []);
             const div = document.getElementById('concLeaderboard');
             if (records.length === 0) { div.innerHTML = ''; return; }
 
@@ -2804,7 +2810,8 @@
             records.forEach((r, i) => {
                 const cls = i === highlightIdx ? ' class="highlight"' : '';
                 const rank = medals[i] || (i + 1);
-                html += `<tr${cls}><td class="rank">${rank}</td><td>${r.name}</td><td>${r.timeStr}</td><td>${r.moves}</td></tr>`;
+                const safeName = String(r.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                html += `<tr${cls}><td class="rank">${rank}</td><td>${safeName}</td><td>${r.timeStr}</td><td>${r.moves}</td></tr>`;
             });
             html += `</table>`;
             div.innerHTML = html;
@@ -2815,6 +2822,7 @@
             clearInterval(concTimerInterval);
             clearTimeout(concPraiseTimer);
             concGen++;
+            try { speechSynthesis.cancel(); } catch (e) {} // don't keep talking over the hub
         }
 
         // Go Fish game
@@ -3049,6 +3057,8 @@
             };
 
             try {
+                // never let the mic transcribe Tako-chan's own voice
+                try { speechSynthesis.cancel(); } catch (e2) {}
                 gfRecognition.start();
             } catch(e) {
                 btn.classList.remove('recording');
@@ -3310,8 +3320,8 @@
                 emoji = '&#x1F3C6;'; title = 'You Win!';
                 speak('おめでとう！');
                 // Running win tally against Tako-chan
-                const wins = (parseInt(localStorage.getItem('gf_wins')) || 0) + 1;
-                localStorage.setItem('gf_wins', wins);
+                const wins = (parseInt(lsGetStr('gf_wins', '0')) || 0) + 1;
+                lsSet('gf_wins', wins);
                 extra += `<br>&#x1F3C5; That's ${wins} win${wins === 1 ? '' : 's'} against Tako-chan!`;
             } else if (gfAiPairCount > gfPlayerPairCount) {
                 emoji = '&#x1F916;'; title = 'AI Wins!';
@@ -3321,9 +3331,9 @@
             }
 
             // Best pair count ever - celebrate a new personal best
-            const bestPairs = parseInt(localStorage.getItem('gf_best_pairs')) || 0;
+            const bestPairs = parseInt(lsGetStr('gf_best_pairs', '0')) || 0;
             if (gfPlayerPairCount > bestPairs) {
-                localStorage.setItem('gf_best_pairs', gfPlayerPairCount);
+                lsSet('gf_best_pairs', gfPlayerPairCount);
                 extra += `<br>&#x2B50; New personal best!`;
                 burstConfetti(el, 24);
             }
@@ -3352,6 +3362,7 @@
             gfClearTimer();
             gfHideResponseBtns();
             gfAiAsking = null;
+            try { speechSynthesis.cancel(); } catch (e) {} // don't keep talking over the hub
             // Release the microphone if a listen was in progress
             if (gfRecognition) { try { gfRecognition.abort(); } catch(e) {} }
         }
@@ -3395,9 +3406,11 @@
     <script>
         // "This Week" banner for the 5-Year Journey (workbook.html).
         // Same calendar math as curriculum.js: week 1 of year 1 = Mon Jul 6, 2026.
+        // Whole-day math via UTC so DST can never shift a week boundary.
         (function () {
-            var START = new Date(2026, 6, 6);
-            var g = Math.floor((Date.now() - START.getTime()) / (7 * 24 * 60 * 60 * 1000));
+            var n = new Date();
+            var days = Math.floor((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - Date.UTC(2026, 6, 6)) / 86400000);
+            var g = Math.floor(days / 7);
             g = Math.max(0, Math.min(5 * 52 - 1, g));
             var y = Math.floor(g / 52) + 1, w = (g % 52) + 1;
             var el = document.getElementById('thisWeekLabel');
