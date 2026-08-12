@@ -15,6 +15,7 @@ const assets = ['./'];
 for (const p of PAGES) assets.push(p);
 assets.push('kanjivg_data.js');
 assets.push('curriculum.js');
+assets.push('wordcats.js');
 assets.push('activities.js');
 for (let y = 1; y <= 5; y++) assets.push('curriculum_y' + y + '.js');
 assets.push('Underwater Theme.mp3');

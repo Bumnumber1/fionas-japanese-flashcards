@@ -466,6 +466,41 @@
         .theme-pronouns .card-english { color: #d84315; }
         .theme-pronouns .card-type { background: #fbe9e7; color: #ff5722; }
 
+        .sorting-bar {
+            max-width: 720px; margin: 0 auto 18px; padding: 13px 18px;
+            background: rgba(255,255,255,0.88); border: 2px dashed #ce93d8; border-radius: 18px;
+            color: #4a148c; font-weight: 700; font-size: 0.92em; line-height: 1.5; text-align: center;
+        }
+        .sorting-bar .sort-head { font-size: 1.05em; }
+        .sorting-bar .sort-jp { color: #b39ddb; font-size: 0.85em; margin-left: 6px; }
+        .sorting-bar .sort-blurb { color: #6a1b9a; font-weight: 600; margin-top: 4px; }
+        .sorting-bar .sort-news {
+            margin-top: 8px; padding: 7px 12px; border-radius: 12px;
+            background: #fff8e1; color: #ef6c00; font-weight: 700;
+        }
+        .sorting-bar .sort-chips { margin-top: 9px; color: #9575cd; font-size: 0.85em; }
+        .sort-chip {
+            border: 2px solid #d1c4e9; background: #fff; color: #6a1b9a; font-family: inherit;
+            font-weight: 800; border-radius: 10px; padding: 3px 10px; margin-left: 5px; cursor: pointer;
+        }
+        .sort-chip.on { background: linear-gradient(135deg, #ce93d8, #b39ddb); color: #fff; border-color: #9575cd; }
+
+        /* Drawer colour is data-driven (--g), so a new drawer needs no new CSS. */
+        .category[style*="--g"] .category-title { border-left: 6px solid var(--g); }
+        .category[style*="--g"] .category-title h2 { color: var(--g); }
+        .flashcard.grouped .flashcard-front { border-top: 4px solid var(--g); }
+        .flashcard.grouped .card-english { color: var(--g); }
+        .flashcard.grouped .card-type { background: var(--g-bg); color: var(--g); }
+        .cat-jp { color: #b0bec5; font-weight: 700; font-size: 0.8em; margin-left: 6px; }
+        .cat-count {
+            margin-left: auto; background: var(--g-bg); color: var(--g);
+            border-radius: 10px; padding: 1px 9px; font-weight: 800; font-size: 0.8em;
+        }
+
+        .theme-journey .flashcard-front { border-top: 4px solid #8e24aa; }
+        .theme-journey .card-english { color: #6a1b9a; }
+        .theme-journey .card-type { background: #f3e5f5; color: #8e24aa; }
+
         .theme-hiragana .flashcard-front { border-top: 4px solid #795548; }
         .theme-hiragana .card-english { color: #4e342e; }
         .theme-hiragana .card-type { background: #efebe9; color: #795548; }
@@ -725,6 +760,15 @@
             text-align: left;
         }
 
+        .quiz-filter-grid .filter-head {
+            grid-column: 1 / -1; text-align: left; font-weight: 800; color: #6a1b9a;
+            font-size: 0.95em; padding: 6px 2px 2px; border-bottom: 2px dashed #e1bee7; margin-top: 4px;
+        }
+        .quiz-filter-grid .filter-note {
+            grid-column: 1 / -1; text-align: left; color: #90a4ae; font-weight: 600;
+            font-size: 0.85em; padding: 4px 2px;
+        }
+        .quiz-filter-grid label.lesson-opt { background: #f8f2fc; border-color: #e1bee7; }
         .quiz-filter-grid label {
             display: flex;
             align-items: center;
@@ -1495,6 +1539,8 @@
             <span class="tw-small">Tap to open this week in your 5-Year Journey!</span>
         </a>
 
+        <div class="sorting-bar" id="sortingBar"></div>
+
         <div class="score-bar" id="scoreBar">
             <span class="score-correct" id="scoreCorrect">Correct: 0</span>
             <span class="score-wrong" id="scoreWrong">Wrong: 0</span>
@@ -1525,6 +1571,8 @@
                     <div class="quiz-filter-actions">
                         <button onclick="selectAllFilters()">Select All</button>
                         <button onclick="deselectAllFilters()">Deselect All</button>
+                        <button onclick="filterPick('quizFilterGrid','lessons')">&#x1F4DA; My lessons only</button>
+                        <button onclick="filterPick('quizFilterGrid','topics')">&#x1F9FA; Topics only</button>
                     </div>
                 </div>
                 <button class="quiz-start-btn" onclick="beginQuiz()">Start Quiz</button>
@@ -1557,8 +1605,10 @@
                 <div class="quiz-filter">
                     <div class="quiz-filter-grid" id="concFilterGrid"></div>
                     <div class="quiz-filter-actions">
-                        <button onclick="document.querySelectorAll('#concFilterGrid input').forEach(c=>c.checked=true)">Select All</button>
-                        <button onclick="document.querySelectorAll('#concFilterGrid input').forEach(c=>c.checked=false)">Deselect All</button>
+                        <button onclick="filterPick('concFilterGrid','all')">Select All</button>
+                        <button onclick="filterPick('concFilterGrid','none')">Deselect All</button>
+                        <button onclick="filterPick('concFilterGrid','lessons')">&#x1F4DA; My lessons only</button>
+                        <button onclick="filterPick('concFilterGrid','topics')">&#x1F9FA; Topics only</button>
                     </div>
                 </div>
                 <div class="conc-pair-select">
@@ -1635,8 +1685,10 @@
                 <div class="quiz-filter">
                     <div class="quiz-filter-grid" id="gfFilterGrid"></div>
                     <div class="quiz-filter-actions">
-                        <button onclick="document.querySelectorAll('#gfFilterGrid input').forEach(c=>c.checked=true)">Select All</button>
-                        <button onclick="document.querySelectorAll('#gfFilterGrid input').forEach(c=>c.checked=false)">Deselect All</button>
+                        <button onclick="filterPick('gfFilterGrid','all')">Select All</button>
+                        <button onclick="filterPick('gfFilterGrid','none')">Deselect All</button>
+                        <button onclick="filterPick('gfFilterGrid','lessons')">&#x1F4DA; My lessons only</button>
+                        <button onclick="filterPick('gfFilterGrid','topics')">&#x1F9FA; Topics only</button>
                     </div>
                 </div>
                 <button class="quiz-start-btn" onclick="beginGoFish()">Start Game</button>
@@ -1696,6 +1748,13 @@
         </div>
     </div>
 
+    <script src="curriculum_y1.js"></script>
+    <script src="curriculum_y2.js"></script>
+    <script src="curriculum_y3.js"></script>
+    <script src="curriculum_y4.js"></script>
+    <script src="curriculum_y5.js"></script>
+    <script src="curriculum.js"></script>
+    <script src="wordcats.js"></script>
     <script>
         const words = [
             // Days of the week
@@ -2024,36 +2083,172 @@
             'Shopping': '&#x1F6D2;'
         };
 
+        // ---- Part of speech for the 268 hand-written cards ----
+        // They have no `pos` of their own and only 4% of them appear in the
+        // curriculum, so it is derived from the category they were filed under.
+        const STATIC_POS = {
+            'Hiragana': 'kana', 'Verbs': 'verb', 'い-Adjectives': 'i-adj', 'な-Adjectives': 'na-adj',
+            'Counters (1-10 things)': 'counter', 'Greetings & Polite Phrases': 'expression',
+        };
+        // Cards whose category label does not match their grammar. Keyed on
+        // japanese+category because じ, に and ご each exist BOTH as a hiragana
+        // letter and as a word.
+        const STATIC_POS_FIX = {
+            'じ|Time Words': 'counter',           // the hour counter, not a time noun
+            'ですか|Question Words': 'expression',  // です + か: a set sentence ending
+            'まいにち|Time Words': 'adverb',
+            'もっと|Descriptions & Feelings': 'adverb',
+            'ぜんぶ|Descriptions & Feelings': 'adverb',
+        };
+        words.forEach(w => {
+            w.pos = STATIC_POS_FIX[w.japanese + '|' + w.category] || STATIC_POS[w.category] || 'noun';
+        });
+
+        // ---- Journey words: unlocked as each week is FINISHED ----
+        // Every word here is material she has really been taught. They join the
+        // type drawers alongside the hand-written cards, and stay selectable by
+        // week in Quiz Me / Concentration / Go Fish.
+        let journeyWeekCount = 0;
+        function addJourneyDecks() {
+            if (typeof Journey === 'undefined' || !Journey.passedWeeks) return;
+            const passed = Journey.passedWeeks(5, 52);
+            journeyWeekCount = passed.length;
+            const seen = new Set(words.filter(w => w.pos !== 'kana').map(w => w.japanese));
+            passed.forEach(p => {
+                const wk = Journey.getWeek(p.year, p.week);
+                if (!wk || !wk.vocab || !wk.vocab.length) return;
+                const cat = 'Year ' + p.year + ' Week ' + p.week + ' · ' + wk.title;
+                categoryEmojis[cat] = wk.emoji || '&#x1F4DA;';
+                wk.vocab.forEach(v => {
+                    if (!v || !v.jp || !v.en || seen.has(v.jp)) return;
+                    seen.add(v.jp);
+                    words.push({
+                        japanese: v.jp, romaji: v.romaji || '', english: v.en,
+                        emoji: v.emoji || '', category: cat, weekCat: cat,
+                        pos: v.pos || 'noun', theme: 'journey',
+                    });
+                });
+            });
+        }
+        addJourneyDecks();
+
+        // ---- Which sorting scheme is in force ----
+        // The calendar year is a FLOOR and finished work can only promote, never
+        // demote: the effective stage is mirrored to localStorage and max()'d, so
+        // a cleared week or a new device can never re-sort her page backwards.
+        let sortingJustAdvanced = 0;
+        function groupingStage() {
+            let pin = null, seen = 0;
+            try { pin = localStorage.getItem('fiona-card-grouping'); } catch (e) {}
+            if (pin && pin !== 'auto') return Math.min(5, Math.max(1, parseInt(pin, 10) || 1));
+            let cal = 1, grad = 0;
+            if (typeof Journey !== 'undefined' && Journey.currentPos) {
+                cal = Journey.currentPos().year;
+                for (let y = 1; y <= 5; y++) {
+                    if (Journey.yearTotals(y).weeks >= 45) grad = y; else break;
+                }
+            }
+            const computed = Math.min(5, Math.max(cal, grad + 1));
+            try { seen = parseInt(localStorage.getItem('fiona-card-grouping-seen'), 10) || 0; } catch (e) {}
+            const stage = Math.max(computed, seen);
+            if (stage > seen) {
+                sortingJustAdvanced = seen ? stage : 0;   // no fanfare on a first-ever visit
+                try { localStorage.setItem('fiona-card-grouping-seen', String(stage)); } catch (e) {}
+            }
+            return stage;
+        }
+        let cardStage = groupingStage();
+
+        // Group every card for the active stage and stamp each one with its
+        // drawer, so the games can filter on it.
+        function groupedCards() {
+            const cards = words.map((w, index) => ({ ...w, index, jp: w.japanese, en: w.english }));
+            const groups = WordCats.groupCards(cards, cardStage);
+            const byKey = {};
+            groups.forEach(g => g.words.forEach(c => { byKey[c.index] = g.key; }));
+            words.forEach((w, i) => { w.group = byKey[i] || 'play'; });
+            return groups;
+        }
+
+        // ---- Shared filter for Quiz Me / Concentration / Go Fish ----
+        // Two ways to choose: by TYPE (the drawers the page is sorted into right
+        // now) or by LESSON (one finished week). Checkbox values are prefixed
+        // g: / w: so a card can be picked either way.
+        const JOURNEY_CAT = /^Year \d+ Week \d+ /;
+        function isJourneyCat(cat) { return JOURNEY_CAT.test(cat); }
+        function cardMatches(w, sel) {
+            return sel.has('g:' + w.group) || (w.weekCat && sel.has('w:' + w.weekCat));
+        }
+        function selectedSet(gridId) {
+            return new Set([...document.querySelectorAll('#' + gridId + ' input:checked')].map(cb => cb.value));
+        }
+        function buildCategoryFilter(gridId) {
+            const grid = document.getElementById(gridId);
+            if (!grid) return;
+            const groups = groupedCards();
+            const weeks = {};
+            words.forEach(w => { if (w.weekCat) weeks[w.weekCat] = (weeks[w.weekCat] || 0) + 1; });
+            grid.innerHTML = '';
+            const head = title => {
+                const h = document.createElement('div');
+                h.className = 'filter-head'; h.textContent = title; grid.appendChild(h);
+            };
+            const opt = (value, text, lesson) => {
+                const label = document.createElement('label');
+                if (lesson) label.className = 'lesson-opt';
+                const box = document.createElement('input');
+                box.type = 'checkbox'; box.value = value; box.checked = true;
+                label.appendChild(box);
+                label.appendChild(document.createTextNode(' ' + text));
+                grid.appendChild(label);
+            };
+            head('\u{1F9FA} By type');
+            groups.forEach(g => opt('g:' + g.key, g.emoji + ' ' + g.label + ' (' + g.words.length + ')', false));
+            const weekKeys = Object.keys(weeks);
+            head('\u{1F4DA} By lesson');
+            weekKeys.forEach(c => opt('w:' + c, c + ' (' + weeks[c] + ')', true));
+            if (!weekKeys.length) {
+                const note = document.createElement('div');
+                note.className = 'filter-note';
+                note.innerHTML = '&#x1F331; Finish a week in your <a href="workbook.html#current">5-Year Journey</a> '
+                    + 'to unlock it as its own deck here!';
+                grid.appendChild(note);
+            }
+        }
+        // Quick picks shared by all three filter screens.
+        function filterPick(gridId, which) {
+            document.querySelectorAll('#' + gridId + ' input').forEach(cb => {
+                cb.checked = which === 'all' ? true
+                    : which === 'none' ? false
+                    : which === 'lessons' ? cb.value.charAt(0) === 'w'
+                    : cb.value.charAt(0) === 'g';   // 'topics'
+            });
+        }
+
         function renderCards() {
             const container = document.getElementById('cardContainer');
-            const categories = {};
-
-            words.forEach((word, index) => {
-                if (!categories[word.category]) {
-                    categories[word.category] = [];
-                }
-                categories[word.category].push({ ...word, index });
-            });
-
+            const groups = groupedCards();
             let html = '';
-            for (const [cat, catWords] of Object.entries(categories)) {
+            for (const g of groups) {
                 html += `
-                    <div class="category">
+                    <div class="category" style="--g:${g.color};--g-bg:${g.color}1f">
                         <div class="category-title">
-                            <span class="emoji">${categoryEmojis[cat] || ''}</span>
-                            <h2>${cat}</h2>
+                            <span class="emoji">${g.emoji}</span>
+                            <h2>${g.label}</h2>
+                            <span class="cat-jp">${g.jp}</span>
+                            <span class="cat-count">${g.words.length}</span>
                         </div>
                         <div class="card-grid">
                 `;
-                catWords.forEach(word => {
-                    const isHiragana = word.theme === 'hiragana';
+                g.words.forEach(word => {
+                    const isKana = word.pos === 'kana';
                     const frontEmoji = word.emoji ? `<div class="card-emoji">${word.emoji}</div>` : '';
                     const backEmoji = word.emoji ? `<div class="card-emoji">${word.emoji}</div>` : '';
-                    const frontJpStyle = isHiragana ? 'font-size:3.5em;' : '';
+                    const frontJpStyle = isKana ? 'font-size:3.5em;' : '';
                     const romaji = word.romaji ? `<div class="card-romaji">${word.romaji}</div>` : '';
-                    const escaped = word.japanese.replace(/'/g, "\\'");
+                    const escaped = word.japanese.replace(/'/g, "\'");
                     html += `
-                        <div class="flashcard theme-${word.theme}" onclick="flipCard(this)" data-index="${word.index}">
+                        <div class="flashcard grouped" onclick="flipCard(this)" data-index="${word.index}">
                             <div class="flashcard-inner">
                                 <div class="flashcard-front">
                                     <button class="audio-btn" onclick="event.stopPropagation(); speak('${escaped}', this)" title="Listen">&#x1F50A;</button>
@@ -2066,7 +2261,7 @@
                                     ${backEmoji}
                                     <div class="card-english">${word.english}</div>
                                     <div class="card-japanese" style="font-size:1.3em;">${word.japanese}</div>
-                                    <span class="card-type">${word.category}</span>
+                                    <span class="card-type">${g.emoji} ${g.label}</span>
                                 </div>
                             </div>
                         </div>
@@ -2074,8 +2269,35 @@
                 });
                 html += `</div></div>`;
             }
-
             container.innerHTML = html;
+            renderSortingBar();
+        }
+
+        // A chip row naming how the cards are sorted right now, with a way to
+        // peek at any other stage. Kon-Kon announces a promotion, so the page
+        // never silently rearranges itself under her.
+        function renderSortingBar() {
+            const bar = document.getElementById('sortingBar');
+            if (!bar) return;
+            const st = WordCats.STAGES[cardStage - 1];
+            let pinned = 'auto';
+            try { pinned = localStorage.getItem('fiona-card-grouping') || 'auto'; } catch (e) {}
+            const chips = WordCats.STAGES.map(x =>
+                `<button class="sort-chip${x.year === cardStage ? ' on' : ''}" data-stage="${x.year}">${x.year}</button>`).join('');
+            bar.innerHTML = `
+                <div class="sort-head"><b>&#x1F5C2;&#xFE0F; ${st.name}</b>
+                    <span class="sort-jp">ならべかた</span></div>
+                <div class="sort-blurb">${st.blurb}</div>
+                ${sortingJustAdvanced ? `<div class="sort-news">&#x1F98A; <b>あたらしい ならべかた!</b>
+                    Your cards moved house &mdash; tap a number to see the older way any time.</div>` : ''}
+                <div class="sort-chips">Sorting: ${chips}
+                    <button class="sort-chip${pinned === 'auto' ? ' on' : ''}" data-stage="auto">auto</button></div>`;
+            bar.querySelectorAll('.sort-chip').forEach(b => b.onclick = () => {
+                try { localStorage.setItem('fiona-card-grouping', b.dataset.stage); } catch (e) {}
+                sortingJustAdvanced = 0;
+                cardStage = groupingStage();
+                renderCards();
+            });
         }
 
         function flipCard(card) {
@@ -2139,15 +2361,7 @@
 
         function startQuiz() {
             // Show filter screen
-            const grid = document.getElementById('quizFilterGrid');
-            const cats = [...new Set(words.map(w => w.category))];
-            grid.innerHTML = '';
-            cats.forEach(cat => {
-                const count = words.filter(w => w.category === cat).length;
-                const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" value="${cat}" checked> ${cat} (${count})`;
-                grid.appendChild(label);
-            });
+            buildCategoryFilter('quizFilterGrid');
 
             document.getElementById('quizFilterScreen').style.display = 'block';
             document.getElementById('quizQuestion').style.display = 'none';
@@ -2156,19 +2370,14 @@
             document.getElementById('scoreBar').classList.remove('active');
         }
 
-        function selectAllFilters() {
-            document.querySelectorAll('#quizFilterGrid input').forEach(cb => cb.checked = true);
-        }
-
-        function deselectAllFilters() {
-            document.querySelectorAll('#quizFilterGrid input').forEach(cb => cb.checked = false);
-        }
+        function selectAllFilters() { filterPick('quizFilterGrid', 'all'); }
+        function deselectAllFilters() { filterPick('quizFilterGrid', 'none'); }
 
         function beginQuiz() {
-            const selected = [...document.querySelectorAll('#quizFilterGrid input:checked')].map(cb => cb.value);
-            if (selected.length === 0) return;
+            const selected = selectedSet('quizFilterGrid');
+            if (selected.size === 0) return;
 
-            quizPool = words.filter(w => selected.includes(w.category));
+            quizPool = words.filter(w => cardMatches(w, selected));
             quizWords = [...quizPool].sort(() => Math.random() - 0.5);
             quizIndex = 0;
             quizCorrect = 0;
@@ -2292,34 +2501,27 @@
         // Print functionality
         function renderPrintSection() {
             const container = document.getElementById('printSection');
-            const categories = {};
-            words.forEach(word => {
-                if (!categories[word.category]) categories[word.category] = [];
-                categories[word.category].push(word);
-            });
-
+            const groups = groupedCards();
             let html = `
                 <div class="print-page-title">Fiona's Japanese Flashcards</div>
                 <div class="print-page-subtitle">Cut along the dashed lines</div>
             `;
-
-            for (const [cat, catWords] of Object.entries(categories)) {
-                html += `<div class="print-category-header">${cat}</div>`;
+            for (const g of groups) {
+                html += `<div class="print-category-header">${g.emoji} ${g.label}</div>`;
                 html += `<div class="print-grid">`;
-                catWords.forEach(word => {
+                g.words.forEach(word => {
                     html += `
                         <div class="print-card">
                             <span class="scissors">&#9986;</span>
                             <div class="print-card-emoji">${word.emoji}</div>
                             <div class="print-card-japanese">${word.japanese}</div>
                             <div class="print-card-romaji">${word.romaji}</div>
-                            <div class="print-card-english theme-${word.theme}">${word.english}</div>
+                            <div class="print-card-english" style="color:${g.color}">${word.english}</div>
                         </div>
                     `;
                 });
                 html += `</div>`;
             }
-
             container.innerHTML = html;
         }
 
@@ -2474,15 +2676,7 @@
         const praise = ['すごい！', 'やったね！', 'じょうずだね！', 'すばらしい！'];
 
         function openConcentration() {
-            const grid = document.getElementById('concFilterGrid');
-            const cats = [...new Set(words.map(w => w.category))];
-            grid.innerHTML = '';
-            cats.forEach(cat => {
-                const count = words.filter(w => w.category === cat).length;
-                const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" value="${cat}" checked> ${cat} (${count})`;
-                grid.appendChild(label);
-            });
+            buildCategoryFilter('concFilterGrid');
             document.getElementById('concFilterScreen').style.display = 'block';
             document.getElementById('concGameArea').style.display = 'none';
             document.getElementById('concOverlay').classList.add('active');
@@ -2490,15 +2684,15 @@
         }
 
         function beginConcentration() {
-            const selected = [...document.querySelectorAll('#concFilterGrid input:checked')].map(cb => cb.value);
-            if (selected.length === 0) return;
+            const selected = selectedSet('concFilterGrid');
+            if (selected.size === 0) return;
             concGen++; // invalidate any flip timers left over from a previous game
 
             concPairCount = parseInt(document.getElementById('concPairCount').value);
             concIs2P = document.getElementById('concMode').value === '2p';
             // Dedupe by Japanese text (ご/に/じ each appear in two categories) so no two pairs look identical
             const seen = new Set();
-            const pool = words.filter(w => selected.includes(w.category) && !seen.has(w.japanese) && seen.add(w.japanese));
+            const pool = words.filter(w => cardMatches(w, selected) && !seen.has(w.japanese) && seen.add(w.japanese));
             const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
             const chosen = shuffledPool.slice(0, Math.min(concPairCount, shuffledPool.length));
 
@@ -2835,27 +3029,19 @@
         const GFSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         function openGoFish() {
-            const grid = document.getElementById('gfFilterGrid');
-            const cats = [...new Set(words.map(w => w.category))];
-            grid.innerHTML = '';
-            cats.forEach(cat => {
-                const count = words.filter(w => w.category === cat).length;
-                const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" value="${cat}" checked> ${cat} (${count})`;
-                grid.appendChild(label);
-            });
+            buildCategoryFilter('gfFilterGrid');
             document.getElementById('gfFilterScreen').style.display = 'block';
             document.getElementById('gfGameArea').style.display = 'none';
             document.getElementById('gfOverlay').classList.add('active');
         }
 
         function beginGoFish() {
-            const selected = [...document.querySelectorAll('#gfFilterGrid input:checked')].map(cb => cb.value);
-            if (selected.length === 0) return;
+            const selected = selectedSet('gfFilterGrid');
+            if (selected.size === 0) return;
 
             // Dedupe by Japanese text (ご/に/じ each appear in two categories) - pairing is by japanese string
             const seen = new Set();
-            gfPool = words.filter(w => selected.includes(w.category) && !seen.has(w.japanese) && seen.add(w.japanese));
+            gfPool = words.filter(w => cardMatches(w, selected) && !seen.has(w.japanese) && seen.add(w.japanese));
             // Use up to 20 words, create 2 copies of each
             const chosen = [...gfPool].sort(() => Math.random() - 0.5).slice(0, 20);
             gfDeck = [];

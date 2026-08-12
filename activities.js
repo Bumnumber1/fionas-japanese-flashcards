@@ -1,8 +1,13 @@
 // Fiona's Japanese - rotating weekly activity engine
 // Each activity type renders into a host element from a context object:
-//   ctx = { year, w, week, vocab, pool, examples, kanjiPool, writing, story,
-//           speak(text), sfx, onComplete(stars, correct, total) }
-// pool = this week's vocab + review-week vocab (always >= 8 usable entries).
+//   ctx = { year, w, week, scope, vocab, pool, examples, kanjiPool, writing,
+//           story, speak(text), sfx, onComplete(stars, correct, total) }
+// The pool comes from one of two honest scopes (see curriculum.js):
+//   scope 'lesson' - ONLY what this week teaches, so a week's games can never
+//                    quiz a word, sentence, kanji or kana it did not introduce.
+//   scope 'review' - everything the journey has covered up to today.
+// A game is only ever offered when Activities.requires says the material can
+// actually support it - see Activities.playable().
 // Every game ends on a finish screen that reports stars via ctx.onComplete.
 
 window.Activities = (() => {
@@ -470,7 +475,9 @@ window.Activities = (() => {
     // ---------- 7. blank ----------
     const PARTICLES = ['は', 'が', 'を', 'に', 'で', 'へ', 'と', 'も', 'の', 'から', 'まで'];
     function blank(host, ctx) {
-        const sents = ctx.examples.filter(s => s.jp.trim().split(/\s+/).length >= 3);
+        // 2 chunks is enough for a real gap-fill - early Year 1 sentences like
+        // 「ぞうは うさぎじゃないです。」 never reach 3
+        const sents = ctx.examples.filter(s => s.jp.trim().split(/\s+/).length >= 2);
         if (!sents.length) return quiz(host, ctx);
         const rounds = pickN(sents, Math.min(8, sents.length)).map(s => {
             const tokens = s.jp.trim().replace(/。$/, '').split(/\s+/);
@@ -497,13 +504,19 @@ window.Activities = (() => {
 
     // ---------- 8. bingo ----------
     function bingo(host, ctx) {
-        const words = distinct(ctx.pool, 9, v => v.jp);
-        if (words.length < 9) return listen(host, ctx);
+        // Full 3x3 board when the material stretches to 9 words, otherwise a
+        // 3x2 board (win = one full row) so a small lesson still gets real
+        // bingo instead of being quietly handed a different game.
+        const wide = distinct(ctx.pool, 9, v => v.jp);
+        const words = wide.length >= 9 ? wide : distinct(ctx.pool, 6, v => v.jp);
+        if (words.length < 6) return listen(host, ctx);
         const order = shuffleArr(words);
         let calls = 0, wrong = 0, marked = new Set(), currentCall = null;
-        const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+        const LINES = words.length >= 9
+            ? [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]]
+            : [[0, 1, 2], [3, 4, 5]];
         function markedFlags() {
-            const g = Array(9).fill(0);
+            const g = Array(words.length).fill(0);
             marked.forEach(w => { g[words.indexOf(w)] = 1; });
             return g;
         }
@@ -1403,48 +1416,104 @@ window.Activities = (() => {
         bossquiz:   { name: 'Quiz Battle', jp: 'クイズバトル', icon: '🐉', make: bossquiz },
     };
 
+    // ---- What each engine actually needs to run honestly ----
+    // One shared table so the workbook, the arcade and the flashcard page all
+    // agree on whether a game can be played from a given pile of material -
+    // instead of a game silently falling back to Quiz when its pool is thin.
+    // O(n) shiritori check - the review pool runs to ~1800 words by Year 5, so a
+    // pairwise scan here would stall the panel every time it renders.
+    function chainable(v) {
+        const heads = new Map();          // base of first kana -> count of words
+        v.forEach(x => {
+            if (shiLast(x.jp) === 'ん') return;
+            const k = shiBase(shiFirst(x.jp));
+            heads.set(k, (heads.get(k) || 0) + 1);
+        });
+        return v.some(a => {
+            if (shiLast(a.jp) === 'ん') return false;
+            const k = shiBase(shiLast(a.jp));
+            const n = heads.get(k) || 0;
+            // a word may only chain to ITSELF - that is not a chain
+            return n > (shiBase(shiFirst(a.jp)) === k ? 1 : 0);
+        });
+    }
+    function statsOf(m) {
+        const v = (m.pool || []).filter(x => x && x.jp && x.en);
+        const ex = (m.examples || []).filter(e => e && e.jp);
+        const tok = e => e.jp.trim().replace(/。$/, '').split(/\s+/).length;
+        const byPos = {};
+        v.forEach(x => {
+            const p = (x.pos === 'phrase' || x.pos === 'expression') ? 'phrase' : (x.pos || 'word');
+            (byPos[p] = byPos[p] || []).push(x);
+        });
+        const groups = Object.values(byPos);
+        return {
+            pool: new Set(v.map(x => x.jp)).size,
+            uniqEn: new Set(v.map(x => (x.en || '').toLowerCase())).size,
+            examples: ex.length,
+            sents2: ex.filter(e => tok(e) >= 2).length,
+            sents3: ex.filter(e => tok(e) >= 3).length,
+            kanji: new Set((m.kanji || []).filter(k => k && k.char).map(k => k.char)).size,
+            chars: (m.chars || []).length,
+            kana: v.filter(x => /^[ぁ-ゖァ-ヶー]{2,6}$/.test(x.jp)).length,
+            nouns: v.filter(x => x.pos === 'noun').length,
+            nounsEmoji: v.filter(x => x.pos === 'noun' && x.emoji).length,
+            counterWords: v.filter(x => x.pos === 'counter').length,
+            story: !!m.story,
+            chain: chainable(v),
+            posGroups: groups.length,
+            posTrios: groups.filter(g => g.length >= 3).length,
+        };
+    }
+    const requires = {
+        // All of these put English on a card face, so they need distinct MEANINGS,
+        // not just distinct spellings - two words glossed the same would give a
+        // round two right answers.
+        memory:     s => s.uniqEn >= 4,          // 4 pairs is still a real board
+        karuta:     s => s.uniqEn >= 4,
+        listen:     s => s.uniqEn >= 4,          // 1 answer + 3 distractors
+        quiz:       s => s.uniqEn >= 4,
+        bossquiz:   s => s.uniqEn >= 4,
+        whack:      s => s.uniqEn >= 5,
+        sort:       s => s.pool >= 4 && s.uniqEn >= 2,
+        bingo:      s => s.pool >= 6,            // 3x2 board; 3x3 once there are 9
+        oddone:     s => s.posGroups >= 2 && s.posTrios >= 1,
+        shiritori:  s => s.chain,
+        kanabuild:  s => s.kana >= 1,
+        scramble:   s => s.sents3 >= 1,
+        blank:      s => s.sents2 >= 1 && s.pool >= 4,
+        speak:      s => s.examples >= 1,
+        trace:      s => s.chars >= 1,
+        story:      s => s.story,
+        diary:      () => true,
+        shop:       s => s.nouns >= 4,
+        counters:   s => s.counterWords >= 1 || s.nounsEmoji >= 4,
+        kanjimatch: s => s.kanji >= 3,
+    };
+    function canRun(key, m) {
+        const r = requires[key];
+        return r ? !!r(m && m.pool !== undefined ? statsOf(m) : m) : false;
+    }
+    // Which of `keys` this material can actually support, in the given order.
+    function playable(keys, m) {
+        const st = statsOf(m);
+        return keys.filter(k => defs[k] && requires[k] && requires[k](st));
+    }
+
     // Build a run-context for (year, w) and start activity `key` in `host`.
-    function start(key, host, year, w, onComplete, onClose) {
+    // opts.scope: 'lesson' (default for lesson/special weeks) uses ONLY what this
+    //             week teaches; 'review' (default for Review weeks) widens the
+    //             pool to every week the journey has already covered.
+    function start(key, host, year, w, onComplete, onClose, opts) {
         const def = defs[key] || defs.quiz;
         const week = Journey.getWeek(year, w) || { vocab: [], activities: [] };
-        // pool = week vocab + review weeks' vocab, walk back if thin
-        let pool = (week.vocab || []).slice();
-        (week.review || []).forEach(rw => {
-            const r = Journey.getWeek(year, rw);
-            if (r && r.vocab) pool = pool.concat(r.vocab);
-        });
-        let back = w - 1;
-        while (pool.length < 8 && back >= 1) {
-            const r = Journey.getWeek(year, back--);
-            if (r && r.vocab) pool = pool.concat(r.vocab);
-        }
-        if (pool.length < 8 && year > 1) {
-            let py = year - 1, pw = 52;
-            while (pool.length < 8 && pw >= 40) {
-                const r = Journey.getWeek(py, pw--);
-                if (r && r.vocab) pool = pool.concat(r.vocab);
-            }
-        }
-        const seen = new Set();
-        pool = pool.filter(v => v && v.jp && !seen.has(v.jp) && seen.add(v.jp));
-        // examples = grammar examples + phrases + story lines (this week + review weeks)
-        let examples = [];
-        function addWeekSentences(wk) {
-            if (!wk) return;
-            if (wk.grammar && wk.grammar.examples) examples = examples.concat(wk.grammar.examples);
-            if (wk.phrases) examples = examples.concat(wk.phrases);
-        }
-        addWeekSentences(week);
-        (week.review || []).forEach(rw => addWeekSentences(Journey.getWeek(year, rw)));
-        // kanji pool: this week + all earlier kanji this year
-        let kanjiPool = (week.kanji || []).slice();
-        for (let b = w - 1; b >= 1 && kanjiPool.length < 8; b--) {
-            const r = Journey.getWeek(year, b);
-            if (r && r.kanji) kanjiPool = kanjiPool.concat(r.kanji);
-        }
+        const scope = (opts && opts.scope) || (week.kind === 'review' ? 'review' : 'lesson');
+        const m = scope === 'review' ? Journey.reviewMaterial(year, w) : Journey.lessonMaterial(year, w);
         return runWith(def, host, {
-            year, w, week, pool, examples, kanjiPool, actKey: key,
-            vocab: week.vocab || [], writing: week.writing, story: week.story,
+            year, w, week, actKey: key, scope,
+            pool: m.pool, examples: m.examples, kanjiPool: m.kanji,
+            vocab: m.pool, writing: m.chars.length ? { type: (week.writing && week.writing.type) || 'kana', chars: m.chars } : null,
+            story: m.story,
         }, onComplete, onClose);
     }
 
@@ -1480,5 +1549,5 @@ window.Activities = (() => {
         }, onComplete, onClose);
     }
 
-    return { defs, start, startCustom };
+    return { defs, start, startCustom, requires, statsOf, canRun, playable };
 })();

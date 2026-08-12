@@ -100,8 +100,86 @@ const Journey = (() => {
         return { stars, weeks };
     }
 
+    // ---- Material scopes ----
+    // Two honest pools, used by every page so a game can never quiz Fiona on a
+    // word she has not met yet:
+    //   lessonMaterial(y,w) = ONLY what this week teaches.
+    //   reviewMaterial(y,w) = every week the journey has already covered.
+    // passedWeeks() is separate: it tracks weeks actually FINISHED, and gates the
+    // opt-in lesson decks on the flashcard page and in the arcade.
+    function isPassed(y, w) { return !!weekProgress(y, w).complete; }
+
+    // Every completed week at or before (y,w) in journey order, oldest first.
+    // Pass includeSelf=false to exclude (y,w) itself.
+    function passedWeeks(y, w, includeSelf) {
+        const limit = toGlobal(y, w);
+        const out = [];
+        for (let g = 0; g <= limit; g++) {
+            if (g === limit && includeSelf === false) continue;
+            const p = fromGlobal(g);
+            if (isPassed(p.year, p.week) && getWeek(p.year, p.week)) out.push(p);
+        }
+        return out;
+    }
+    function weekMaterial(wk) {
+        if (!wk) return { pool: [], examples: [], kanji: [], chars: [], story: null };
+        let examples = [];
+        if (wk.grammar && wk.grammar.examples) examples = examples.concat(wk.grammar.examples);
+        if (wk.phrases) examples = examples.concat(wk.phrases);
+        return {
+            pool: (wk.vocab || []).filter(v => v && v.jp && v.en),
+            examples,
+            kanji: (wk.kanji || []).filter(k => k && k.char),
+            chars: (wk.writing && wk.writing.chars) || [],
+            story: wk.story || null,
+        };
+    }
+    // Merge several weeks' material, de-duped, keeping the first sighting.
+    function mergeMaterial(list) {
+        const seenV = new Set(), seenK = new Set(), seenC = new Set(), seenE = new Set();
+        const out = { pool: [], examples: [], kanji: [], chars: [], story: null };
+        list.forEach(m => {
+            m.pool.forEach(v => { if (!seenV.has(v.jp)) { seenV.add(v.jp); out.pool.push(v); } });
+            m.examples.forEach(e => { if (e && e.jp && !seenE.has(e.jp)) { seenE.add(e.jp); out.examples.push(e); } });
+            m.kanji.forEach(k => { if (!seenK.has(k.char)) { seenK.add(k.char); out.kanji.push(k); } });
+            m.chars.forEach(c => { if (!seenC.has(c)) { seenC.add(c); out.chars.push(c); } });
+            if (!out.story && m.story) out.story = m.story;
+        });
+        return out;
+    }
+
+    function lessonMaterial(y, w) { return weekMaterial(getWeek(y, w)); }
+
+    // "Review" means everything the journey has already covered: every week from
+    // the start up to this one. It deliberately does NOT depend on ticking weeks
+    // off - a checkpoint must never be empty just because a box went unchecked.
+    // Peeking at a future week still only reviews material up to today, so a
+    // review game can never show a word Fiona has not met.
+    function reviewMaterial(y, w, now) {
+        const wk = getWeek(y, w);
+        const here = toGlobal(y, w);
+        const nowPos = now || currentPos();
+        const limit = Math.min(here, toGlobal(nowPos.year, nowPos.week));
+        const mats = [], seenKey = new Set();
+        const add = (yy, ww) => {
+            const k = yy + ':' + ww;
+            if (seenKey.has(k)) return;
+            const x = getWeek(yy, ww);
+            if (!x) return;
+            seenKey.add(k); mats.push(weekMaterial(x));
+        };
+        add(y, w);                                        // this week always counts
+        for (let g = limit; g >= 0; g--) { const p = fromGlobal(g); add(p.year, p.week); }
+        // A Review week's declared list is its promise - honour it even if the
+        // calendar has not reached those weeks on this device.
+        if (wk) (wk.review || []).forEach(rw => add(y, rw));
+        return mergeMaterial(mats);
+    }
+
     return { START, getWeek, yearMeta, fromGlobal, toGlobal, currentPos, weekDates, termOf,
-             weekProgress, recordActivity, markComplete, totals, yearTotals };
+             weekProgress, recordActivity, markComplete, totals, yearTotals,
+             isPassed, passedWeeks, weekMaterial, mergeMaterial,
+             lessonMaterial, reviewMaterial };
 })();
 
 // ---- Speech (matches the site's TTS conventions) ----

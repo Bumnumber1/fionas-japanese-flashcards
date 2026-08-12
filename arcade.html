@@ -68,6 +68,27 @@
         }
         .allwords-chip:active { transform: scale(0.96); }
         .pool-info { color: #78909c; font-weight: 800; font-size: 0.9em; }
+        .mode-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+        .mode-chip {
+            flex: 1 1 140px; padding: 12px 16px; border-radius: 16px; cursor: pointer;
+            border: 3px solid #e1bee7; background: #fff; color: #6a1b9a;
+            font-family: inherit; font-weight: 800; font-size: 1em;
+        }
+        .mode-chip.active { background: linear-gradient(135deg, #ce93d8, #b39ddb); color: #fff; border-color: #9575cd; }
+        .lesson-note {
+            background: #fff8e1; border: 2px dashed #ffe082; border-radius: 12px;
+            padding: 9px 12px; margin: 8px 0 4px; color: #ef6c00; font-weight: 700; font-size: 0.88em;
+        }
+        .yr-block { margin-top: 12px; }
+        .yr-block h4 { color: #6a1b9a; font-size: 0.95em; margin-bottom: 6px; }
+        .wk-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+        .wk-chip {
+            padding: 7px 11px; border-radius: 13px; cursor: pointer; font-family: inherit;
+            border: 2px solid #b3e5fc; background: #fff; color: #0277bd;
+            font-weight: 800; font-size: 0.82em;
+        }
+        .wk-chip.on { background: linear-gradient(135deg, #4fc3f7, #29b6f6); color: #fff; border-color: #039be5; }
+        .wk-chip.locked { opacity: 0.4; cursor: not-allowed; border-style: dashed; }
         .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
         .cat-card {
             position: relative; background: #fff; border: 2px solid #eceff1; border-radius: 16px;
@@ -377,18 +398,42 @@
     </div>
 
     <div class="panel">
-        <div class="section-title">🚀 Choose your level <span class="st-jp">レベル</span></div>
-        <div class="lvl-chips" id="lvlChips"></div>
-        <div class="lvl-hint" id="lvlHint"></div>
+        <div class="section-title">🎯 Where should the words come from? <span class="st-jp">どこから？</span></div>
+        <div class="mode-chips" id="modeChips">
+            <button class="mode-chip" data-mode="topic">🧺 By topic</button>
+            <button class="mode-chip" data-mode="lesson">📚 By lesson</button>
+        </div>
+        <div class="lvl-hint" id="modeHint"></div>
     </div>
 
-    <div class="panel">
-        <div class="section-title">🧺 Pick your word baskets <span class="st-jp">ことばえらび</span></div>
-        <div class="cat-tools">
-            <button class="allwords-chip" id="allWords">✨ All words</button>
-            <span class="pool-info" id="poolInfo"></span>
+    <div id="topicMode">
+        <div class="panel">
+            <div class="section-title">🚀 Choose your level <span class="st-jp">レベル</span></div>
+            <div class="lvl-chips" id="lvlChips"></div>
+            <div class="lvl-hint" id="lvlHint"></div>
         </div>
-        <div class="cat-grid" id="catGrid"></div>
+
+        <div class="panel">
+            <div class="section-title">🧺 Pick your word baskets <span class="st-jp">ことばえらび</span></div>
+            <div class="cat-tools">
+                <button class="allwords-chip" id="allWords">✨ All words</button>
+                <span class="pool-info" id="poolInfo"></span>
+            </div>
+            <div class="cat-grid" id="catGrid"></div>
+        </div>
+    </div>
+
+    <div id="lessonMode">
+        <div class="panel">
+            <div class="section-title">📚 Pick your lessons <span class="st-jp">レッスンえらび</span></div>
+            <div class="cat-tools">
+                <button class="allwords-chip" id="allLessons">✨ All my lessons</button>
+                <button class="allwords-chip" id="lastLessons">🕒 Last 5</button>
+                <span class="pool-info" id="lessonPoolInfo"></span>
+            </div>
+            <div class="lesson-note" id="lessonNote"></div>
+            <div id="lessonYears"></div>
+        </div>
     </div>
 
     <div class="panel">
@@ -409,6 +454,7 @@
 </div>
 
 <script src="kanjivg_data.js"></script>
+<script src="wordcats.js"></script>
 <script src="curriculum.js"></script>
 <script src="curriculum_y1.js"></script>
 <script src="curriculum_y2.js"></script>
@@ -433,42 +479,9 @@
         { label: 'All 5 Years', years: 5 },
     ];
 
-    // A word may belong to several categories: matched on en (case-insensitive),
-    // pos, and jp where noted. 'Everything Else' catches words matching nothing.
-    // meaning:true marks the meaning-based groups handed to Odd One Out.
-    const CATS = [
-        { key: 'animals', icon: '🐾', name: 'Animals', meaning: true,
-          en: /animal|pupp|kitten|\bdogs?\b|\bcats?\b|\bbirds?\b|\bfish|goldfish|rabbit|bunny|elephant|\blions?\b|tiger|\bbears?\b|panda|monkey|mouse|mice|horse|pony|\bcows?\b|\bpigs?\b|sheep|goat|chicks?|duck|frog|snake|turtle|tortoise|hamster|\bfox|wol(f|ves)|deer|whale|dolphin|shark|octopus|squid|crab|shrimp|insect|\bbugs?\b|butterfl|beetle|dragon\b|dragonfly|\bants?\b|\bbees?\b|honeybee|spider|penguin|\bowls?\b|eagle|\bcrows?\b|sparrow|swan|\bcranes?\b|dove|pigeon|zebra|giraffe|kangaroo|koala|hippo|rhino|camel|squirrel|hedgehog|snail|jellyfish|starfish|\bseals?\b|otter|raccoon|tanuki|firefly|cicada|cricket|grasshopper|ladybug|gorilla|lizard|\bbats?\b|worm|\bpets?\b|cheetah|parakeet|sardine|peacock|\bzoo\b|turkey/i },
-        { key: 'food', icon: '🍎', name: 'Food & Drink', meaning: true,
-          en: /food|drink|\beat|meal\b|breakfast|lunch|dinner|supper|snack|dessert|candy|sweets|chocolate|cookie|biscuit|cake|ice cream|pudding|donut|doughnut|\brice\b|bread|toast|sandwich|noodle|ramen|udon|soba\b|pasta|spaghetti|pizza|sushi|onigiri|bento|curry|soup|miso|stew\b|salad|\beggs?\b|meat\b|beef|pork|\bham\b|sausage|chicken|steak|tempura|tofu|seaweed|fruit|apple|banana|orange\b|grape|strawberry|peach(es)?(?!s*pink)|\bpears?\b|melon|cherr(y|ies)|lemon|tangerine|mandarin|persimmon|pineapple|kiwi|mango|chestnut|vegetable|carrot|potato|tomato|onion|cucumber|pumpkin|\bcorn\b|mushroom|cabbage|lettuce|radish|eggplant|\bbeans?\b|spinach|broccoli|juice|milk(?!y)|\btea\b|coffee|cocoa|soda|cola\b|water \(|yogurt|cheese|butter\b|\bjam\b|honey(?!s*bee)|sugar|salt\b|pepper|sauce|soy|ketchup|delicious|yummy|tasty|hungry|thirsty|bitter|sour\b|spicy|sweet\b|mochi|dango|dumpling|senbei|taiyaki|takoyaki|okonomiyaki|yakisoba|gyoza|katsu\b|cracker|gum\b|caramel|gummy|omelette|omelet\b|feast|taro\b|clam\b|acorn/i },
-        { key: 'people', icon: '👪', name: 'People & Family', meaning: true,
-          en: /family|mother|\bmom|father|\bdad|parent|sister|brother|sibling|grand(ma|pa|mother|father|child)|baby|child|kid\b|kids\b|\bboys?\b|girl|friend|teacher|student|person|people|\bman\b|\bmen\b|woman|women|uncle|\baunts?\b|cousin|everyone|everybody|classmate|neighbo|doctor|nurse|dentist|police(?!s*car)|firefighter|farmer|bakers?\b|chef|\bcook\b|singer|driver|pilot|astronaut|player|scientist|professor|hairdresser|actor|\bvet\b|princess|prince\b|\bking\b|queen|knight|soldier|servant|retainer|messenger|samurai|ninja|captain|announcer|angel|celebrity|twins|elderly|adult|clerk|hero|villain|character \(|main character|audience|orihime|hikoboshi|santa\b|sweetheart|myself|oneself|\bwho\b|worker|\bjobs?\b|\bwork\b/i },
-        { key: 'school', icon: '🎒', name: 'School & Things', meaning: true,
-          en: /school|class|homework|lesson|stud(y|ies)|\btests?\b|exam\b|book|notebook|dictionary|magazine|comic|manga|encyclopedia|pencil|\bpens?\b|eraser|crayon|marker|scissors|glue|paper|ruler|desk|chair|\bbags?\b|backpack|randoseru|blackboard|whiteboard|math|p\.e\.|calligraphy|science|social studies|english|kanji|timetable|schedule|\btoys?\b|\bballs?\b|doll|puzzle|\bgames?\b|card|\bbox\b|umbrella|telephone|phone|computer|tablet|\btv\b|television|camera|clock|watch\b|\bkeys?\b|wallet|purse|present|gift|letter|stamp|sticker|envelope|picture|photo|piano|guitar|drum|flute|violin|recorder|whistle|racket|bicycle|bike\b|kite\b|robot|origami|craft|towel|soap|toothbrush|\bcups?\b|glass\b|plate|chopstick|fork\b|spoon|knife|bottle|lunch box|lunchbox|money|\byen\b|coin|\bcars?\b|\bbus\b|train\b|taxi|truck|airplane|plane\b|\bships?\b|boat|rocket|vehicle|ambulance|sled|sleigh|bell\b|wreath|ornament|spinning top|lantern|candle|balloon|microphone|newspaper|remote|outlet|battery|air conditioner|electric fan|lamp|screen|curtain|\blids?\b|switch|machine|flag|thermos|treasure|jewel|gem\b|medal|trophy|certificate|prize|blocks|marble|skateboard|page\b|diary|\bmaps?\b|ticket|futon|pillow|shelf|drawer|broom|instrument|mask\b|\bpot\b|\bpan\b|stuffed animal|jump rope|kendama|karuta|ribbon|\blists?\b|goods|merchandise|wrapping|parasol|bowls?\b|paddle|rope\b|fan\b|banner|streamer|paint\b|swing\b|slide\b|seesaw|sandbox|song\b|lullaby|carol|melody|shower\b|price|cash register|receipt|sale\b|savings|free of charge|\bstor(y|ies)\b|tale\b|folktale|legend|movie/i },
-        { key: 'places', icon: '🏞️', name: 'Places & Nature', meaning: true,
-          en: /park\b|mountain|\bhill|\briver|\bsea\b|ocean|beach|forest|woods?\b|\btrees?\b|flower|blossom|grass|\bsky\b|\bstars?\b|moon|\bsun\b|garden|house|home\b|\btowns?\b|\bcit(y|ies)\b|village|station|\bshop|store\b|market|restaurant|hospital|pharmacy|\bzoo\b|aquarium|pool\b|playground|road|street|bridge|island|lake\b|pond|field|meadow|sand|stone|rock\b|boulder|leaf|leaves|bamboo|sakura|nature|world|earth|japan|country|place\b|room\b|kitchen|bathroom|bedroom|living room|entryway|entrance|toilet|bath\b|roof|stairs|hallway|elevator|building|castle|shrine|temple\b|tower|post office|bank\b|bakery|cafe|theater|theatre|bookstore|greengrocer|butcher|festival|outside|inside|middle\b|behind|beside|next to|corner|above|below|\bunder\b|in front|valley|cliff|summit|\bpeaks?\b|tunnel|intersection|crosswalk|slope|plaza|square\b|cave\b|waterfall|hot spring|amusement|museum|university|cram school|space\b|planet|comet|constellation|milky way|galaxy|horizon|ground\b|^air$|soil|dirt\b|riverbank|veranda|scenery|ranch|pasture|farm|rice field|vegetable field|observation deck|path\b|harbor|port\b|window|door\b|wall\b|floor\b|yard\b|icicle\b|puddle|pinecone|moss\b|branch\b|stem\b|seed\b|bud\b|petal|foliage|sunflower|tulip|dandelion|rose\b|hydrangea|lily|iris\b|holly|mistletoe|fir tree|pampas|library|picnic|camping|hiking|barbecue|bonfire|firework|traffic|handrail|emergency exit|seashell|\bwaves?\b|bench\b|direction|\bwalk\b/i },
-        { key: 'weather', icon: '⛅', name: 'Weather & Seasons', meaning: true,
-          en: /weather|\brain|snow|wind\b|windy|wintry|cloud|sunny|storm|thunder|lightning|typhoon|rainbow|season|^spring|summer|autumn|winter|temperature|humid|breeze|\bfog|frost|hail\b|sleet|blizzard|icicle|\bhot\b|\bcold|warm\b|chilly|\bice\b| shower$|downpour|sunshine|sunlight|sunset|sunrise/i },
-        { key: 'colors', icon: '🎨', name: 'Colors & Shapes', meaning: true,
-          en: /colou?r|\bred\b|blue\b|yellow|green\b|black(?!board)|white(?!board)|pink\b|purple|orange \(|brown|gr[ae]y\b|gold\b|silver|shape|circle|square|triangle|rectangle|\bround\b|heart shape|diamond(?!s*rice)|\bdots?\b|stripe|navy/i,
-          jp: /いろ$/ },
-        { key: 'body', icon: '👚', name: 'Body & Clothes', meaning: true,
-          en: /\bbody|\bhead|\bhair|face\b|\beyes?\b|eyebrow|\bears?\b|nose|mouth|tooth|teeth|neck|shoulder|\barms?\b|hand\b|hands\b|finger|\blegs?\b|foot\b|feet\b|knee|elbow|stomach|tummy|belly|\bchest\b|cheek|chin\b|forehead|tongue|\bnails?\b|\bskin\b|bone|\blips?\b|beard|whisker|mustache|clothes|clothing|shirt|pants|trousers|jeans|shorts|skirt|dress\b|dressed|\bhats?\b|\bcaps?\b|shoes?\b|boots?\b|socks?\b|coat\b|jacket|sweater|scarf|glove|mitten|kimono|yukata|pajama|pyjama|wear\b|uniform|button|pocket|glasses|belt\b|swimsuit|sandal|slipper|apron|sweat\b|fever|cough|sneeze|runny nose|sick\b|hurt|itchy|band-aid|bandage|height\b|costume|cape\b|cloak|helmet|obi sash|hair ornament|suntan|sunburn|horn\b|smell\b|taste|flavor|health\b|sleep\b|diaper|armou?r|crown\b/i },
-        { key: 'time', icon: '⏰', name: 'Time & Numbers', meaning: true, pos: ['counter'],
-          en: /time\b|o'clock|hour\b|minute|second \(|today|tomorrow|yesterday|\bdays?\b|week\b|weekend|month|year\b|years\b|morning|noon\b|afternoon|evening|\bnight|tonight|\bnow\b|later|soon\b|\bearly|\blate\b|number|zero|\bone\b(?!['’])|\btwo\b|three|\bfour\b|five|\bsix\b|seven|\beight|\bnine\b|\bten\b|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand|\bcount\b|counting|half\b|birthday|\bdate\b|calendar|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march\b|april|june|july|august|september|october|november|december|holiday|always|sometimes|often|usually|never|every day|daily|first\b|\bwhen\b|deadline|\b\d+(st|nd|rd|th)\b|how many|times\b|once\b|twice|dusk|midnight|past\b|future|long ago|ago\b|christmas|halloween|\beve\b|^may$|\bnext\b|the last|ending\b|beginn/i },
-        { key: 'actions', icon: '🏃', name: 'Action Words', meaning: false, pos: ['verb'] },
-        { key: 'describe', icon: '💖', name: 'Describing Words', meaning: false, pos: ['i-adj', 'na-adj', 'adverb'] },
-        { key: 'phrases', icon: '💬', name: 'Phrases & Greetings', meaning: false, pos: ['phrase', 'expression'] },
-        { key: 'other', icon: '📦', name: 'Everything Else', meaning: false, other: true },
-    ];
-
-    function catMatch(cat, v) {
-        if (cat.other) return !CATS.some(c => !c.other && catMatch(c, v));
-        return !!((cat.pos && cat.pos.indexOf(v.pos) >= 0)
-            || (cat.en && cat.en.test(v.en || ''))
-            || (cat.jp && cat.jp.test(v.jp || '')));
-    }
-    function catWords(vocab, cat) { return vocab.filter(v => catMatch(cat, v)); }
+    // The meaning taxonomy now lives in wordcats.js so the flashcard page can
+    // share it - one source of truth for what a word is about.
+    const CATS = WordCats.CATS, catMatch = WordCats.catMatch, catWords = WordCats.catWords;
 
     function levelWeeks(li) {
         const out = [];
@@ -513,31 +526,19 @@
         return vocab.filter(v => CATS.some(c => keys.indexOf(c.key) >= 0 && catMatch(c, v)));
     }
 
-    const KANA_SMALL = /^[ぁ-ゖァ-ヶー]{2,6}$/; // pure-kana word usable in Kana Builder
     const GAME_KEYS = ['memory', 'listen', 'quiz', 'karuta', 'bingo', 'whack', 'shiritori', 'oddone',
                        'kanabuild', 'sort', 'blank', 'scramble', 'speak', 'shop', 'counters', 'trace',
                        'kanjimatch', 'bossquiz'];
-    const GAME_OK = {
-        memory:     s => s.pool.length >= 6,
-        listen:     s => s.pool.length >= 8,
-        quiz:       s => s.pool.length >= 8,
-        karuta:     s => s.pool.length >= 6,
-        bingo:      s => s.pool.length >= 9,
-        whack:      s => s.pool.length >= 6,
-        shiritori:  s => s.pool.length >= 10,
-        oddone:     s => s.pool.length >= 8,
-        kanabuild:  s => s.pool.filter(v => KANA_SMALL.test(v.jp)).length >= 6,
-        sort:       s => s.pool.length >= 8,
-        blank:      s => s.examples.length >= 4 && s.pool.length >= 4, // non-particle rounds draw distractors from the pool
-        scramble:   s => s.examples.length >= 4,
-        speak:      s => s.examples.length >= 4,
-        shop:       s => s.pool.filter(v => v.pos === 'noun').length >= 4,
-        counters:   s => s.pool.length >= 8,
-        trace:      s => s.pool.length >= 4,
-        kanjimatch: s => s.kanji.length >= 3,
-        bossquiz:   s => s.pool.length >= 8,
-    };
     /* ===== arcade-core-end ===== */
+
+    // One shared answer to "can this game run on this material?" (activities.js),
+    // so the arcade and the weekly lessons never disagree about what is playable.
+    function gameOk(key, sel) {
+        return Activities.canRun(key, {
+            pool: sel.pool, examples: sel.examples, kanji: sel.kanji,
+            chars: sel.writingChars || [], story: sel.story || null,
+        });
+    }
 
     // ---------- state ----------
     function loadLevel() {
@@ -551,6 +552,24 @@
         if (Array.isArray(keys)) keys = keys.filter(k => CATS.some(c => c.key === k));
         return keys && keys.length ? keys : CATS.map(c => c.key);
     }
+    // ---------- lesson-mode state ----------
+    // "By lesson" builds the pool out of weeks Fiona has actually finished, so a
+    // game here can only ever use material she has already been taught.
+    function loadMode() {
+        let v = null;
+        try { v = localStorage.getItem('arcade-mode'); } catch (e) {}
+        return v === 'lesson' ? 'lesson' : 'topic';
+    }
+    function loadWeeks() {
+        let v = null;
+        try { v = JSON.parse(localStorage.getItem('arcade-weeks')); } catch (e) {}
+        return Array.isArray(v) ? v.filter(k => /^\d+:\d+$/.test(k)) : [];
+    }
+    function saveMode() { try { localStorage.setItem('arcade-mode', mode); } catch (e) {} }
+    function saveWeeks() { try { localStorage.setItem('arcade-weeks', JSON.stringify(selWeeks)); } catch (e) {} }
+
+    let mode = loadMode();
+    let selWeeks = loadWeeks();
     let level = loadLevel();
     let selCats = loadCats();
     let LV = null;
@@ -559,8 +578,26 @@
     }
     function saveLevel() { try { localStorage.setItem('arcade-level', String(level)); } catch (e) {} }
     function saveCats() { try { localStorage.setItem('arcade-cats', JSON.stringify(selCats)); } catch (e) {} }
+
+    function passedList() { return Journey.passedWeeks(5, 52); }
+    // Drop any saved pick that is no longer unlocked (progress can be reset).
+    function prunedWeeks() {
+        const ok = new Set(passedList().map(p => p.year + ':' + p.week));
+        return selWeeks.filter(k => ok.has(k));
+    }
+    function lessonSelection() {
+        const keys = prunedWeeks();
+        const m = Journey.mergeMaterial(keys.map(k => {
+            const [y, w] = k.split(':').map(Number);
+            return Journey.weekMaterial(Journey.getWeek(y, w));
+        }));
+        return { pool: m.pool, examples: m.examples, kanji: m.kanji, writingChars: m.chars, story: m.story };
+    }
     function selection() {
-        return { pool: poolFor(LV.vocab, selCats), examples: LV.examples, kanji: LV.kanji };
+        const sel = mode === 'lesson' ? lessonSelection()
+            : { pool: poolFor(LV.vocab, selCats), examples: LV.examples, kanji: LV.kanji };
+        if (!sel.writingChars || !sel.writingChars.length) sel.writingChars = writingChars(sel.pool);
+        return sel;
     }
 
     // ---------- best-star records (per game, per level) ----------
@@ -621,17 +658,18 @@
     function renderGames() {
         const sel = selection();
         $('poolInfo').textContent = `🎯 ${sel.pool.length} word${sel.pool.length === 1 ? '' : 's'} in your game pool`;
-        $('gameNote').textContent = sel.pool.length ? '' :
-            'Your word basket is empty — tap some categories above! 🧺';
+        $('gameNote').textContent = sel.pool.length ? ''
+            : mode === 'lesson' ? 'No lessons picked yet — tap some weeks above! 📚'
+            : 'Your word basket is empty — tap some categories above! 🧺';
         $('gameGrid').innerHTML = GAME_KEYS.map(key => {
             const def = Activities.defs[key];
-            const ok = GAME_OK[key](sel);
+            const ok = gameOk(key, sel);
             const best = bestFor(key);
             return `<div class="act-card game-card${ok ? '' : ' locked'}" data-game="${key}" data-ok="${ok ? 1 : 0}">
                 <div class="a-icon">${def.icon}</div>
                 <div class="a-name">${escHtml(def.name)}</div>
                 <div class="a-jp">${escHtml(def.jp)}</div>
-                <div class="a-stars">${!ok ? '<span class="lock-note">Pick more categories! 🧺</span>'
+                <div class="a-stars">${!ok ? `<span class="lock-note">${mode === 'lesson' ? 'Pick more lessons! 📚' : 'Pick more categories! 🧺'}</span>`
                     : best ? '⭐'.repeat(best) : '<span style="color:#cfd8dc">not played yet</span>'}</div>
             </div>`;
         }).join('');
@@ -644,17 +682,74 @@
             openGame(c.dataset.game);
         });
     }
-    function renderAll() { renderTotals(); renderLevels(); renderCats(); renderGames(); }
+    // ---------- lesson picker ----------
+    function renderMode() {
+        $('modeChips').querySelectorAll('.mode-chip').forEach(b =>
+            b.classList.toggle('active', b.dataset.mode === mode));
+        $('topicMode').style.display = mode === 'topic' ? '' : 'none';
+        $('lessonMode').style.display = mode === 'lesson' ? '' : 'none';
+        $('modeHint').textContent = mode === 'lesson'
+            ? 'Play with the exact words from lessons you have already finished. 📚'
+            : 'Play with every word in the course, sorted into fun topics. 🧺';
+    }
+    function renderLessons() {
+        const passed = passedList();
+        selWeeks = prunedWeeks();
+        if (!passed.length) {
+            $('lessonNote').innerHTML = '🌱 No finished lessons yet! Play three games in a week on the '
+                + '<a href="workbook.html">5-Year Journey</a> and it will appear here.';
+            $('lessonYears').innerHTML = '';
+            $('lessonPoolInfo').textContent = '';
+            return;
+        }
+        $('lessonNote').textContent = passed.length + ' lesson' + (passed.length === 1 ? '' : 's')
+            + ' unlocked — tap the weeks you want to play with!';
+        const byYear = {};
+        passed.forEach(p => (byYear[p.year] = byYear[p.year] || []).push(p.week));
+        $('lessonYears').innerHTML = Object.keys(byYear).sort().map(y => {
+            const meta = Journey.yearMeta(+y);
+            return `<div class="yr-block"><h4>${escHtml(meta && meta.title ? meta.title : 'Year ' + y)}</h4>
+              <div class="wk-chips">${byYear[y].map(w => {
+                const wk = Journey.getWeek(+y, w);
+                const on = selWeeks.indexOf(y + ':' + w) >= 0;
+                return `<button class="wk-chip${on ? ' on' : ''}" data-wk="${y}:${w}">
+                    ${wk.emoji} W${w} ${escHtml(wk.title)}</button>`;
+              }).join('')}</div></div>`;
+        }).join('');
+        $('lessonYears').querySelectorAll('.wk-chip').forEach(b => b.onclick = () => {
+            const k = b.dataset.wk;
+            selWeeks = selWeeks.indexOf(k) >= 0 ? selWeeks.filter(x => x !== k) : selWeeks.concat([k]);
+            saveWeeks(); Sfx.pop();
+            renderLessons(); renderGames();
+        });
+        const sel = lessonSelection();
+        $('lessonPoolInfo').textContent = `🎯 ${sel.pool.length} word${sel.pool.length === 1 ? '' : 's'} picked`;
+    }
+    $('allLessons').onclick = () => {
+        selWeeks = passedList().map(p => p.year + ':' + p.week);
+        saveWeeks(); Sfx.pop(); renderLessons(); renderGames();
+    };
+    $('lastLessons').onclick = () => {
+        selWeeks = passedList().slice(-5).map(p => p.year + ':' + p.week);
+        saveWeeks(); Sfx.pop(); renderLessons(); renderGames();
+    };
+    $('modeChips').querySelectorAll('.mode-chip').forEach(b => b.onclick = () => {
+        if (b.dataset.mode === mode) return;
+        mode = b.dataset.mode; saveMode(); Sfx.pop();
+        renderAll();
+    });
+
+    function renderAll() { renderTotals(); renderMode(); renderLevels(); renderCats(); renderLessons(); renderGames(); }
 
     // ---------- activity modal ----------
-    function writingFor(pool) {
+    function writingChars(pool) {
         // hand the tracing game a spread of kana from the picked words
         const seen = new Set(), chars = [];
         shuffleArr(pool).forEach(v => {
             if (!/^[ぁ-ゖァ-ヶー]+$/.test(v.jp)) return;
             for (const c of v.jp) if (c !== 'ー' && !seen.has(c)) { seen.add(c); chars.push(c); }
         });
-        return chars.length ? { type: 'kana', chars: chars.slice(0, 8) } : null;
+        return chars.slice(0, 8);
     }
     function openGame(key) {
         const def = Activities.defs[key];
@@ -672,7 +767,7 @@
             pool: sel.pool,
             examples: sel.examples,
             kanjiPool: sel.kanji,
-            writing: writingFor(sel.pool),
+            writing: (sel.writingChars || []).length ? { type: 'kana', chars: sel.writingChars.slice(0, 10) } : null,
             categories: catObjs,
             prevBest: () => bestFor(key),
         }, stars => { recordBest(key, stars); renderTotals(); renderGames(); },

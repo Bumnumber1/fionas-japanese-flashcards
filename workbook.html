@@ -156,6 +156,17 @@
         .act-card .a-name { font-weight: 800; color: #0277bd; font-size: 0.92em; }
         .act-card .a-jp { color: #90a4ae; font-size: 0.75em; font-weight: 700; }
         .act-card .a-stars { min-height: 1.2em; font-size: 0.85em; margin-top: 3px; }
+        .act-card .a-badge {
+            display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 10px;
+            background: #fff3c4; color: #f57f17; font-size: 0.68em; font-weight: 800;
+        }
+        .act-card.locked-act { opacity: 0.55; cursor: default; border-style: dashed; }
+        .act-card.locked-act:hover { transform: none; }
+        .scope-note {
+            background: #f1f8e9; border: 2px dashed #c5e1a5; border-radius: 12px;
+            padding: 7px 12px; margin-bottom: 10px; color: #558b2f;
+            font-weight: 700; font-size: 0.86em;
+        }
         .review-chips { display: flex; flex-wrap: wrap; gap: 8px; }
         .review-chip {
             background: #fff; border: 2px solid #d1c4e9; color: #5e35b1; border-radius: 14px; padding: 7px 12px;
@@ -615,17 +626,69 @@
             html += `<div class="panel culture-box"><b>🎌 Japan Corner:</b> ${escHtml(wk.culture)}</div>`;
         }
 
-        const acts = (wk.activities || []).filter(a => Activities.defs[a]);
-        if (acts.length) {
-            html += `<div class="panel"><div class="section-title">🎮 This Week's Games & Activities</div>
-            <div class="act-cards">` + acts.map(a => {
-                const def = Activities.defs[a];
-                const st = (p.starsBy || {})[a] || 0;
-                return `<div class="act-card" data-act="${a}">
+        // Games split by what they are allowed to draw on:
+        //   lesson games -> ONLY this week's words, sentences, kanji and kana
+        //   review games -> everything the journey has covered so far
+        // A listed game that needs more than one week can supply moves into the
+        // review row rather than quietly running on a padded pool.
+        const listed = (wk.activities || []).filter(a => Activities.defs[a]);
+        const lessonMat = Journey.lessonMaterial(y, w);
+        const reviewMat = Journey.reviewMaterial(y, w);
+        const isReviewWeek = wk.kind === 'review';
+        const lessonActs = isReviewWeek ? [] : Activities.playable(listed, lessonMat);
+        const needReview = listed.filter(a => lessonActs.indexOf(a) < 0);
+        const listedReview = Activities.playable(needReview, reviewMat);
+        // A listed game the journey has not fed enough material for YET (Kanji
+        // Match before three kanji exist). Shown locked instead of quietly
+        // handing back a different game.
+        const notYet = needReview.filter(a => listedReview.indexOf(a) < 0);
+        const extraReview = Activities.playable(
+            Object.keys(Activities.defs).filter(k => listed.indexOf(k) < 0), reviewMat);
+        // Week 1 has nothing behind it - don't offer a "review" of the very
+        // lesson she is sitting on.
+        const reviewAddsSomething = reviewMat.pool.length > lessonMat.pool.length
+            || reviewMat.kanji.length > lessonMat.kanji.length;
+
+        function actCard(a, stars, badge) {
+            const def = Activities.defs[a];
+            return `<div class="act-card" data-act="${a}">
                     <div class="a-icon">${def.icon}</div>
                     <div class="a-name">${def.name}</div>
                     <div class="a-jp">${def.jp}</div>
-                    <div class="a-stars">${st ? '⭐'.repeat(st) : '<span style="color:#cfd8dc">not played yet</span>'}</div>
+                    ${badge || ''}
+                    <div class="a-stars">${stars ? '⭐'.repeat(stars) : '<span style="color:#cfd8dc">not played yet</span>'}</div>
+                </div>`;
+        }
+
+        if (lessonActs.length) {
+            html += `<div class="panel"><div class="section-title">🎮 This Week's Games <span class="st-jp">こんしゅうのゲーム</span></div>
+            <div class="scope-note">🌱 Only this week's words and sentences — nothing else!</div>
+            <div class="act-cards">` +
+                lessonActs.map(a => actCard(a, (p.starsBy || {})[a] || 0)).join('') +
+            '</div></div>';
+        }
+
+        if ((listedReview.length || extraReview.length) && (isReviewWeek || reviewAddsSomething)) {
+            const revStars = loadReviewStars(y, w);
+            html += `<div class="panel"><div class="section-title">🔁 Review Games <span class="st-jp">ふくしゅうゲーム</span></div>
+            <div class="scope-note">🧠 Everything you have learned so far — ${reviewMat.pool.length} words${reviewMat.kanji.length ? ', ' + reviewMat.kanji.length + ' kanji' : ''}!</div>
+            <div class="act-cards">` +
+                listedReview.map(a => actCard(a, (p.starsBy || {})[a] || 0,
+                    '<div class="a-badge">counts for this week</div>')).join('') +
+                extraReview.map(a => actCard(a, revStars[a] || 0)).join('') +
+            '</div></div>';
+        }
+
+        if (notYet.length) {
+            html += `<div class="panel"><div class="section-title">🔒 Not quite yet <span class="st-jp">もうすこし</span></div>
+            <div class="scope-note">🐣 These need a few more lessons before they can be played!</div>
+            <div class="act-cards">` + notYet.map(a => {
+                const def = Activities.defs[a];
+                return `<div class="act-card locked-act">
+                    <div class="a-icon">${def.icon}</div>
+                    <div class="a-name">${def.name}</div>
+                    <div class="a-jp">${def.jp}</div>
+                    <div class="a-stars"><span style="color:#b0bec5">${escHtml(lockNote(a, reviewMat))}</span></div>
                 </div>`;
             }).join('') + '</div></div>';
         }
@@ -665,19 +728,56 @@
             JpSpeech.speak(k.char + '、' + k.read);
         });
         L.querySelectorAll('[data-wc]').forEach(b => b.onclick = () => openTraceChar(y, w, b.dataset.wc));
-        L.querySelectorAll('[data-act]').forEach(c => c.onclick = () => openActivity(y, w, c.dataset.act));
+        L.querySelectorAll('[data-act]').forEach(c => c.onclick = () => {
+            const k = c.dataset.act;
+            if (lessonActs.indexOf(k) >= 0) openActivity(y, w, k, 'lesson', true);
+            else openActivity(y, w, k, 'review', listedReview.indexOf(k) >= 0);
+        });
         L.querySelectorAll('[data-rw]').forEach(b => b.onclick = () => { location.hash = 'y' + y + 'w' + b.dataset.rw; });
     }
 
+    // Why a listed game is not available yet, in words a 6-year-old can read.
+    function lockNote(key, mat) {
+        if (key === 'kanjimatch') return 'needs 3 kanji — you have ' + mat.kanji.length;
+        if (key === 'story') return 'no story in this lesson';
+        if (key === 'shop') return 'needs more shopping words';
+        if (key === 'counters') return 'needs more counting words';
+        return 'needs a few more words';
+    }
+
+    // ---------- review-game best stars ----------
+    // Extra review games are pure practice: they keep their own best-star record
+    // and never nudge a week toward "complete" - a week is finished by playing
+    // that week's own material.
+    const RKEY = 'fiona-journey-review-stars';
+    function loadReviewStars(y, w) {
+        try { return (JSON.parse(localStorage.getItem(RKEY)) || {})['y' + y + 'w' + w] || {}; }
+        catch (e) { return {}; }
+    }
+    function saveReviewStar(y, w, key, stars) {
+        try {
+            const all = JSON.parse(localStorage.getItem(RKEY)) || {};
+            const k = 'y' + y + 'w' + w;
+            all[k] = all[k] || {};
+            all[k][key] = Math.max(all[k][key] || 0, stars);
+            localStorage.setItem(RKEY, JSON.stringify(all));
+        } catch (e) {}
+    }
+
     // ---------- activity modal ----------
-    function openActivity(y, w, key) {
+    function openActivity(y, w, key, scope, counts) {
         const def = Activities.defs[key];
-        $('modalTitle').textContent = def.icon + ' ' + def.name;
+        $('modalTitle').textContent = def.icon + ' ' + def.name
+            + (scope === 'review' ? ' · 🔁 review' : '');
         $('modalBack').classList.add('open');
         if (activeRun) activeRun.teardown();
         activeRun = Activities.start(key, $('actHost'), y, w,
-            (stars) => { Journey.recordActivity(y, w, key, stars); renderTotals(); },
-            () => closeModal(y, w));
+            (stars) => {
+                if (counts) Journey.recordActivity(y, w, key, stars);
+                else saveReviewStar(y, w, key, stars);
+                renderTotals();
+            },
+            () => closeModal(y, w), { scope: scope || 'lesson' });
     }
     function openTraceChar(y, w, ch) {
         $('modalTitle').textContent = '✍️ Trace: ' + ch;
@@ -692,7 +792,7 @@
         // (null also tells finish() to skip the NEW RECORD banner)
         activeRun = Activities.start('trace', $('actHost'), y, w,
             null,
-            () => closeModal(y, w));
+            () => closeModal(y, w), { scope: 'lesson' });
         if (saveWriting) wk.writing = { type: wk.writing.type, chars: restore };
     }
     function closeModal(y, w) {
