@@ -452,7 +452,7 @@
         </div>
         <div class="nav-row">
             <a class="nav-btn" href="index.html">🏠 Flashcards</a>
-            <a class="nav-btn teal" href="ebook.html">📖 Workbook Vol. 1</a>
+            <a class="nav-btn teal" href="weekly-workbook.html">📝 Weekly Workbook</a>
             <a class="nav-btn" href="arcade.html" style="background: linear-gradient(135deg, #ab47bc, #7e57c2);">🎮 Arcade</a>
             <a class="nav-btn" href="kanjiride.html" style="background: linear-gradient(135deg, #8d6e63, #6d4c41);">🐴 Trail Ride</a>
             <button class="nav-btn pink" id="jumpNow">⭐ Jump to This Week</button>
@@ -626,6 +626,13 @@
             html += `<div class="panel culture-box"><b>🎌 Japan Corner:</b> ${escHtml(wk.culture)}</div>`;
         }
 
+        html += `<div class="panel" style="text-align:center;background:linear-gradient(160deg,#fff8e1,#fff);border-color:#ffe0b2">
+            <div class="section-title">📝 This Week's Workbook Pages</div>
+            <div class="scope-note" style="background:#fffde7;border-color:#ffe082;color:#8d6e63">
+                Two illustrated, curriculum-matched pages: Learn &amp; Remember + Practice &amp; Create.
+            </div>
+            <a class="nav-btn pink" href="weekly-workbook.html#y${y}w${w}">Open Week ${w} Workbook 🖨️</a>
+        </div>`;
         // Games split by what they are allowed to draw on:
         //   lesson games -> ONLY this week's words, sentences, kanji and kana
         //   review games -> everything the journey has covered so far

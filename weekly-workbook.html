@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Workbook Pages · Fiona's Japanese Journey</title>
+    <style>
+        @import url('fonts/fonts.css');
+        :root {
+            --ink: #34495e; --purple: #7355a6; --pink: #ed77a7;
+            --teal: #45b9b2; --paper: #fffdf7;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; color: var(--ink); font-family: 'Nunito', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #fce4ec, #e8eaf6 45%, #e0f7fa);
+        }
+        button, select, a { font: inherit; }
+        .toolbar {
+            position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap;
+            align-items: center; justify-content: center; gap: 8px; padding: 10px;
+            background: rgba(255,255,255,.94); border-bottom: 2px solid #ede7f6;
+            box-shadow: 0 3px 14px rgba(62,39,93,.12);
+        }
+        .tool-btn, .toolbar select {
+            border: 0; border-radius: 14px; padding: 8px 13px; font-weight: 800;
+            color: #fff; background: linear-gradient(135deg, #8e73bd, #7355a6);
+            text-decoration: none; cursor: pointer;
+        }
+        .toolbar select { color: #4d3b68; background: #f2edf9; }
+        .tool-btn.print { background: linear-gradient(135deg, #54c8c1, #2ba69f); }
+        .tool-btn:disabled { opacity: .35; cursor: default; }
+        .page-stack { padding: 22px 12px 42px; }
+        .sheet {
+            position: relative; width: 8.5in; height: 11in; margin: 0 auto 22px;
+            padding: .34in .42in .35in; overflow: hidden; background-color: var(--paper);
+            background-repeat: no-repeat; background-position: center; background-size: 100% 100%;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            border: 1px solid #e4d9c9; border-radius: 18px;
+            box-shadow: 0 12px 34px rgba(64,42,84,.18);
+        }
+        .sheet.term-1 { background-image: url('workbook_templates/term1_summer_tanabata.png'); }
+        .sheet.term-2 { background-image: url('workbook_templates/term2_autumn_adventure.png'); }
+        .sheet.term-3 { background-image: url('workbook_templates/term3_cozy_winter.png'); }
+        .sheet.term-4 { background-image: url('workbook_templates/term4_spring_world.png'); }
+        .sheet::before, .sheet::after {
+            content: ''; position: absolute; left: 0; right: 0; height: 13px;
+            background: radial-gradient(circle at 7px 0, transparent 7px, var(--pink) 7.5px) 0 0/14px 14px repeat-x;
+        }
+        .sheet::before { top: 0; transform: rotate(180deg); }
+        .sheet::after { bottom: 0; }
+        .page-header {
+            margin-left: 70px; margin-right: 70px;
+            display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 12px;
+            padding: 7px 12px 9px; border-radius: 18px;
+            background: linear-gradient(135deg, #fff0f6, #f0efff 54%, #e9fbfa);
+            border: 2px solid #f0d6e6;
+        }
+        .week-bubble {
+            width: 67px; height: 67px; border-radius: 50%; display: grid; place-items: center;
+            color: #fff; background: linear-gradient(135deg, var(--pink), var(--purple));
+            font-weight: 900; line-height: 1.05; text-align: center; font-size: 12px;
+            box-shadow: 0 4px 0 #d8bfd8;
+        }
+        .week-bubble b { display: block; font-size: 26px; }
+        .page-title h1 { margin: 0; color: #553d85; font-size: 24px; line-height: 1.1; }
+        .page-title .jp-title { color: #b24f85; font-size: 20px; font-weight: 900; }
+        .page-title .meta { color: #8b8096; font-size: 11px; font-weight: 800; }
+        .header-emoji { font-size: 44px; filter: drop-shadow(0 3px 2px rgba(0,0,0,.12)); }
+        .goal {
+            margin: 9px 70px; padding: 7px 12px; border-radius: 14px;
+            background: #fff6cf; border: 2px dashed #eab64f; font-size: 12px; font-weight: 800;
+        }
+        .section { margin-top: 8px; break-inside: avoid; }
+        .section h2 {
+            display: flex; align-items: center; gap: 6px; margin: 0 0 5px;
+            color: #5f458f; font-size: 15px; line-height: 1.1;
+        }
+        .section h2::after { content: ''; flex: 1; border-top: 2px dotted #d9cbe9; }
+        .vocab-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .vocab-card {
+            position: relative; min-height: 62px; padding: 6px 7px 5px 44px;
+            border: 1.5px solid #d9cbea; border-radius: 13px; background: #fff;
+        }
+        .vocab-card .emoji { position: absolute; left: 8px; top: 12px; font-size: 26px; }
+        .vocab-card .jp { color: #4c3481; font-size: 16px; font-weight: 900; line-height: 1.1; }
+        .vocab-card .romaji { color: #bc4e87; font-size: 10px; font-weight: 800; }
+        .vocab-card .en { font-size: 10px; font-weight: 800; line-height: 1.1; }
+        .vocab-card .pos {
+            position: absolute; right: 5px; bottom: 3px; color: #aaa0b1;
+            font-size: 7px; font-weight: 900; text-transform: uppercase;
+        }
+        .grammar {
+            padding: 8px 10px; border-radius: 13px; background: #f5f2fb;
+            border: 1.5px solid #d8ccea;
+        }
+        .grammar-title { color: #493478; font-size: 14px; font-weight: 900; }
+        .explain { margin: 2px 0 5px; font-size: 10.5px; font-weight: 700; line-height: 1.28; }
+        .examples { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+        .example { padding: 5px 7px; border-radius: 9px; background: #fff; border-left: 4px solid #53bdb4; }
+        .example .jp { font-size: 12px; font-weight: 900; color: #33466e; }
+        .example .romaji { font-size: 8.5px; color: #a34f86; font-weight: 800; }
+        .example .en { font-size: 8.5px; color: #6e7d87; font-weight: 700; }
+        .bottom-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 7px; }
+        .mini-box { height: 100%; padding: 7px 9px; border-radius: 12px; background: #fff; border: 1.5px solid #cde8e4; }
+        .phrase { margin-bottom: 4px; font-size: 9px; line-height: 1.18; }
+        .phrase b { display: block; color: #315f66; font-size: 11px; }
+        .writing-row { display: flex; flex-wrap: wrap; gap: 4px; }
+        .trace-char {
+            min-width: 35px; height: 37px; padding: 2px 6px; display: grid; place-items: center;
+            border-radius: 8px; border: 1px dashed #bea9d3; color: #c9bdcf;
+            font-size: 22px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+        }
+        .kanji-row { display: flex; gap: 5px; margin-top: 5px; }
+        .kanji { flex: 1; text-align: center; border-radius: 9px; padding: 3px; background: #fff7dd; }
+        .kanji b { display: block; font-size: 22px; color: #d17136; }
+        .kanji small { font-size: 8px; font-weight: 800; }
+        .name-row { position: absolute; left: .45in; right: .45in; bottom: .19in; color: #9c929f; font-size: 9px; }
+        .name-line { display: inline-block; width: 170px; border-bottom: 1px solid #9c929f; }
+        .practice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .practice-box { padding: 7px 9px; border: 1.5px solid #d8cbea; border-radius: 13px; background: #fff; }
+        .match-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .match-item { min-height: 27px; padding: 2px 0; border-bottom: 1px dotted #cbc1cf; font-size: 10px; font-weight: 800; }
+        .match-item b { color: #593e88; font-size: 12px; }
+        .answer-blank { display: inline-block; width: 30px; border-bottom: 1.5px solid #6c6370; margin-left: 5px; }
+        .sentence-prompt { padding: 6px; background: #f8f5fb; border-radius: 9px; }
+        .sentence-prompt .jp { font-size: 15px; font-weight: 900; color: #4c367c; }
+        .sentence-prompt .hint { font-size: 9px; color: #777; font-weight: 700; }
+        .write-line { height: 23px; border-bottom: 1.5px solid #b9afb9; }
+        .square-grid {
+            min-height: 84px; border-radius: 9px;
+            background: linear-gradient(#dbcfe1 1px, transparent 1px), linear-gradient(90deg, #dbcfe1 1px, transparent 1px);
+            background-size: 42px 42px;
+        }
+        .story-lines { font-size: 9px; line-height: 1.3; }
+        .story-lines p { margin: 3px 0; }
+        .story-lines b { color: #4d377a; font-size: 11px; }
+        .culture { font-size: 9px; line-height: 1.27; color: #68533d; }
+        .draw-box {
+            height: 76px; margin-top: 5px; border: 2px dashed #d5b2c7; border-radius: 10px;
+            display: grid; place-items: center; color: #c6a6b8; font-size: 11px; font-weight: 900;
+        }
+        .answer-panel {
+            max-width: 8.5in; margin: 0 auto 40px; padding: 15px 18px;
+            background: #fff; border-radius: 16px; box-shadow: 0 5px 18px rgba(0,0,0,.12);
+        }
+        .answer-panel summary { color: #5f458f; font-weight: 900; cursor: pointer; }
+        .answer-panel p { font-size: 13px; }
+        .qa-badge {
+            position: absolute; right: .44in; bottom: .17in; color: #2a8e73;
+            font-size: 8px; font-weight: 900; letter-spacing: .04em;
+        }
+        @media (max-width: 860px) {
+            .sheet { width: 100%; height: auto; min-height: 11in; border-radius: 10px; }
+            .page-stack { padding: 12px 4px 30px; }
+        }
+        body.layout-qa .sheet { width: 8.5in; height: 11in; min-height: 0; }
+        @page { size: Letter portrait; margin: 0; }
+        @media print {
+            body { background: #fff; }
+            .toolbar, .answer-panel { display: none !important; }
+            .page-stack { padding: 0; }
+            .sheet { margin: 0; border: 0; border-radius: 0; box-shadow: none; break-after: page; page-break-after: always; }
+            .sheet:last-child { break-after: auto; page-break-after: auto; }
+        }
+    </style>
+</head>
+<body>
+<nav class="toolbar" aria-label="Workbook controls">
+    <a class="tool-btn" id="backLink" href="workbook.html">← Journey</a>
+    <button class="tool-btn" id="prevWeek" type="button">◀ Previous</button>
+    <label>Year <select id="yearSelect"></select></label>
+    <label>Week <select id="weekSelect"></select></label>
+    <button class="tool-btn" id="nextWeek" type="button">Next ▶</button>
+    <button class="tool-btn print" id="printPages" type="button">🖨 Print 2 Pages</button>
+</nav>
+<main class="page-stack" id="pageStack"></main>
+<details class="answer-panel" id="answerPanel">
+    <summary>Teacher / parent answer key</summary>
+    <div id="answers"></div>
+</details>
+
+<script src="curriculum.js"></script>
+<script src="curriculum_y1.js"></script>
+<script src="curriculum_y2.js"></script>
+<script src="curriculum_y3.js"></script>
+<script src="curriculum_y4.js"></script>
+<script src="curriculum_y5.js"></script>
+<script src="weekly-workbook.js"></script>
+<script>
+(() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    let current = { year: 1, week: 1 };
+
+    function parseHash() {
+        const match = location.hash.match(/^#y([1-5])w(\d{1,2})$/i);
+        if (match) {
+            current.year = +match[1];
+            current.week = Math.max(1, Math.min(52, +match[2]));
+        } else {
+            const now = Journey.currentPos();
+            current = { year: now.year, week: now.week };
+            history.replaceState(null, '', '#y' + current.year + 'w' + current.week);
+        }
+    }
+
+    function header(model, subtitle) {
+        const kind = model.kind === 'lesson' ? '' : ' · ' + model.kind.toUpperCase();
+        return `<header class="page-header">
+            <div class="week-bubble">WEEK <b>${model.week}</b></div>
+            <div class="page-title">
+                <h1>${esc(model.title)}</h1>
+                <div class="jp-title">${esc(model.jp)}</div>
+                <div class="meta">Year ${model.year} · Term ${model.term}${kind} · ${esc(subtitle)}</div>
+            </div>
+            <div class="header-emoji" aria-hidden="true">${esc(model.emoji)}</div>
+        </header><div class="goal">🎯 ${esc(model.goal)}</div>`;
+    }
+
+    function pageFooter(model, letter) {
+        return `<div class="name-row">Name <span class="name-line"></span> &nbsp; Date ____________ · Page ${letter}</div>
+            <div class="qa-badge">✓ CURRICULUM-LINKED · Y${model.year}W${model.week}</div>`;
+    }
+
+    function learnPage(model) {
+        const learn = model.learn;
+        const vocab = learn.vocab.map(v => `<div class="vocab-card">
+            <span class="emoji">${esc(v.emoji)}</span><div class="jp">${esc(v.jp)}</div>
+            <div class="romaji">${esc(v.romaji)}</div><div class="en">${esc(v.en)}</div>
+            <div class="pos">${esc(v.pos)}</div></div>`).join('');
+        const examples = learn.examples.map(ex => `<div class="example">
+            <div class="jp">${esc(ex.jp)}</div><div class="romaji">${esc(ex.romaji)}</div>
+            <div class="en">${esc(ex.en)}</div></div>`).join('');
+        const phrases = learn.phrases.length
+            ? learn.phrases.map(ph => `<div class="phrase"><b>${esc(ph.jp)}</b>${esc(ph.romaji)} · ${esc(ph.en)}</div>`).join('')
+            : '<div class="phrase">Say each model sentence aloud three times. ☆ ☆ ☆</div>';
+        const chars = learn.writing.map(c => `<span class="trace-char">${esc(c)}</span>`).join('');
+        const kanji = learn.kanji.map(k => `<div class="kanji"><b>${esc(k.char)}</b><small>${esc(k.read)} · ${esc(k.mean)}</small></div>`).join('');
+        return `<article class="sheet term-${model.term}" data-page="learn" data-week="${model.id}">
+            ${header(model, 'Learn & Remember')}
+            <section class="section"><h2>✨ Words of the Week · こんしゅうの ことば</h2><div class="vocab-grid">${vocab}</div></section>
+            <section class="section"><h2>🧠 Grammar Power-Up</h2><div class="grammar">
+                <div class="grammar-title">${esc(learn.grammar.title)}</div>
+                <div class="explain">${esc(learn.grammar.explain)}</div>
+                <div class="examples">${examples}</div>
+            </div></section>
+            <section class="section bottom-grid">
+                <div><h2>💬 Handy Phrases</h2><div class="mini-box">${phrases}</div></div>
+                <div><h2>✍ Writing · ${esc(learn.writingType)}</h2><div class="mini-box">
+                    <div class="writing-row">${chars}</div>${kanji ? `<div class="kanji-row">${kanji}</div>` : ''}
+                </div></div>
+            </section>
+            ${pageFooter(model, 'A')}
+        </article>`;
+    }
+
+    function storyOrCulture(model) {
+        const p = model.practice;
+        if (p.story) {
+            const lines = (p.story.lines || []).map(line => `<p><b>${esc(line.jp)}</b><br>${esc(line.romaji || '')}<br>${esc(line.en || '')}</p>`).join('');
+            const questions = (p.story.questions || []).slice(0, 2).map((q, i) =>
+                `<p><b>${i + 1}. ${esc(q.q || q.question || '')}</b><br>${(q.options || []).map((o, j) => String.fromCharCode(65 + j) + ') ' + esc(o)).join(' &nbsp; ')}</p>`).join('');
+            return `<h2>📖 Story Challenge · ${esc(p.story.title)}</h2><div class="practice-box story-lines">${lines}${questions}</div>`;
+        }
+        return `<h2>🎋 Japan Corner & Draw</h2><div class="practice-box culture">${esc(p.culture)}
+            <div class="draw-box">Draw this week's idea here</div></div>`;
+    }
+
+    function practicePage(model) {
+        const p = model.practice;
+        const left = p.match.rows.map(r => `<div class="match-item"><b>${r.id}. ${esc(r.jp)}</b><br>${esc(r.romaji)} <span class="answer-blank"></span></div>`).join('');
+        const right = p.match.meanings.map(m => `<div class="match-item"><b>${m.letter}.</b> ${esc(m.en)}</div>`).join('');
+        const cloze = p.cloze ? `<div class="sentence-prompt"><div class="jp">${esc(p.cloze.prompt)}</div>
+            <div class="hint">${esc(p.cloze.en)}</div></div><div class="write-line"></div>` : '<div class="write-line"></div>';
+        const trans = p.translation ? `<div class="sentence-prompt"><b>Write in Japanese:</b><br>${esc(p.translation.en)}</div>
+            <div class="write-line"></div><div class="write-line"></div>` : '<div class="write-line"></div>';
+        const chars = p.writing.map(c => `<span class="trace-char">${esc(c)}</span>`).join('');
+        const review = p.reviewWeeks.length ? `<div class="practice-box"><b>Review:</b> ${p.reviewWeeks.map(w => 'Week ' + w).join(' · ')}</div>` : '';
+        return `<article class="sheet term-${model.term}" data-page="practice" data-week="${model.id}">
+            ${header(model, 'Practice & Create')}
+            <section class="section"><h2>🔗 1. Match the Japanese to the meaning</h2>
+                <div class="practice-box match-cols"><div>${left}</div><div>${right}</div></div>
+            </section>
+            <section class="section practice-grid">
+                <div><h2>✏️ 2. Complete the sentence</h2><div class="practice-box">${cloze}</div></div>
+                <div><h2>🌟 3. Translation challenge</h2><div class="practice-box">${trans}</div></div>
+            </section>
+            <section class="section practice-grid">
+                <div><h2>🖊 4. Write and trace · ${esc(p.writingType)}</h2><div class="practice-box">
+                    <div class="writing-row">${chars}</div><div class="square-grid"></div></div></div>
+                <div>${storyOrCulture(model)}</div>
+            </section>
+            ${review}
+            ${pageFooter(model, 'B')}
+        </article>`;
+    }
+
+    function renderAnswers(model) {
+        const match = model.practice.match.answers.map(a => a.id + '–' + a.letter).join(', ');
+        const cloze = model.practice.cloze ? esc(model.practice.cloze.answer) : 'Copy the model sentence.';
+        const trans = model.practice.translation ? esc(model.practice.translation.jp) : '—';
+        let story = '';
+        const s = model.practice.story;
+        if (s && s.questions) {
+            story = '<p><b>Story:</b> ' + s.questions.slice(0, 2).map((q, i) => {
+                const value = q.options && Number.isInteger(q.answer) ? q.options[q.answer] : q.answer;
+                return (i + 1) + '. ' + esc(value == null ? '' : value);
+            }).join(' · ') + '</p>';
+        }
+        $('answers').innerHTML = `<p><b>Match:</b> ${match}</p>
+            <p><b>Complete:</b> ${cloze}</p><p><b>Translation:</b> ${trans}</p>${story}
+            <p><small>Generated directly from the QA-validated Y${model.year}W${model.week} curriculum record.</small></p>`;
+    }
+
+    function render() {
+        parseHash();
+        const model = WeeklyWorkbook.buildWeek(window.CURRICULUM, current.year, current.week);
+        document.title = `Y${current.year} W${current.week} · ${model.title} · Weekly Workbook`;
+        $('pageStack').innerHTML = learnPage(model) + practicePage(model);
+        $('yearSelect').value = String(current.year);
+        $('weekSelect').value = String(current.week);
+        $('backLink').href = 'workbook.html#y' + current.year + 'w' + current.week;
+        $('prevWeek').disabled = current.year === 1 && current.week === 1;
+        $('nextWeek').disabled = current.year === 5 && current.week === 52;
+        renderAnswers(model);
+        window.scrollTo(0, 0);
+    }
+
+    function move(delta) {
+        let global = (current.year - 1) * 52 + current.week - 1 + delta;
+        global = Math.max(0, Math.min(259, global));
+        location.hash = '#y' + (Math.floor(global / 52) + 1) + 'w' + (global % 52 + 1);
+    }
+
+    async function runAllLayoutQa() {
+        document.body.classList.add('layout-qa');
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        const host = document.createElement('div');
+        host.style.cssText = 'position:absolute;left:-10000px;top:0;width:8.5in';
+        document.body.appendChild(host);
+        const issues = [];
+        let pages = 0;
+        let largest = 0;
+        for (let year = 1; year <= 5; year++) {
+            for (let week = 1; week <= 52; week++) {
+                const model = WeeklyWorkbook.buildWeek(window.CURRICULUM, year, week);
+                host.innerHTML = learnPage(model) + practicePage(model);
+                host.querySelectorAll('.sheet').forEach(sheet => {
+                    pages++;
+                    const overflow = Math.max(0, sheet.scrollHeight - sheet.clientHeight);
+                    largest = Math.max(largest, overflow);
+                    if (overflow > 1) issues.push(model.id + ':' + sheet.dataset.page + ':' + overflow);
+                });
+            }
+        }
+        host.remove();
+        const report = { pages, overflowCount: issues.length, largestOverflow: largest, issues };
+        const output = document.createElement('pre');
+        output.id = 'layoutQaResult';
+        output.textContent = JSON.stringify(report);
+        document.body.appendChild(output);
+        document.body.dataset.layoutQa = issues.length ? 'failed' : 'passed';
+    }
+    $('yearSelect').innerHTML = [1,2,3,4,5].map(y => `<option value="${y}">${y}</option>`).join('');
+    $('weekSelect').innerHTML = Array.from({ length: 52 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    $('yearSelect').onchange = e => { location.hash = '#y' + e.target.value + 'w' + current.week; };
+    $('weekSelect').onchange = e => { location.hash = '#y' + current.year + 'w' + e.target.value; };
+    $('prevWeek').onclick = () => move(-1);
+    $('nextWeek').onclick = () => move(1);
+    $('printPages').onclick = () => window.print();
+    window.addEventListener('hashchange', render);
+    render();
+    if (new URLSearchParams(location.search).has('qaAll')) runAllLayoutQa();
+
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+})();
+</script>
+</body>
+</html>

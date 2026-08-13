@@ -8,7 +8,7 @@ const path = require('path');
 const PAGES = [
     'index.html', 'writing.html', 'ocean.html', 'spaceship.html', 'review.html',
     'questions.html', 'voicepractice.html', 'sentencebuilder.html', 'ebook.html',
-    'workbook.html', 'arcade.html', 'kanjiride.html'
+    'workbook.html', 'weekly-workbook.html', 'arcade.html', 'kanjiride.html'
 ];
 
 const assets = ['./'];
@@ -17,10 +17,12 @@ assets.push('kanjivg_data.js');
 assets.push('curriculum.js');
 assets.push('wordcats.js');
 assets.push('activities.js');
+assets.push('weekly-workbook.js');
 for (let y = 1; y <= 5; y++) assets.push('curriculum_y' + y + '.js');
 assets.push('Underwater Theme.mp3');
 for (const f of fs.readdirSync('fonts')) assets.push('fonts/' + f);
 for (const f of fs.readdirSync('ocean_images')) assets.push('ocean_images/' + f);
+for (const f of fs.readdirSync('workbook_templates')) assets.push('workbook_templates/' + f);
 
 // Verify everything exists before baking the list
 for (const a of assets) {
