@@ -324,6 +324,10 @@
 
 <script src="kanjivg_data.js"></script>
 <script src="curriculum.js"></script>
+<script src="curriculum_y1.js"></script>
+<script src="year1-review-data.js"></script>
+<script src="garden-material.js"></script>
+<script src="garden-session.js"></script>
 
 <script id="ridemath">
 // ---------- pure pseudo-3D engine math (unit-tested by the node harness) ----------
@@ -481,6 +485,13 @@ window.KANJI_WORLD = (function () {
         { id: 'big', icon: '🌈', name: 'Big Adventure', jp: 'だいぼうけん', blurb: 'Every kanji at once!', big: true }
     ];
 
+    if (window.GardenSession) {
+        const allowed = new Map(GardenSession.kanji.filter(k => k.ride).map(k => [k.char,k]));
+        const chosen = K.filter(k => allowed.has(k.char)).map(k => ({ ...k, read:allowed.get(k.char).read,
+            say:allowed.get(k.char).read, mean:allowed.get(k.char).mean, en:allowed.get(k.char).mean, trail:'garden' }));
+        K.splice(0, K.length, ...chosen);
+        TRAILS.splice(0, TRAILS.length, { id:'garden', icon:'🌷', name:'Garden Trail', jp:'', blurb:'Only kanji forms of your checked words' });
+    }
     const byChar = {};
     K.forEach(function (k) { byChar[k.char] = k; });
 
@@ -506,16 +517,17 @@ window.KANJI_WORLD = (function () {
     const STATS_KEY = 'kanjiride-stats';
     const TRAIL_KEY = 'kanjiride-trail';
     function loadJSON(key, def) {
+        if (window.GardenSession) return def;
         try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? def : v; }
         catch (e) { return def; }
     }
-    function saveJSON(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+    function saveJSON(key, val) { if (window.GardenSession) return; try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
     let collected = loadJSON(COLLECT_KEY, {});
     let stats = loadJSON(STATS_KEY, { caught: 0, rides: 0 });
     if (typeof stats.caught !== 'number') stats.caught = 0;
     if (typeof stats.rides !== 'number') stats.rides = 0;
     let selectedTrail = loadJSON(TRAIL_KEY, 'meadow');
-    if (!KW.TRAILS.some(t => t.id === selectedTrail)) selectedTrail = 'meadow';
+    if (!KW.TRAILS.some(t => t.id === selectedTrail)) selectedTrail = KW.TRAILS[0].id;
 
     function gotSet(trailId) { return new Set(collected[trailId] || []); }
 
@@ -1234,6 +1246,7 @@ window.KANJI_WORLD = (function () {
     }
 
     function startRide() {
+        if (!KW.K.length) return;
         rideTrail = selectedTrail;
         cam.x = 0; cam.z = 0; cam.th = 0;
         simT = 0; boostUntil = -1;
@@ -1258,6 +1271,7 @@ window.KANJI_WORLD = (function () {
 
     // ---------------- title overlay ----------------
     function renderTitle() {
+        $("startBtn").disabled = !KW.K.length;
         $('trailCards').innerHTML = KW.TRAILS.map(tr => {
             const total = KW.trailChars(tr.id).length;
             const got = gotSet(tr.id).size;

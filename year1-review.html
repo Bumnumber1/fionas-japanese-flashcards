@@ -6,7 +6,16 @@
   <title>Fiona’s Little Review Garden · Year 1</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="year1-review.css">
+  <link rel="stylesheet" href="activity-styles.css">
+  <link rel="stylesheet" href="garden-games.css">
   <script src="curriculum_y1.js" defer></script>
+  <script src="curriculum.js" defer></script>
+  <script src="year1-review-data.js" defer></script>
+  <script src="garden-material.js" defer></script>
+  <script src="kanjivg_data.js" defer></script>
+  <script src="wordcats.js" defer></script>
+  <script src="activities.js" defer></script>
+  <script src="garden-games.js" defer></script>
   <script src="year1-review.js" defer></script>
 </head>
 <body>
@@ -34,9 +43,21 @@
         <div id="bulk" class="bulk"><p id="results" aria-live="polite"></p><div><button id="select-visible" class="text-button">Select visible</button><button id="clear-visible" class="text-button">Clear visible</button></div></div>
         <div id="review-content"></div>
       </section>
+      <section id="garden-games" class="panel garden-games" aria-labelledby="games-title">
+        <p class="eyebrow">03 / TIME TO PLAY</p>
+        <div class="section-heading"><h2 id="games-title">The garden playground 🎮</h2><a href="#planner-title">↑ Change my words</a></div>
+        <p>Play your familiar games with the words you checked above. Sentence games also use your checked patterns. Writing adventures practice kana or kanji forms of checked words.</p>
+        <p id="games-summary" class="selection-summary" aria-live="polite"></p>
+        <p class="games-note">Need more words? Each game tells you what to select. Games never add unchecked vocabulary to fill a round.</p>
+        <div id="garden-game-grid" class="garden-game-grid"></div>
+      </section>
       <noscript><p class="panel">Please enable JavaScript to load the curriculum and choose your lesson.</p></noscript>
     </main>
     <footer>Made for small steps &amp; happy discoveries. <span lang="ja">はなまる!</span> 🌸<br><small>Year 1 · Weeks 1–13 · From your Japanese journey curriculum</small></footer>
   </div>
+  <dialog id="garden-game-dialog" aria-labelledby="garden-game-title">
+    <div class="garden-game-head"><div><h2 id="garden-game-title"></h2><p id="garden-game-scope"></p></div><button id="garden-game-close" aria-label="Close game">✕</button></div>
+    <div id="garden-game-host" class="act-host"></div>
+  </dialog>
 </body>
 </html>

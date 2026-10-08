@@ -19,6 +19,8 @@ assets.push('wordcats.js');
 assets.push('activities.js');
 assets.push('weekly-workbook.js');
 assets.push('year1-review.js', 'year1-review.css');
+assets.push('year1-review-data.js', 'garden-material.js', 'garden-games.js', 'garden-games.css',
+    'garden-session.js', 'garden-legacy.js', 'garden-embed.css', 'activity-styles.css');
 for (let y = 1; y <= 5; y++) assets.push('curriculum_y' + y + '.js');
 assets.push('Underwater Theme.mp3');
 for (const f of fs.readdirSync('fonts')) assets.push('fonts/' + f);

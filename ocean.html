@@ -1402,6 +1402,10 @@
     </div>
 
 <script src="kanjivg_data.js"></script>
+<script src="curriculum_y1.js"></script>
+<script src="year1-review-data.js"></script>
+<script src="garden-material.js"></script>
+<script src="garden-session.js"></script>
 <script>
 // =========================================================================
 // KANJI DATA - 80+ kanji (1st & 2nd grade mix)
@@ -1503,6 +1507,12 @@ const gameKanji = [
     { char: '半', romaji: 'han', english: 'half', emoji: '½', strokes: 5, image: 'kanji_half.png' },
     { char: '方', romaji: 'hou', english: 'direction', emoji: '🧭', strokes: 4, image: 'kanji_direction.png' },
 ];
+
+if (window.GardenSession) {
+    const allowed = new Map(GardenSession.kanji.filter(k => k.ocean).map(k => [k.char,k]));
+    const chosen = gameKanji.filter(k => allowed.has(k.char)).map(k => ({ ...k, gardenReading:allowed.get(k.char).read, english:allowed.get(k.char).mean }));
+    gameKanji.splice(0, gameKanji.length, ...chosen);
+}
 
 // =========================================================================
 // OCEAN SENTENCE TEMPLATES
@@ -2163,6 +2173,7 @@ function generateGrid() {
 // GAME INIT
 // =========================================================================
 function startGame() {
+    if (!gameKanji.length) return;
     gameGen++;
     document.getElementById('introOverlay').classList.add('hidden');
     generateGrid();
@@ -2344,7 +2355,7 @@ function showKanjiPanel(kanji) {
     document.getElementById('kanjiChar').textContent = kanji.char;
     document.getElementById('kanjiEmoji').textContent = kanji.emoji;
     document.getElementById('kanjiEnglish').textContent = kanji.english;
-    document.getElementById('kanjiRomaji').textContent = kanji.romaji;
+    document.getElementById('kanjiRomaji').textContent = (kanji.gardenReading ? kanji.gardenReading + ' · ' : '') + kanji.romaji;
     document.getElementById('kanjiStrokesInfo').textContent = kanji.strokes + ' strokes';
     document.getElementById('kanjiDisplay').style.display = 'block';
     document.getElementById('actionButtons').style.display = 'flex';
@@ -2572,7 +2583,7 @@ function selectDirection(dir) {
 
     setOceanMessage('✏️', `Write "${currentKanji.char}" (${currentKanji.english}) — ${currentKanji.strokes} strokes`);
     showKanjiPanel(currentKanji);
-    speakJapanese(currentKanji.char);
+    speakJapanese(currentKanji.gardenReading || currentKanji.char);
     clearCanvas();
 
     // Trigger KanjiVG preload for this character
@@ -4064,6 +4075,12 @@ document.addEventListener('keydown', function(e) {
 let fontLoaded = false;
 
 function preloadKvg() {
+    if (window.GardenSession) {
+        const intro = document.querySelector("#introOverlay h1, #introOverlay h2");
+        if (intro) intro.textContent = gameKanji.length ? "Garden Ocean Adventure" : "Choose a checked word with ocean kanji in the garden.";
+        const button = document.querySelector(".intro-btn");
+        if (button) button.disabled = !gameKanji.length;
+    }
     // Preload KanjiVG for first 20 kanji
     let i = 0;
     function fetchBatch() {

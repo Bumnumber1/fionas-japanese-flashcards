@@ -481,8 +481,10 @@ window.Activities = (() => {
         if (!sents.length) return quiz(host, ctx);
         const rounds = pickN(sents, Math.min(8, sents.length)).map(s => {
             const tokens = s.jp.trim().replace(/。$/, '').split(/\s+/);
-            let bi = tokens.findIndex(t => PARTICLES.includes(t));
-            const isParticle = bi >= 0;
+            let bi = ctx.strictPool
+                ? tokens.findIndex(t => ctx.pool.some(word => word.jp === t))
+                : tokens.findIndex(t => PARTICLES.includes(t));
+            const isParticle = !ctx.strictPool && bi >= 0;
             if (bi < 0) bi = Math.floor(Math.random() * tokens.length);
             const answer = tokens[bi];
             // never offer a particle that would ALSO be correct in the sentence
@@ -826,6 +828,10 @@ window.Activities = (() => {
             const cn = COUNTER_NOUNS[k];
             const fit = nouns.filter(v => (cn.re.test(v.en) || (v.emoji && cn.emo.includes(v.emoji)))
                 && !(k === 'つ' && animateNoun(v)));
+            if (ctx.strictPool && !fit.length) {
+                el(host, '<div class="act-subtitle">Choose object words in the garden to play this counting round.</div>');
+                return;
+            }
             const noun = fit.length ? fit[i % fit.length] : cn.def;
             const answer = COUNTERS[k][n - 1];
             const distract = pickN(COUNTERS[k].filter(x => x !== answer), 3);
@@ -1241,7 +1247,10 @@ window.Activities = (() => {
             if (i >= N) return finish(host, ctx, correct, N);
             const w = words[i];
             const target = [...w.jp];
-            const tiles = shuffleArr(target.concat(kbDecoys(w.jp, 2))).map(ch => ({ ch, used: false }));
+            const decoys = ctx.strictPool
+                ? pickN([...new Set(ctx.pool.flatMap(word => [...word.jp]))].filter(char => /^[ぁ-ゖァ-ヶ]$/.test(char) && !target.includes(char)), 2)
+                : kbDecoys(w.jp, 2);
+            const tiles = shuffleArr(target.concat(decoys)).map(ch => ({ ch, used: false }));
             const placed = [];
             let missed = false, built = false;
             function render() {
@@ -1545,7 +1554,7 @@ window.Activities = (() => {
             pool: data.pool || [], examples: data.examples || [], kanjiPool: data.kanjiPool || [],
             vocab: data.pool || [], writing: data.writing || null, story: data.story || null,
             categories: data.categories || null, prevBest: data.prevBest || null,
-            actKey: key,
+            actKey: key, strictPool: !!data.strictPool,
         }, onComplete, onClose);
     }
 

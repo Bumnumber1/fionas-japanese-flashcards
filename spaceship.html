@@ -417,6 +417,10 @@
     </div>
 </div>
 
+<script src="curriculum_y1.js"></script>
+<script src="year1-review-data.js"></script>
+<script src="garden-material.js"></script>
+<script src="garden-session.js"></script>
 <script>
 // =========================================================================
 // KANA DATA - hiragana + katakana (46 base + 25 dakuten/handakuten each)
@@ -464,7 +468,8 @@ const KATAKANA = [
 // remembered across visits. All spawning/targeting goes through activePool.
 let mode = 'hira';
 try { if (localStorage.getItem('kana-galaxy-mode') === 'kata') mode = 'kata'; } catch (e) {}
-let activePool = mode === 'kata' ? KATAKANA : KANA;
+const gardenKana = window.GardenSession ? [...KANA, ...KATAKANA].filter(kana => GardenSession.chars.includes(kana.k)) : null;
+let activePool = gardenKana || (mode === 'kata' ? KATAKANA : KANA);
 
 function poolForWave(w) {
     // Full shuffled set of the chosen script every wave (incl.
@@ -498,8 +503,8 @@ let stars = [];
 const ship = { x: 200, tx: 200, y: 0, w: 60 };
 // High scores are kept separately per mode ('kana-galaxy-best' predates the
 // katakana mode, so it stays the hiragana key)
-function bestKey() { return mode === 'kata' ? 'kana-galaxy-best-kata' : 'kana-galaxy-best'; }
-function bestWaveKey() { return mode === 'kata' ? 'kana-galaxy-best-wave-kata' : 'kana-galaxy-best-wave'; }
+function bestKey() { if (gardenKana) return 'garden-galaxy-best'; return mode === 'kata' ? 'kana-galaxy-best-kata' : 'kana-galaxy-best'; }
+function bestWaveKey() { if (gardenKana) return 'garden-galaxy-best-wave'; return mode === 'kata' ? 'kana-galaxy-best-wave-kata' : 'kana-galaxy-best-wave'; }
 let best = 0;
 function loadBest() {
     best = 0;
@@ -879,6 +884,7 @@ function gameOver() {
 }
 
 function startGame() {
+    if (gardenKana && new Set(gardenKana.map(kana => kana.r)).size < 2) return;
     score = 0; lives = 5; shield = 0; wave = 1; combo = 0; totalCaptured = 0;
     rapidUntil = wideUntil = slowUntil = x2Until = freezeUntil = 0;
     couponEarned = false; winnerIdx = null;
@@ -1524,7 +1530,7 @@ document.addEventListener('touchstart', function unlock() {
 // =========================================================================
 function setMode(m) {
     mode = m;
-    activePool = mode === 'kata' ? KATAKANA : KANA;
+    activePool = gardenKana || (mode === 'kata' ? KATAKANA : KANA);
     try { localStorage.setItem('kana-galaxy-mode', mode); } catch (e) {}
     document.getElementById('modeHira').classList.toggle('selected', mode === 'hira');
     document.getElementById('modeKata').classList.toggle('selected', mode === 'kata');
@@ -1551,6 +1557,15 @@ function setMode(m) {
 document.getElementById('modeHira').addEventListener('click', () => setMode('hira'));
 document.getElementById('modeKata').addEventListener('click', () => setMode('kata'));
 setMode(mode);
+if (gardenKana) {
+    document.getElementById("modeHira").hidden = true;
+    document.getElementById("modeKata").hidden = true;
+    document.getElementById("bestLine").textContent = gardenKana.length + " kana from your checked garden words";
+    if (new Set(gardenKana.map(kana => kana.r)).size < 2) {
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("bestLine").textContent = "Choose words with at least two different kana sounds in the garden.";
+    }
+}
 resize();
 if (document.fonts && document.fonts.load) {
     document.fonts.load('700 28px "Noto Sans JP"', 'あ').catch(() => {});
