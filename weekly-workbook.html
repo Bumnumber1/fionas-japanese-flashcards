@@ -208,7 +208,7 @@
         }
     }
 
-    function header(model, subtitle) {
+    function header(model, subtitle, practice = false) {
         const kind = model.kind === 'lesson' ? '' : ' · ' + model.kind.toUpperCase();
         return `<header class="page-header">
             <div class="week-bubble">WEEK <b>${model.week}</b></div>
@@ -217,8 +217,8 @@
                 <div class="jp-title">${esc(model.jp)}</div>
                 <div class="meta">Year ${model.year} · Term ${model.term}${kind} · ${esc(subtitle)}</div>
             </div>
-            <div class="header-emoji" aria-hidden="true">${esc(model.emoji)}</div>
-        </header><div class="goal">🎯 ${esc(model.goal)}</div>`;
+            ${practice ? '' : `<div class="header-emoji" aria-hidden="true">${esc(model.emoji)}</div>`}
+        </header><div class="goal">${practice ? 'Try these on your own. Check the learning page when you are finished.' : '🎯 ' + esc(model.goal)}</div>`;
     }
 
     function pageFooter(model, letter) {
@@ -281,7 +281,7 @@
         const chars = p.writing.map(c => `<span class="trace-char">${esc(c)}</span>`).join('');
         const review = p.reviewWeeks.length ? `<div class="practice-box"><b>Review:</b> ${p.reviewWeeks.map(w => 'Week ' + w).join(' · ')}</div>` : '';
         return `<article class="sheet term-${model.term}" data-page="practice" data-week="${model.id}">
-            ${header(model, 'Practice & Create')}
+            ${header(model, 'Practice & Create', true)}
             <section class="section"><h2>🔗 1. Match the Japanese to the meaning</h2>
                 <div class="practice-box match-cols"><div>${left}</div><div>${right}</div></div>
             </section>

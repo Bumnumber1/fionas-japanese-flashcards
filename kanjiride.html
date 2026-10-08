@@ -274,7 +274,6 @@
 <!-- ---------- catch panel ---------- -->
 <div class="modal-back" id="catchBack">
     <div class="modal catch-modal" id="catchModal">
-        <div class="catch-emoji" id="catchEmoji"></div>
         <div class="catch-jp" id="catchJp"></div>
         <div class="catch-en" id="catchEn"></div>
         <div class="catch-info" id="catchInfo"></div>
@@ -704,23 +703,17 @@ window.KANJI_WORLD = (function () {
         }
     }
 
-    function drawBillboardEmoji(item, x, y, size, alpha) {
+    function drawTargetMarker(x, y, size, alpha) {
         ctx.globalAlpha = alpha;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
-        if (item.multi === 2) {
-            ctx.font = Math.round(size * 0.78) + 'px ' + EMOJI_FONT;
-            ctx.fillText('🌲', x - size * 0.24, y);
-            ctx.fillText('🌲', x + size * 0.24, y);
-        } else if (item.multi === 3) {
-            ctx.font = Math.round(size * 0.72) + 'px ' + EMOJI_FONT;
-            ctx.fillText('🌲', x, y - size * 0.32);
-            ctx.fillText('🌲', x - size * 0.3, y);
-            ctx.fillText('🌲', x + size * 0.3, y);
-        } else {
-            ctx.font = Math.round(size) + 'px ' + EMOJI_FONT;
-            ctx.fillText(item.emoji, x, y);
-        }
+        // Every uncaught target uses the same marker; its picture would reveal its meaning.
+        ctx.font = 'bold ' + Math.round(size) + 'px sans-serif';
+        ctx.fillStyle = '#fff8d0';
+        ctx.strokeStyle = '#5b417b';
+        ctx.lineWidth = Math.max(2, size * 0.04);
+        ctx.strokeText('?', x, y);
+        ctx.fillText('?', x, y);
         ctx.globalAlpha = 1;
     }
 
@@ -1062,7 +1055,7 @@ window.KANJI_WORLD = (function () {
                 drawTargetGlow(it.target, it.p, t);
                 // the collectible hovers with a gentle bob above its glow
                 const bobY = Math.sin(t * 2 + it.target.phase) * it.p.size * 0.035;
-                drawBillboardEmoji(it.target.k, it.p.x, it.p.y - bobY, it.p.size, it.p.alpha);
+                drawTargetMarker(it.p.x, it.p.y - bobY, it.p.size, it.p.alpha);
             }
         }
 
@@ -1713,7 +1706,6 @@ window.KANJI_WORLD = (function () {
         hintOn = true; catchBusy = false;
         $('hintBtn').textContent = '💡 Hint ON';
         $('hintBtn').classList.remove('off');
-        $('catchEmoji').textContent = k.multi ? '🌲'.repeat(k.multi) : k.emoji;
         $('catchJp').textContent = '「みて！ ' + k.say + 'だ！」';
         $('catchEn').textContent = k.en + '! Draw ' + k.char + ' to catch it!';
         $('catchInfo').textContent = k.char + '・' + k.read + '・' + k.mean;

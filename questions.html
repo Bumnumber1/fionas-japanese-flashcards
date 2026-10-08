@@ -225,6 +225,12 @@
             margin-bottom: 10px;
         }
 
+        /* A recall round hides every saved answer, including copies in the editor. */
+        body.qa-quizzing .container > .panel:not(:last-child),
+        body.qa-quizzing .saved-item:not(.quizzing),
+        body.qa-quizzing .saved-item.quizzing:not(.answer-revealed) .saved-a,
+        body.qa-quizzing .saved-item .saved-meta { display: none; }
+
         .saved-item.quizzing {
             box-shadow: 0 0 0 3px #ffb300, 0 4px 14px rgba(255,179,0,0.35);
         }
@@ -439,7 +445,6 @@
             const grid = document.getElementById('qwGrid');
             grid.innerHTML = questionWords.map((w, i) => `
                 <div class="qw-chip" data-index="${i}" onclick="pickWord(${i})">
-                    <div class="qw-emoji">${w.emoji}</div>
                     <div class="qw-jp">${w.jp}</div>
                     <div class="qw-romaji">${w.romaji}</div>
                     <div class="qw-en">${w.en}</div>
@@ -582,6 +587,7 @@
         }
 
         function renderSaved() {
+            teardownQuiz();
             const el = document.getElementById('savedList');
             const countEl = document.getElementById('savedCount');
             const list = loadSaved();
@@ -658,9 +664,8 @@
             const list = loadSaved();
             if (list.length === 0) return;
             const item = list[Math.floor(Math.random() * list.length)];
-            if (quizTimer) { clearTimeout(quizTimer); quizTimer = null; }
-            if (quizClearTimer) { clearTimeout(quizClearTimer); quizClearTimer = null; }
-            document.querySelectorAll('.saved-item.quizzing').forEach(c => c.classList.remove('quizzing'));
+            teardownQuiz();
+            document.body.classList.add('qa-quizzing');
             const card = document.querySelector('.saved-item[data-ts="' + item.ts + '"]');
             if (card) {
                 card.classList.add('quizzing');
@@ -671,8 +676,9 @@
             const answerDelay = Math.max(2500, 600 + item.q.length * 170);
             quizTimer = setTimeout(() => {
                 quizTimer = null;
+                if (card) card.classList.add('answer-revealed');
                 speakText(item.a);
-                quizClearTimer = setTimeout(() => { if (card) card.classList.remove('quizzing'); }, 2500);
+                quizClearTimer = setTimeout(teardownQuiz, Math.max(2500, 600 + item.a.length * 170));
             }, answerDelay);
         }
 
@@ -680,7 +686,8 @@
         function teardownQuiz() {
             if (quizTimer) { clearTimeout(quizTimer); quizTimer = null; }
             if (quizClearTimer) { clearTimeout(quizClearTimer); quizClearTimer = null; }
-            document.querySelectorAll('.saved-item.quizzing').forEach(c => c.classList.remove('quizzing'));
+            document.body.classList.remove('qa-quizzing');
+            document.querySelectorAll('.saved-item.quizzing').forEach(c => c.classList.remove('quizzing', 'answer-revealed'));
             try { window.speechSynthesis.cancel(); } catch (e) {}
         }
         window.addEventListener('pagehide', teardownQuiz);

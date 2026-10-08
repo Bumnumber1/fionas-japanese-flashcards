@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-08",
+  "scope": "All 14 public learner pages, all 20 shared activity engines, all 12 standalone review activities, the garden launchers, 260 generated practice sheets, and the 41 pages displayed by the ebook.",
+  "rule": "Do not display word-dependent pictures beside recall prompts or answer choices. Answers stay concealed until feedback or an explicit reveal. Preserve instructional stimuli, writing models, reference material and decorations unrelated to the selected answer.",
+  "sharedEngines": ["memory", "listen", "quiz", "scramble", "trace", "sort", "blank", "bingo", "whack", "speak", "shop", "counters", "story", "kanjimatch", "diary", "karuta", "shiritori", "oddone", "kanabuild", "bossquiz"],
+  "pages": {
+    "index.html": "Checked flashcard front/reveal, quiz, Concentration, Go Fish, shared game launchers and print output. Earlier fixes remove front/hand pictures; this audit also removes printed word pictures.",
+    "review.html": "Checked all 12 activity renderers and opened each in the browser. Includes refusal, sequences, phone numbers and greetings beyond the garden subset. Like/dislike cards retain the earlier picture removal.",
+    "arcade.html": "All 20 engines instantiated with marked vocabulary emoji to detect accidental rendering. Neutral dots remain for counting. Story text disappears when its questions begin.",
+    "workbook.html": "Uses the audited shared engines. Vocabulary reference pictures and activity navigation icons remain. Diary topic emoji removed from its exercise prompt.",
+    "year1-review.html": "Recall cards and hidden-meaning study mode checked. All 32 playable garden launchers regression-tested with selected vocabulary, including native embedded pages.",
+    "sentencebuilder.html": "Reviewed all topic, verb, adjective and color chip renderers; semantic pictures remain removed. Bilingual construction scaffolding and grammar prompts are intentional.",
+    "questions.html": "Removed question-word icons. Saved quiz now hides the editor, other saved pairs, metadata and current answer during recall, then reveals the answer. Restart and list refresh cancel pending timers.",
+    "voicepractice.html": "Removed four semantic scenario illustrations. All four scenarios checked with targets hidden and with explicit reveal. English task instructions remain.",
+    "writing.html": "Removed semantic pictures from both kanji palettes and the current-character panel. Hiragana, katakana and both kanji modes checked. Character models and stroke guides remain as writing instruction.",
+    "ocean.html": "Removed target emoji and target-specific scene image during the writing challenge. The kanji model, reading, stroke guide and unrelated exploration scenery remain.",
+    "kanjiride.html": "All uncaught target billboards now use the same question mark. Removed catch-panel semantic picture. Collection-book stickers appear only for successfully caught characters.",
+    "spaceship.html": "Reviewed kana pod, target and boss renderers; no target-dependent picture cues found. Kana and audio/romaji are the intended matching stimuli.",
+    "weekly-workbook.html": "Checked all 260 generated practice headers. Removed topic pictures and lesson goals that could repeat model answers. Teacher key stays closed by default and excluded from printing. Study page references, writing guides and comprehension passages remain.",
+    "ebook.html": "Visually inspected all 41 linked pages. Replaced Question Words Practice, i-Adjectives and na-Adjectives worksheets with text-based SVG exercises: no semantic icons or answers printed beside blanks. Illustrated reference pages and exercises whose pictures are the actual question stimulus remain. Archived originals are not used by the reader."
+  },
+  "ebookReplacements": [
+    "WorkbookPages_Correct/43_QuestionWords_Practice_NoClues.svg",
+    "WorkbookPages_Correct/48_IAdjectives_Practice_NoClues.svg",
+    "WorkbookPages_Correct/49_NaAdjectives_Practice_NoClues.svg"
+  ],
+  "validation": [
+    "node validate_activity_visuals.cjs: PASS; all public pages load without JavaScript exceptions, 20 shared engines, 12 review activities, conceal/reveal transitions, four writing modes, four speaking scenarios, adventure prompts, 260 practice headers, three ebook replacements and mobile ebook layout",
+    "Garden browser regression: PASS; all 32 playable original games, selected-only pools, empty/one-word selections, teardown, mobile and printing",
+    "node validate_garden_games.js: PASS; 100 selection subsets, 51 safe examples, 15 kanji mappings",
+    "node validate_curriculum.js: PASS; five years",
+    "node validate_weekly_workbook.js: PASS; 260 weeks, 520 printable pages, 1967 answer-key checks",
+    "Visual screenshot inspection: repaired ebook on desktop/mobile, saved quiz during recall, writing, ocean and ride"
+  ],
+  "reproduction": {
+    "browser": "Node 22+ with Edge; set BROWSER_PATH for another Chromium executable and AUDIT_OUTPUT for screenshots. Run node validate_activity_visuals.cjs.",
+    "ebook": "Run node generate_practice_pages.js to regenerate the three SVG worksheets.",
+    "offline": "Run node generate_sw.js after content changes. Ebook replacement filenames are new so the stable image cache cannot serve the old worksheets."
+  },
+  "limits": [
+    "Browser checks exercise initial question states, selected reveal/reset transitions and launcher integration; they are not complete playthroughs of every random round.",
+    "Live microphone recognition, audible speech quality and physical handwriting scoring were not validated in the headless browser.",
+    "This is an answer-cue audit, not a comprehensive Japanese-language accuracy review of the archived illustrated worksheets."
+  ]
+}

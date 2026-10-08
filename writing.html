@@ -713,7 +713,6 @@
 
             <!-- Kanji picture panel (only visible in kanji mode) -->
             <div class="kanji-picture-panel" id="kanjiPicturePanel" style="display:none;">
-                <div class="kanji-pic-emoji" id="kanjiPicEmoji"></div>
                 <div class="kanji-pic-english" id="kanjiPicEnglish"></div>
                 <div class="kanji-pic-reading" id="kanjiPicReading"></div>
                 <button class="kanji-pic-speak" id="kanjiPicSpeak" onclick="speakCurrentChar()">&#x1F50A;</button>
@@ -1612,10 +1611,6 @@
                 btn.className = 'char-btn char-btn-kanji';
                 btn.dataset.index = idx;
 
-                const emojiSpan = document.createElement('span');
-                emojiSpan.className = 'kanji-emoji';
-                emojiSpan.textContent = k.emoji;
-                btn.appendChild(emojiSpan);
                 btn.appendChild(document.createTextNode(k.char));
 
                 if (practicedKanji.has(k.char)) {
@@ -1658,11 +1653,10 @@
         }
         document.getElementById('refStrokes').textContent = data.strokes + (data.strokes === 1 ? ' stroke' : ' strokes');
 
-        // Show/hide kanji picture panel
+        // Show/hide the written kanji reference
         const picPanel = document.getElementById('kanjiPicturePanel');
-        if (currentMode.startsWith('kanji') && data.emoji) {
+        if (currentMode.startsWith('kanji')) {
             picPanel.style.display = 'block';
-            document.getElementById('kanjiPicEmoji').textContent = data.emoji;
             document.getElementById('kanjiPicEnglish').textContent = data.english;
             let readingText = '';
             if (data.onyomi) readingText += 'On: ' + data.onyomi;

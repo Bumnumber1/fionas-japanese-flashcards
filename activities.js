@@ -942,7 +942,7 @@ window.Activities = (() => {
         let saved = false;
         el(host, `
           <div class="act-subtitle">✏️ My Japanese Diary</div>
-          <div class="scr-en">Write 1-3 little sentences in Japanese about: <b>${escHtml(wk.title)}</b> ${wk.emoji}<br>
+          <div class="scr-en">Write 1-3 little sentences in Japanese about: <b>${escHtml(wk.title)}</b><br>
           Use this week's words! Tap a starter to begin.</div>
           <div class="scr-chips">${starters.map((s, i) => `<button class="scr-chip" data-s="${i}">${escHtml(s.trim())}</button>`).join('')}
             ${(wk.vocab || []).slice(0, 6).map(v => `<button class="scr-chip diary-word" data-w="${escHtml(v.jp)}">${escHtml(v.jp)}</button>`).join('')}</div>

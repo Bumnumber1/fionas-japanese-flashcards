@@ -1344,7 +1344,6 @@
                     <div class="kanji-display" id="kanjiDisplay" style="display:none;">
                         <div class="kanji-char" id="kanjiChar"></div>
                         <div class="kanji-info">
-                            <span class="kanji-emoji" id="kanjiEmoji"></span>
                             <span class="kanji-english" id="kanjiEnglish"></span>
                             <span class="kanji-romaji" id="kanjiRomaji"></span>
                         </div>
@@ -2353,7 +2352,6 @@ function hideKanjiPanel() {
 
 function showKanjiPanel(kanji) {
     document.getElementById('kanjiChar').textContent = kanji.char;
-    document.getElementById('kanjiEmoji').textContent = kanji.emoji;
     document.getElementById('kanjiEnglish').textContent = kanji.english;
     document.getElementById('kanjiRomaji').textContent = (kanji.gardenReading ? kanji.gardenReading + ' · ' : '') + kanji.romaji;
     document.getElementById('kanjiStrokesInfo').textContent = kanji.strokes + ' strokes';
@@ -2565,21 +2563,8 @@ function selectDirection(dir) {
     currentKanji = gameKanji[Math.floor(Math.random() * gameKanji.length)];
     kanjiPracticed.add(currentKanji.char);
 
-    // Generate description matching the image
-    let sentence;
-    if (specialSentences[currentKanji.char]) {
-        sentence = specialSentences[currentKanji.char];
-    } else {
-        const template = oceanSentences[Math.floor(Math.random() * oceanSentences.length)];
-        sentence = template(currentKanji);
-    }
-
-    // Show kanji scene image as background with description
-    if (currentKanji.image) {
-        showScene({ image: currentKanji.image, title: currentKanji.emoji + ' ' + currentKanji.english, text: sentence }, null);
-    } else {
-        hideScene();
-    }
+    // Keep the writing prompt free of pictures that reveal the target meaning.
+    hideScene();
 
     setOceanMessage('✏️', `Write "${currentKanji.char}" (${currentKanji.english}) — ${currentKanji.strokes} strokes`);
     showKanjiPanel(currentKanji);
