@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiona’s Little Review Garden · Year 1</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="year1-review.css">
+  <script src="curriculum_y1.js" defer></script>
+  <script src="year1-review.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <nav class="top-nav" aria-label="Course navigation"><a href="index.html">← Flashcards</a><a href="workbook.html">My learning journey ↗</a></nav>
+    <header class="hero">
+      <div><p class="eyebrow">FIONA’S JAPANESE JOURNEY · YEAR 1, WEEKS 1–13</p><h1>Little review garden<span aria-hidden="true"> ✿</span></h1><p>All the little things you’ve learned.<br>Let’s help them bloom!</p><span class="pill">🌱 A whole term of growing</span></div>
+      <div class="garden" aria-hidden="true"><span class="spark s1">✦</span><span class="spark s2">✧</span><div class="flower f1">🌼</div><div class="flower f2">🌷</div><div class="bunny">🐰</div><div class="grass">✿ &nbsp; ❀ &nbsp; ✿</div><span class="garden-note">いっしょに あそぼう!</span></div>
+    </header>
+    <main>
+      <section class="planner panel" aria-labelledby="planner-title">
+        <div><p class="eyebrow" id="mode-label">01 / PREPARE TOGETHER</p><h2 id="planner-title">Pick today’s little discoveries</h2><p id="mode-help">Check the words, patterns, and phrases you’d like to include. Your choices stay saved in this browser.</p></div>
+        <div class="plan-actions"><button id="start" class="primary">Start our lesson →</button><button id="edit" hidden>← Edit lesson choices</button><button id="print" class="subtle">Print selected lesson</button></div>
+        <p id="selection-summary" class="selection-summary" aria-live="polite"></p><p id="save-status" class="save-status" role="status"></p>
+      </section>
+      <section id="practice" class="panel practice" hidden aria-labelledby="practice-title">
+        <div class="section-heading"><div><p class="eyebrow">A LITTLE RECALL PRACTICE</p><h2 id="practice-title">What does this word mean?</h2></div><span id="card-position" class="pill"></span></div>
+        <div id="flashcard" class="flashcard"></div>
+        <div class="practice-actions"><button id="previous">← Previous</button><button id="reveal" class="primary" aria-expanded="false" aria-controls="flash-answer">Reveal answer</button><button id="next">Next →</button><button id="shuffle" class="subtle">↝ Shuffle</button></div>
+      </section>
+      <nav class="section-nav" aria-label="Review sections"><button data-tab="words" aria-pressed="true">🌷 Words <span id="words-count"></span></button><button data-tab="patterns" aria-pressed="false">🧩 Sentence patterns <span id="patterns-count"></span></button><button data-tab="phrases" aria-pressed="false">💬 Basic phrases <span id="phrases-count"></span></button></nav>
+      <section class="library" aria-labelledby="library-title">
+        <div class="section-heading"><div><p class="eyebrow" id="library-kicker">YOUR WORD PATCH</p><h2 id="library-title">A little word, a big discovery</h2></div><div class="display-options"><label><input id="romaji" type="checkbox" checked> Romaji</label><label><input id="english" type="checkbox" checked> English meanings</label></div></div>
+        <div id="filters" class="filters"><label class="search-label"><span class="sr-only">Search Japanese, romaji, or English</span><input id="search" type="search" placeholder="Find a word, phrase, or pattern…"></label><label><span class="sr-only">Filter by week</span><select id="week"><option value="all">All 13 weeks</option></select></label><label class="selected-filter"><input id="selected-only" type="checkbox"> Selected only</label></div>
+        <div id="bulk" class="bulk"><p id="results" aria-live="polite"></p><div><button id="select-visible" class="text-button">Select visible</button><button id="clear-visible" class="text-button">Clear visible</button></div></div>
+        <div id="review-content"></div>
+      </section>
+      <noscript><p class="panel">Please enable JavaScript to load the curriculum and choose your lesson.</p></noscript>
+    </main>
+    <footer>Made for small steps &amp; happy discoveries. <span lang="ja">はなまる!</span> 🌸<br><small>Year 1 · Weeks 1–13 · From your Japanese journey curriculum</small></footer>
+  </div>
+</body>
+</html>
