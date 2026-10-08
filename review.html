@@ -1882,7 +1882,7 @@
                 skState.remaining.forEach((it, idx) => {
                     const c = document.createElement('button');
                     c.className = 'sk-card';
-                    c.innerHTML = `${it.emoji}<span class="lbl">${it.label}</span>`;
+                    c.innerHTML = `<span class="lbl">${it.label}</span>`;
                     c.dataset.idx = idx;
                     c.onclick = () => { skSelected = idx; document.querySelectorAll('.sk-card').forEach(x => x.style.borderColor='#ddd'); c.style.borderColor='#8e24aa'; speak(it.label); };
                     bank.appendChild(c);
@@ -1896,7 +1896,7 @@
         function renderSKBins() {
             const renderBin = (id, list) => {
                 const el = document.getElementById(id);
-                el.innerHTML = list.map(it => `<span style="font-size:1.5em;">${it.emoji}<span style="font-family:'Noto Sans JP', sans-serif;font-size:0.5em;display:block;text-align:center;color:#455a64;">${it.label}</span></span>`).join('');
+                el.innerHTML = list.map(it => `<span style="font-size:1.5em;"><span style="font-family:'Noto Sans JP', sans-serif;font-size:0.5em;display:block;text-align:center;color:#455a64;">${it.label}</span></span>`).join('');
             };
             renderBin('sukiItems', skState.suki);
             renderBin('kiraiItems', skState.kirai);

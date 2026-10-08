@@ -91,7 +91,7 @@
     $('practice').hidden = !lesson || !item;
     if (!item) return;
     $('card-position').textContent = `${cardIndex + 1} / ${deck.length}`;
-    $('flashcard').innerHTML = `<div class="word-emoji" aria-hidden="true">${escape(item.emoji)}</div><div class="jp" lang="ja">${escape(item.jp)}</div><div class="romaji">${escape(item.romaji)}</div><div id="flash-answer" class="flash-answer" hidden><div>${escape(item.en)}</div><small>Week ${item.week}${item.extra ? ' · Sentence lesson' : ''}</small></div>`;
+    $('flashcard').innerHTML = `<div class="jp" lang="ja">${escape(item.jp)}</div><div class="romaji">${escape(item.romaji)}</div><div id="flash-answer" class="flash-answer" hidden><div>${escape(item.en)}</div><small>Week ${item.week}${item.extra ? ' · Sentence lesson' : ''}</small></div>`;
     $('reveal').textContent = 'Reveal answer';
     $('reveal').setAttribute('aria-expanded', 'false');
     $('previous').disabled = cardIndex === 0;

@@ -135,7 +135,7 @@ window.Activities = (() => {
         let cards = [];
         words.forEach((v, i) => {
             cards.push({ pid: i, face: `<span class="mem-jp">${escHtml(v.jp)}</span>`, say: v.jp });
-            cards.push({ pid: i, face: `<span class="mem-emoji">${v.emoji}</span><span class="mem-en">${escHtml(v.en)}</span>`, say: null });
+            cards.push({ pid: i, face: `<span class="mem-en">${escHtml(v.en)}</span>`, say: null });
         });
         cards = shuffleArr(cards);
         let open = [], matched = 0, moves = 0, lock = false;
@@ -174,8 +174,8 @@ window.Activities = (() => {
         const words = distinct(ctx.pool, Math.min(10, ctx.pool.length), v => v.jp);
         const rounds = words.map(w => {
             const others = pickN(ctx.pool.filter(v => v.en !== w.en), 3);
-            const opts = shuffleArr([{ html: `<span class="opt-emoji">${w.emoji}</span> ${escHtml(w.en)}`, ok: true },
-                ...others.map(o => ({ html: `<span class="opt-emoji">${o.emoji}</span> ${escHtml(o.en)}`, ok: false }))]);
+            const opts = shuffleArr([{ html: `${escHtml(w.en)}`, ok: true },
+                ...others.map(o => ({ html: `${escHtml(o.en)}`, ok: false }))]);
             return { prompt: '<span class="act-ear">👂</span> What did you hear?', speakText: w.jp, options: opts };
         });
         mcRun(host, ctx, rounds, { autoSpeak: true });
@@ -193,7 +193,7 @@ window.Activities = (() => {
                 options: shuffleArr([{ html: escHtml(w.en), ok: true }, ...others.map(o => ({ html: escHtml(o.en), ok: false }))]),
             };
             return {
-                prompt: `<span class="opt-emoji">${w.emoji}</span> <b>${escHtml(w.en)}</b>`,
+                prompt: `<b>${escHtml(w.en)}</b>`,
                 sayOnRight: w.jp,
                 options: shuffleArr([{ html: `<span class="q-jp-opt">${escHtml(w.jp)}</span>`, ok: true },
                     ...others.map(o => ({ html: `<span class="q-jp-opt">${escHtml(o.jp)}</span>`, ok: false }))]),
@@ -433,7 +433,7 @@ window.Activities = (() => {
             const [a, b] = pickN(classes, 2);
             binA = { key: a, label: POS_LABEL[a] || a }; binB = { key: b, label: POS_LABEL[b] || b };
             cards = shuffleArr(pickN(byPos[a], 5).concat(pickN(byPos[b], 5)))
-                .map(v => ({ html: `${v.emoji} <b>${escHtml(v.jp)}</b><br><small>${escHtml(v.en)}</small>`, say: v.jp, bin: posClass(v) === a ? 'A' : 'B' }));
+                .map(v => ({ html: `<b>${escHtml(v.jp)}</b><br><small>${escHtml(v.en)}</small>`, say: v.jp, bin: posClass(v) === a ? 'A' : 'B' }));
             mode = 'pos';
         } else {
             const words = distinct(ctx.pool, 10, v => v.jp);
@@ -542,7 +542,7 @@ window.Activities = (() => {
               <div class="act-row"><button class="act-btn act-btn-primary" data-call>${calls ? '🔊 Hear it again' : '▶ Start calling!'}</button></div>
               <div class="bingo-grid">${words.map((w, i) =>
                 `<button class="bingo-cell${marked.has(w) ? ' marked' : ''}${!marked.has(w) && hot.has(i) ? ' bingo-hot' : ''}" data-i="${i}">
-                   <span class="bingo-emoji">${w.emoji}</span><span class="bingo-jp">${escHtml(w.jp)}</span></button>`).join('')}</div>`);
+                   <span class="bingo-jp">${escHtml(w.jp)}</span></button>`).join('')}</div>`);
             host.querySelector('[data-call]').onclick = () => {
                 if (!currentCall) { currentCall = order[calls]; calls++; }
                 ctx.speak(currentCall.jp);
@@ -587,7 +587,7 @@ window.Activities = (() => {
             const cells = shuffleArr([...ups, null, null, null, null, null]).slice(0, 9);
             el(host, `
               ${bar(round - 1, TOTAL)}
-              <div class="act-subtitle">🔨 Whack: <b>${escHtml(target.en)}</b> ${target.emoji}
+              <div class="act-subtitle">🔨 Whack: <b>${escHtml(target.en)}</b>
                 <button class="act-speaker act-speaker-sm" data-spk>🔊</button></div>
               <div class="whack-grid">${cells.map((c, i) =>
                 `<button class="whack-hole" data-i="${i}">${c ? `<span class="whack-mole">${escHtml(c.jp)}</span>` : ''}</button>`).join('')}</div>
@@ -750,7 +750,7 @@ window.Activities = (() => {
               <div class="act-bar-label" data-purse>👛 おさいふ: ¥${purse}</div>
               <div class="act-subtitle">🏪 いらっしゃいませ! Buy: </div>
               <div class="shop-items">${want.map(v =>
-                `<div class="shop-item"><span class="opt-emoji">${v.emoji}</span> ${escHtml(v.jp)}<br><b>¥${v.price}</b></div>`).join('<span class="shop-plus">+</span>')}</div>
+                `<div class="shop-item">${escHtml(v.jp)}<br><b>¥${v.price}</b></div>`).join('<span class="shop-plus">+</span>')}</div>
               <div class="act-prompt">ぜんぶで いくら ですか?</div>
               <button class="act-speaker" data-spk>🔊 Listen</button>
               <div class="act-options shop-opts">${options.map((o, j) => `<button class="act-opt" data-j="${j}">${o.html}</button>`).join('')}</div>`);
@@ -839,7 +839,7 @@ window.Activities = (() => {
             el(host, `
               ${bar(i, N)}
               <div class="act-subtitle">🔢 How many? (counter: ${escHtml(k)})</div>
-              <div class="count-field">${Array.from({ length: n }, () => `<span class="count-emoji">${noun.emoji}</span>`).join('')}</div>
+              <div class="count-field" role="img" aria-label="${n} objects to count">${Array.from({ length: n }, () => `<span class="count-emoji" aria-hidden="true">●</span>`).join('')}</div>
               <div class="act-prompt">${escHtml(noun.jp)}は ${escHtml(COUNTER_Q[k] || 'いくつ')}?</div>
               <div class="act-options">${options.map((o, j) => `<button class="act-opt" data-j="${j}">${o.html}</button>`).join('')}</div>`);
             host.querySelectorAll('.count-emoji').forEach((s, k2) =>
@@ -945,7 +945,7 @@ window.Activities = (() => {
           <div class="scr-en">Write 1-3 little sentences in Japanese about: <b>${escHtml(wk.title)}</b> ${wk.emoji}<br>
           Use this week's words! Tap a starter to begin.</div>
           <div class="scr-chips">${starters.map((s, i) => `<button class="scr-chip" data-s="${i}">${escHtml(s.trim())}</button>`).join('')}
-            ${(wk.vocab || []).slice(0, 6).map(v => `<button class="scr-chip diary-word" data-w="${escHtml(v.jp)}">${v.emoji} ${escHtml(v.jp)}</button>`).join('')}</div>
+            ${(wk.vocab || []).slice(0, 6).map(v => `<button class="scr-chip diary-word" data-w="${escHtml(v.jp)}">${escHtml(v.jp)}</button>`).join('')}</div>
           <textarea class="diary-text" rows="4" placeholder="ここに かいてね!"></textarea>
           <div class="act-row">
             <button class="act-btn" data-hear>🔊 Read it to me</button>
@@ -1010,7 +1010,7 @@ window.Activities = (() => {
               <div class="act-subtitle">🎴 Listen... then grab the right card!</div>
               <button class="act-speaker" data-spk>🔊 Hear it again</button>
               <div class="karuta-grid">${cards.map((c, j) => `<button class="karuta-card" data-j="${j}">${meaningFace
-                ? `<span class="karuta-emoji">${c.emoji}</span><span class="karuta-en">${escHtml(c.en)}</span>`
+                ? `<span class="karuta-en">${escHtml(c.en)}</span>`
                 : `<span class="karuta-jp">${escHtml(c.jp)}</span>`}</button>`).join('')}</div>
               <div class="karuta-fast" data-fast></div>`);
             function say() { spokeAt = Date.now(); ctx.speak(target.jp); }
@@ -1075,7 +1075,7 @@ window.Activities = (() => {
             const last = train.length - 1;
             return `<div class="train">${train.map((t, k) => t.station
                 ? '<span class="train-station">🚉</span>'
-                : `<span class="train-car${k === last ? ' newest' : ''}">${t.emoji ? t.emoji + ' ' : ''}${escHtml(t.jp)}</span>`).join('')}<span class="train-engine">🚂</span></div>`;
+                : `<span class="train-car${k === last ? ' newest' : ''}">${escHtml(t.jp)}</span>`).join('')}<span class="train-engine">🚂</span></div>`;
         }
         function promptHtml(jp) {
             // bold the kana that carries the link (skips a trailing ー)
@@ -1124,7 +1124,7 @@ window.Activities = (() => {
               <div class="act-prompt">${promptHtml(cur.jp)} → <b>${escHtml(link)}</b>...?</div>
               <button class="act-speaker" data-spk>🔊 Listen</button>
               <div class="act-options">${options.map((o, j) =>
-                `<button class="act-opt" data-j="${j}"><span class="opt-emoji">${o.w.emoji}</span> <span class="q-jp-opt">${escHtml(o.w.jp)}</span></button>`).join('')}</div>`);
+                `<button class="act-opt" data-j="${j}"><span class="q-jp-opt">${escHtml(o.w.jp)}</span></button>`).join('')}</div>`);
             scrollTrain();
             host.querySelector('[data-spk]').onclick = () => ctx.speak(cur.jp);
             host.querySelectorAll('.act-opt').forEach(btn => btn.onclick = () => {
@@ -1204,7 +1204,7 @@ window.Activities = (() => {
               <div class="act-subtitle">🕵️ Which one is not like the others?</div>
               <button class="act-speaker" data-spk>🔊 Listen</button>
               <div class="act-options">${cards.map((c, j) =>
-                `<button class="act-opt" data-j="${j}"><span class="opt-emoji">${c.emoji}</span> <span class="q-jp-opt">${escHtml(c.jp)}</span></button>`).join('')}</div>
+                `<button class="act-opt" data-j="${j}"><span class="q-jp-opt">${escHtml(c.jp)}</span></button>`).join('')}</div>
               <div class="trace-msg" data-reveal></div>`);
             const ask = () => ctx.speak('なかまはずれは どれ?');
             host.querySelector('[data-spk]').onclick = ask;
@@ -1257,7 +1257,7 @@ window.Activities = (() => {
                 el(host, `
                   ${bar(i, N)}
                   <div class="act-subtitle">🧱 Build the word you hear!</div>
-                  <div class="kb-word"><span class="opt-emoji">${w.emoji}</span> <b>${escHtml(w.en)}</b>
+                  <div class="kb-word"><b>${escHtml(w.en)}</b>
                     <button class="act-speaker act-speaker-sm" data-spk>🔊</button></div>
                   <div class="kb-slots">${target.map((c, k) =>
                     `<span class="kb-slot${k < placed.length ? ' filled' : ''}">${k < placed.length ? escHtml(placed[k].ch) : ''}</span>`).join('')}</div>
@@ -1355,7 +1355,7 @@ window.Activities = (() => {
               </div>
               <div class="act-prompt">${jp2en
                 ? `<span class="q-jp">${escHtml(w.jp)}</span><span class="q-rom">${escHtml(w.romaji || '')}</span>`
-                : `<span class="opt-emoji">${w.emoji}</span> <b>${escHtml(w.en)}</b>`}</div>
+                : `<b>${escHtml(w.en)}</b>`}</div>
               <div class="act-options">${options.map((o, j) => `<button class="act-opt" data-j="${j}">${o.html}</button>`).join('')}</div>
               <div class="act-bar-label">Question ${rounds} · take down the boss! ⚔️</div>`);
             if (jp2en) ctx.after(() => ctx.speak(w.jp), 350);

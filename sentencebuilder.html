@@ -443,7 +443,7 @@
             subjects.forEach((s, i) => {
                 const b = document.createElement('button');
                 b.className = 'chip' + (i === subjectIdx ? ' sel-subject' : '');
-                b.innerHTML = `<span class="t-emoji">${s.emoji}</span><span class="c-jp">${s.jp}</span><span class="c-en">${s.glo}</span>`;
+                b.innerHTML = `<span class="c-jp">${s.jp}</span><span class="c-en">${s.glo}</span>`;
                 b.onclick = () => { subjectIdx = i; renderSubjectGrid(); render(); };
                 grid.appendChild(b);
             });
@@ -455,7 +455,7 @@
             describers[mode].forEach((d, i) => {
                 const b = document.createElement('button');
                 b.className = 'chip' + (i === descIdx[mode] ? ' sel-desc-' + mode : '');
-                b.innerHTML = `<span class="t-emoji">${d.emoji}</span><span class="c-jp">${d.jp}</span><span class="c-en">${d.en}</span>`;
+                b.innerHTML = `<span class="c-jp">${d.jp}</span><span class="c-en">${d.en}</span>`;
                 b.onclick = () => { descIdx[mode] = i; renderDescGrid(); render(); };
                 grid.appendChild(b);
             });
@@ -472,7 +472,6 @@
             const row = document.getElementById('tokenRow');
             row.innerHTML = `
                 <div class="token subject">
-                    <div class="t-emoji">${s.emoji}</div>
                     <div class="t-jp">${s.jp}</div>
                     <div class="t-romaji">${s.romaji}</div>
                     <div class="t-en">${s.glo}</div>
@@ -484,7 +483,6 @@
                     <div class="t-en">(topic)</div>
                 </div>
                 <div class="token describer ${mode}">
-                    <div class="t-emoji">${d.emoji}</div>
                     <div class="t-jp">${d.jp}</div>
                     <div class="t-romaji">${d.romaji}</div>
                     <div class="t-en">${d.en}</div>
