@@ -1350,6 +1350,13 @@ dialog p{
 .speed-notice.combo-speed{top:auto;bottom:52px;padding:6px 12px;font-size:10px;letter-spacing:.6px}
 @keyframes combo-callout{0%{opacity:0;transform:translate(-50%,9px) scale(.8)}18%,80%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-5px)}}
 .calm-motion .action-callout.combo-callout.pop{animation:none}
+.flurry-rule{margin:0;padding:0 4px;color:var(--muted);font-size:12px;line-height:1.6}
+.flurry-notice{position:absolute;z-index:4;bottom:52px;left:50%;transform:translateX(-50%);width:max-content;max-width:94%;border:1px solid #ffe19a;border-radius:6px;background:#57361aee;color:#fff0c6;padding:8px 14px;text-align:center;font-size:11px;font-weight:900;letter-spacing:.6px;box-shadow:0 3px 22px #ffc85c50;pointer-events:none}
+.flurry-notice.flurry-pop{animation:flurry-pop .45s ease-out both}
+@keyframes flurry-pop{0%{transform:translateX(-50%) scale(.86);opacity:0}55%{transform:translateX(-50%) scale(1.05);opacity:1}100%{transform:translateX(-50%) scale(1);opacity:1}}
+.calm-motion .flurry-notice.flurry-pop{animation:none}
+@media(prefers-reduced-motion:reduce){.flurry-notice.flurry-pop{animation:none}}
+@media(max-width:420px){.flurry-notice{font-size:9px;letter-spacing:0;padding:7px 9px}.action-callout.combo-callout{font-size:16px}.flurry-rule{font-size:11px}}
 @media(max-width:420px){.speed-notice{top:100px;font-size:9px;letter-spacing:.3px;padding:7px 9px;max-width:92%}}
 @media(max-width:420px){.speed-notice.combo-speed{top:auto;bottom:52px;font-size:8px;letter-spacing:0}.action-callout.combo-callout{bottom:83px;font-size:19px}}
 #voice-status{font-size:11px;line-height:1.7;color:var(--muted);margin:12px 0 0}

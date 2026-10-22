@@ -52,6 +52,8 @@ Clean hands-free reading attacks within two seconds of the native microphone bec
 
 Fast combinations keep their full choreography even when answers arrive quickly. A short bounded animation queue preserves follow-up strikes, and the opponent visibly recoils, loses balance, and recovers between impacts. Stronger impact bursts and brief camera accents emphasize clean hits; a winning strike gives the opponent a decisive cartoon defeat reaction before celebration. Combo labels sit below the fighters so the reactions remain visible. Combat damage still comes from the learning rules.
 
+**Five answers in five seconds:** five consecutive clean attack answers in an inclusive rolling five-second window trigger a knockdown on the fifth strike, with a gold notification and a full fall-to-the-mat/recovery animation. The five answers are consumed, so another knockdown needs another five. The effect adds no damage or rank credit. Hints, mistakes, blocks, hard microphone errors, stopping hands-free, pause/help/reward dialogs, leaving the page, changing bouts, and reload reset this short chain. Unclear speech is not an answer: a retry adds no hit and keeps the original five-second clock running. Ordinary clean streaks still follow their existing rules. New rivals have 150 energy, letting five Lightning basic attacks land for 139 total damage before they fall and get up; Fiona keeps 100 energy. Earlier saved fights retain their original 100-energy rival and exact journal history.
+
 ## Existing systems and references
 
 - `curriculum_y1.js` and `year1-review-data.js`: canonical Year 1, weeks 1–13 vocabulary, including established grammar-example words.

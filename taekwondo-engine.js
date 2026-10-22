@@ -111,6 +111,20 @@
     }
     return milliseconds <= 2000 ? { speedBonus: 6, speedTier: 'lightning' } : { speedBonus: 3, speedTier: 'quick' };
   }
+  // A flurry is presentation only: scoring still comes exclusively from resolveAnswer.
+  // Keep four arrivals at most; the fifth consumes the batch and starts a new cycle.
+  function advanceFlurry(history, now, eligible = true) {
+    const empty = { times: [], count: 0, knockdown: false, elapsedMs: 0 };
+    if (eligible !== true || typeof now !== 'number' || !Number.isFinite(now) || now < 0) return empty;
+    let times = Array.isArray(history) ? history.slice(-4) : [];
+    if (times.some((time, index) => typeof time !== 'number' || !Number.isFinite(time) || time < 0 || time > now ||
+      (index > 0 && time < times[index - 1]))) times = [];
+    times = times.filter(time => now - time <= 5000);
+    times.push(now);
+    const count = times.length;
+    const elapsedMs = now - times[0];
+    return { times: count === 5 ? [] : times, count, knockdown: count === 5, elapsedMs };
+  }
   function normalizeAnswer(value) {
     return typeof value === 'string' ? value.normalize('NFKC').trim().toLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, '') : '';
   }
@@ -159,6 +173,7 @@
   function syncFight(fight, state) {
     Object.assign(fight, { version: SAVE_VERSION, courseVersion: COURSE_VERSION, rulesVersion: FIGHT_VERSION, id: state.id, beltIndex: state.beltIndex, originBelt: state.originBelt,
       opponentIndex: state.beltIndex, playerHp: state.playerHp, opponentHp: state.opponentHp,
+      staminaVersion: state.staminaVersion, opponentMaxHp: state.opponentMaxHp,
       streak: state.streak, bestStreak: state.bestStreak, correct: state.correct, mistakes: state.mistakes,
       assisted: state.assisted, turns: state.journal.length, status: state.status,
       pendingDamage: state.pendingDamage, blocks: state.blocks, blockedDamage: state.blockedDamage,
@@ -170,9 +185,10 @@
     }
     return fight;
   }
-  function makeFight(originBelt, beltIndex, legacyBeltIndex, legacyOriginBelt) {
+  function makeFight(originBelt, beltIndex, legacyBeltIndex, legacyOriginBelt, staminaVersion = 0) {
+    const opponentMaxHp = staminaVersion === 1 ? 150 : 100;
     const state = { id: 'bout-' + Date.now().toString(36) + '-' + (++sequence), originBelt, beltIndex,
-      playerHp: 100, opponentHp: 100, streak: 0, bestStreak: 0, correct: 0, mistakes: 0, assisted: 0,
+      staminaVersion, opponentMaxHp, playerHp: 100, opponentHp: opponentMaxHp, streak: 0, bestStreak: 0, correct: 0, mistakes: 0, assisted: 0,
       pendingDamage: 0, blocks: 0, blockedDamage: 0,
       status: 'fighting', recorded: false, journal: [] };
     if (Number.isInteger(legacyBeltIndex)) Object.assign(state, { legacyBeltIndex, legacyOriginBelt });
@@ -183,7 +199,7 @@
   function startFight(progress, beltIndex) {
     const clean = sanitizeProgress(progress);
     const selected = beltIndex === undefined ? clean.belt : Math.min(clean.belt, beltNumber(beltIndex));
-    return makeFight(clean.belt, selected);
+    return makeFight(clean.belt, selected, undefined, undefined, 1);
   }
   function applyAnswer(fight, answer, rulesVersion) {
     const state = fight && states.get(fight);
@@ -274,6 +290,8 @@
     const versions = [2, 3, 4, 5, FIGHT_VERSION];
     if (!raw || typeof raw !== 'object' || raw.version !== SAVE_VERSION || !versions.includes(raw.rulesVersion) || !Array.isArray(raw.journal) || raw.journal.length > MAX_FIGHT_TURNS) return null;
     const oldCourse = raw.courseVersion !== COURSE_VERSION;
+    const staminaVersion = Object.prototype.hasOwnProperty.call(raw, 'staminaVersion') ? raw.staminaVersion : 0;
+    if (![0, 1].includes(staminaVersion) || (staminaVersion === 1 && (oldCourse || raw.rulesVersion !== FIGHT_VERSION))) return null;
     const maximum = oldCourse ? 8 : BELTS.length - 1;
     if (!Number.isInteger(raw.beltIndex) || raw.beltIndex < 0 || raw.beltIndex > maximum ||
       !Number.isInteger(raw.originBelt) || raw.originBelt < raw.beltIndex || raw.originBelt > maximum ||
@@ -286,11 +304,13 @@
       Number.isInteger(legacyOriginBelt) && legacyOriginBelt >= legacyBeltIndex && legacyOriginBelt <= 8 &&
       OLD_BELT_MAP[legacyBeltIndex] === beltIndex && OLD_BELT_MAP[legacyOriginBelt] === originBelt;
     if ((Object.prototype.hasOwnProperty.call(raw, 'legacyBeltIndex') || Object.prototype.hasOwnProperty.call(raw, 'legacyOriginBelt') || oldCourse) && !legacyMetadata) return null;
+    if (staminaVersion === 1 && legacyMetadata) return null;
     if (progress && beltIndex > sanitizeProgress(progress).belt) return null;
-    const fight = makeFight(originBelt, beltIndex, legacyMetadata ? legacyBeltIndex : undefined, legacyMetadata ? legacyOriginBelt : undefined);
+    const fight = makeFight(originBelt, beltIndex, legacyMetadata ? legacyBeltIndex : undefined, legacyMetadata ? legacyOriginBelt : undefined, staminaVersion);
     let previousEventVersion = 2;
     for (const event of raw.journal) {
       const eventVersion = raw.rulesVersion === 2 ? 2 : event && event.rulesVersion;
+      if (staminaVersion === 1 && eventVersion !== FIGHT_VERSION) return null;
       if (!versions.includes(eventVersion) || eventVersion < previousEventVersion || eventVersion > raw.rulesVersion || (eventVersion < FIGHT_VERSION && !legacyMetadata)) return null;
       previousEventVersion = eventVersion;
       const movePool = eventVersion === 2 ? LEGACY_MOVES : eventVersion < FIGHT_VERSION ? PRE_KATAKANA_MOVES : MOVES;
@@ -460,5 +480,5 @@
   }
 
   return Object.freeze({ SAVE_VERSION, COURSE_VERSION, FIGHT_VERSION, MAX_FIGHT_TURNS, BELTS, MOVES, OPPONENTS, REWARDS, KANA, KATAKANA, createProgress, sanitizeProgress,
-    availableMoves, readingSpeedBonus, startFight, sanitizeFight, createQuestion, resolveAnswer, completeFight, normalizeAnswer, acceptsReading });
+    availableMoves, readingSpeedBonus, advanceFlurry, startFight, sanitizeFight, createQuestion, resolveAnswer, completeFight, normalizeAnswer, acceptsReading });
 });

@@ -265,6 +265,9 @@
             this.actionQueue = [];
             this.pendingCelebration = false;
             this.reactions = { player: [], opponent: [] };
+            // A flurry fall outlives the individual impact history, so a sixth
+            // quick answer cannot erase the fifth answer's knockdown.
+            this.knockdowns = { player: null, opponent: null };
             this.impacts = [];
             this.clockOffset = 0;
             this.frame = 0;
@@ -384,6 +387,7 @@
             this.pendingCelebration = false;
             this.reactions.player.length = 0;
             this.reactions.opponent.length = 0;
+            this.knockdowns.player = this.knockdowns.opponent = null;
             this.impacts.length = 0;
             this.trails.length = 0;
         }
@@ -405,19 +409,40 @@
             const next = { actor: options.actor === 'opponent' ? 'opponent' : 'player', move, hit: options.hit !== false,
                 combo: clamp(Number(options.combo) || 1, 1, 12), chain, followup, speedTier, speed,
                 damage: Math.max(0, Number(options.damage) || 0), victory: !!options.victory,
+                knockdown: attack && !!options.knockdown,
                 finisher: !!options.finisher || move === 'dragon-finisher' || move === 'whirlwind-combo', start: performance.now(), duration };
             next.contacts = contactBeats(next);
             const a = this.action, now = next.start;
             const rapid = attack && a && a.actor === 'player' && a.hit && MOVE_NAMES.includes(a.move)
                 && (speed || chain || a.speed || a.chain) && now - a.start < a.duration;
+            const pendingKnockdown = a && [a, ...this.actionQueue].some(item => item.knockdown && item.contacts.some(contact => !contact.done));
             this.pendingCelebration = false;
-            if (rapid) {
+            if (rapid || pendingKnockdown) {
                 // Two buffered techniques keep the arena responsive even if a
                 // speech provider delivers several transcripts in one burst.
                 // Retain the first complete follow-up; the newest final move
                 // replaces only an unstarted third animation, never a contact.
                 if (this.actionQueue.length < 2) this.actionQueue.push(next);
-                else this.actionQueue[1] = next;
+                else {
+                    // A five-answer knockdown is a promised visual reward.
+                    // Keep it (and a winning strike) when newer speech arrives;
+                    // only ordinary, unstarted animations may be replaced.
+                    const replace = this.actionQueue.findLastIndex(item => !item.knockdown && !item.victory);
+                    if (replace >= 0) {
+                        this.actionQueue.splice(replace, 1);
+                        this.actionQueue.push(next);
+                    } else if (next.knockdown || next.victory) {
+                        if (this.actionQueue.length < 4) this.actionQueue.push(next);
+                        else {
+                            // A provider can deliver an extreme transcript
+                            // burst. Keep all four promised falls and attach
+                            // the final result to the last pending contact.
+                            const final = this.actionQueue[this.actionQueue.length - 1];
+                            final.knockdown = final.knockdown || next.knockdown;
+                            final.victory = final.victory || next.victory;
+                        }
+                    }
+                }
                 return Math.max(0, a.duration - (now - a.start)) + this.actionQueue.reduce((sum, item) => sum + item.duration, 0);
             }
             this.actionQueue.length = 0;
@@ -449,7 +474,22 @@
                         const last = contact.index === a.contacts.length - 1;
                         const hit = { time, power: Math.min(1.7, .66 + a.speed * .24 + Math.min(a.combo, 6) * .065 + (a.finisher && last ? .2 : 0)),
                             speed: a.speed, combo: a.combo, index: contact.index + this.reactions[victim].length,
-                            knockout: a.victory && last, finisher: a.finisher && last };
+                            knockout: a.victory && last, knockdown: a.knockdown && last, finisher: a.finisher && last };
+                        if (hit.knockdown) {
+                            const previousFall = this.knockdowns[victim];
+                            const age = previousFall ? (time - previousFall.time) / 1000 : -1;
+                            this.knockdowns[victim] = { time: age >= 0 && age < 1.9 ? time - Math.min(age, .65) * 1000 : time,
+                                knockout: hit.knockout || !!(age >= 0 && age < 1.9 && previousFall.knockout) };
+                        }
+                        else if (hit.knockout && this.knockdowns[victim]) {
+                            const fall = this.knockdowns[victim], age = (time - fall.time) / 1000;
+                            if (age >= 0 && age < 1.9) {
+                                // Winning while the rival is down keeps the
+                                // flat pose through Fiona's celebration.
+                                fall.time = time - Math.min(age, .65) * 1000;
+                                fall.knockout = true;
+                            }
+                        }
                         this.reactions[victim].push(hit);
                         this.reactions[victim] = this.reactions[victim].filter(item => time - item.time < 2800).slice(-8);
                         this.impacts.push({ ...hit, actor: a.actor, victim, point: [side * (1.04 + previous.push),
@@ -492,8 +532,12 @@
                 if (hit.knockout) down = Math.max(down, ease(age / .44) * (1 - ease((age - 2.1) / .6)));
                 else if (hit.finisher) down = Math.max(down, ease(age / .18) * (1 - ease((age - .42) / .7)) * .5);
             }
+            const fall = this.knockdowns[actor], fallAge = fall ? (time - fall.time) / 1000 : -1;
+            const fallIn = this.reducedMotion ? .52 : .34;
+            const riseAt = fall && fall.knockout ? 2.15 : 1.05;
+            const knockdown = fallAge < 0 ? 0 : ease(fallAge / fallIn) * (1 - ease((fallAge - riseAt) / .85));
             return { amount: clamp(amount, 0, 1.55), push: clamp(push, 0, .68), twist: clamp(twist, -.55, .55),
-                fold: clamp(fold, 0, .8), down, pressure: clamp(pressure, 0, 1.6), speed };
+                fold: clamp(fold, 0, .8), down, pressure: clamp(pressure, 0, 1.6), speed, knockdown, fallAge };
         }
 
         setReducedMotion(value) { this.reducedMotion = !!value; this.trails.length = 0; }
@@ -618,6 +662,35 @@
             p.elbowL += .83 * h + .2 * down; p.elbowR += 1.07 * h + .2 * down;
             p.beltSwing += .25 * h;
             p.dazed = h > .22 || down > .3;
+            if (reaction.knockdown > 0) {
+                const fall = reaction.knockdown;
+                // Rotate the whole rig onto its back, rather than merely
+                // bending its knees. The opponent stays visibly on the mat,
+                // then rolls the bent legs underneath to regain the guard.
+                p.bodyPitch = -1.5 * fall;
+                p.bodyRoll = .11 * fall;
+                const scale = actor === 'player' ? 1.02 : this.opponent.scale;
+                // Keep the pelvis near its fighting position while the body
+                // rotates. A foot-origin rotation alone throws the head well
+                // beyond the side of a narrow screen.
+                p.x = mix(p.x, side * 1.42, fall) - side * 1.1 * scale * Math.sin(1.5 * fall);
+                p.z = mix(p.z, .47, fall);
+                p.yaw = mix(p.yaw, side * -PI / 2, fall);
+                p.bob = mix(p.bob, 0, fall);
+                p.lean = mix(p.lean, .055, fall);
+                p.tilt = mix(p.tilt, 0, fall);
+                p.head = mix(p.head, .12, fall);
+                p.headY = mix(p.headY, -.16, fall);
+                p.pelvisX = mix(p.pelvisX, -.08, fall);
+                p.hipL = p.hipL.map((v, i) => mix(v, [-.30, -.05, -.14][i], fall));
+                p.hipR = p.hipR.map((v, i) => mix(v, [-.19, .12, .17][i], fall));
+                p.kneeL = mix(p.kneeL, .82, fall); p.kneeR = mix(p.kneeR, 1.08, fall);
+                p.armL = p.armL.map((v, i) => mix(v, [-.65, -.1, -.6][i], fall));
+                p.armR = p.armR.map((v, i) => mix(v, [-.45, .1, .7][i], fall));
+                p.elbowL = mix(p.elbowL, -.5, fall); p.elbowR = mix(p.elbowR, -.7, fall);
+                p.dazed = true;
+                p.knockdown = fall;
+            }
             return p;
         }
 
@@ -630,7 +703,7 @@
                 hipL: [-.08, -.08, -.08], hipR: [.15, .12, .07], kneeL: .1, kneeR: .22,
                 armL: [-.47, -.18, .16], armR: [-.36, .12, -.15], elbowL: -2.13, elbowR: -2.23,
                 head: -.08, smile: false, footL: 0, footR: 0, striking: false, strikeHand: false, strikeSide: 'right',
-                beltSwing: Math.sin(phase) * .06 * motion, hit: 0
+                beltSwing: Math.sin(phase) * .06 * motion, hit: 0, bodyPitch: 0, bodyRoll: 0, knockdown: 0
             };
             p.armL[0] += Math.sin(phase) * .025 * motion;
             p.armR[0] -= Math.sin(phase) * .025 * motion;
@@ -642,6 +715,10 @@
             if (a.actor !== actor) {
                 return this._reactPose(p, actor, now);
             }
+            // A newly queued guard/counter must not pop a fallen opponent
+            // upright. The persistent fall owns this rig until recovery;
+            // answer scoring and the microphone continue independently.
+            if (this._reaction(actor, now).knockdown > 0) return this._reactPose(p, actor, now);
             if (a.move === 'bow') {
                 const b = pulse(u, .08, .94);
                 p.lean = .68 * b; p.head = .22 * b;
@@ -895,11 +972,32 @@
             // adapted to this rig's .50/.48 leg lengths. Jump offset stays
             // outside the solver so tornado kicks retain their airtime.
             let lowest = Infinity;
+            const body = append(M.identity(), M.rx(pose.bodyPitch || 0), M.rz(pose.bodyRoll || 0));
             for (const side of [-1, 1]) {
                 const left = side > 0;
-                const ankle = append(this._legRoot(pose, side), M.translate(0, -.5, 0), M.rx(Math.max(0, left ? pose.kneeL : pose.kneeR)), M.translate(0, -.48, .005), M.rx(left ? pose.footL : pose.footR));
+                const ankle = append(body, this._legRoot(pose, side), M.translate(0, -.5, 0), M.rx(Math.max(0, left ? pose.kneeL : pose.kneeR)), M.translate(0, -.48, .005), M.rx(left ? pose.footL : pose.footR));
                 for (const foot of [[0, -.088, .2], [0, -.088, -.06], [.065, -.088, .08], [-.065, -.088, .08]]) {
                     lowest = Math.min(lowest, M.point(ankle, foot)[1]);
+                }
+            }
+            if (pose.knockdown > 0) {
+                // During a fall the back, hands or head may touch first.
+                // Sample their actual rig frames instead of forcing both
+                // soles to remain planted underneath a horizontal body.
+                const torso = append(body, M.translate(0, 1.1, 0), M.rx(pose.lean), M.rz(pose.tilt));
+                const sample = (matrix, center, radius) => {
+                    const point = M.point(matrix, center);
+                    const extent = Math.hypot(matrix[1] * radius[0], matrix[5] * radius[1], matrix[9] * radius[2]);
+                    lowest = Math.min(lowest, point[1] - extent);
+                };
+                sample(torso, [0, .32, 0], [.27, .4, .19]);
+                const head = append(torso, M.translate(0, .92, .01), M.ry(pose.headY), M.rx(pose.head));
+                sample(head, [0, 0, 0], [.22, .26, .2]);
+                sample(head, [0, .119, -.041], [.22, .17, .2]);
+                for (const side of [-1, 1]) {
+                    const left = side > 0, arm = left ? pose.armL : pose.armR;
+                    const hand = append(torso, M.translate(side * .28, .55, 0), limbRotation(arm), M.translate(0, -.32, 0), M.rx(left ? pose.elbowL : pose.elbowR));
+                    sample(hand, [0, -.335, .018], [.1, .1, .09]);
                 }
             }
             return clamp(.105 - (.11 + pose.bob + lowest * scale), -.12, .5);
@@ -911,7 +1009,7 @@
             const belt = heroine ? this.playerBelt : o.belt, uniform = heroine ? rgb('#f9f2df') : rgb('#e6e9e0');
             const shade = heroine ? rgb('#d5d5c8') : rgb('#c4cfd0'), accent = heroine ? rgb('#bc5549') : o.accent;
             const build = heroine ? .94 : o.build, scale = heroine ? 1.02 : o.scale;
-            const eye = rgb('#273b42'), root = append(M.identity(), M.translate(pose.x, .11 + pose.y + pose.bob + this._groundLift(pose, scale), pose.z), M.ry(pose.yaw), M.scale(scale, scale, scale));
+            const eye = rgb('#273b42'), root = append(M.identity(), M.translate(pose.x, .11 + pose.y + pose.bob + this._groundLift(pose, scale), pose.z), M.ry(pose.yaw), M.rx(pose.bodyPitch || 0), M.rz(pose.bodyRoll || 0), M.scale(scale, scale, scale));
             const draw = (name, matrix, color, alpha, emissive) => this._draw(name, matrix, color, alpha, emissive);
             const torso = append(root, M.translate(0, 1.1, 0), M.rx(pose.lean), M.rz(pose.tilt));
             // A fitted, layered dobok with modeled lapels, seam, belt knot, and tails.
@@ -1022,7 +1120,8 @@
             this.gl.depthMask(false);
             for (const p of poses) for (let i = 0; i < 3; i++) {
                 const spread = .77 + i * .15 + p.y * .15;
-                this._draw('cylinder', shape(M.identity(), p.x, .113 + i * .0007, p.z, spread, .002, spread * .42), rgb('#283e49'), (.15 - i * .025) * (1 - p.y * .28), 1);
+                const groundedX = p.x + Math.sin(-(p.bodyPitch || 0)) * (p.x < 0 ? -1 : 1) * .75;
+                this._draw('cylinder', shape(M.identity(), groundedX, .113 + i * .0007, p.z, spread, .002, spread * .42), rgb('#283e49'), (.15 - i * .025) * (1 - p.y * .28), 1);
             }
             this.gl.depthMask(true);
         }
@@ -1083,11 +1182,27 @@
             }
             for (const actor of ['player', 'opponent']) {
                 const r = this._reaction(actor, now), side = actor === 'player' ? -1 : 1;
+                if (r.knockdown > .05) {
+                    const landing = clamp((r.fallAge - .18) / .55, 0, 1), dust = Math.sin(landing * PI);
+                    const x = side * 1.83;
+                    this._draw('torus', append(M.identity(), M.translate(x, .125, .42), M.rx(PI / 2), M.scale(.3 + landing * 1.05, .16 + landing * .55, .8)), rgb('#c3fff2'), dust * .7, 1);
+                    for (let i = 0; i < 6; i++) {
+                        const angle = i * PI / 3, drift = .2 + landing * .75;
+                        this._draw('sphere', shape(M.identity(), x + Math.cos(angle) * drift, .15 + dust * .08, .42 + Math.sin(angle) * drift * .45,
+                            .16 + landing * .13, .05 + dust * .05, .11), rgb('#e8d7a7'), dust * .24, 1);
+                    }
+                    for (let i = 0; i < 3; i++) {
+                        const angle = now / 350 + i * PI * 2 / 3;
+                        const star = append(M.identity(), M.translate(side * 2.43 + Math.cos(angle) * .23, .66 + Math.sin(angle * 2) * .04, .4 + Math.sin(angle) * .19), M.rz(angle));
+                        this._draw('cube', append(star, M.scale(.085, .025, .025)), rgb('#ffe183'), r.knockdown * .85, 1);
+                        this._draw('cube', append(star, M.scale(.025, .085, .025)), rgb('#ffe183'), r.knockdown * .85, 1);
+                    }
+                }
                 if (r.pressure < .2) continue;
                 const x = side * (1.23 + r.push), skid = Math.min(1, r.pressure);
                 for (let i = 0; i < 3; i++) this._draw('sphere', shape(M.identity(), x + side * (i * .1 + .11), .14 + i * .025, .21 + i * .1,
                     .14 + i * .025, .024 + i * .012, .08 + i * .015), rgb('#e8d7a7'), skid * (.19 - i * .035), 1);
-                if (r.down > .45) for (let i = 0; i < 3; i++) {
+                if (r.down > .45 && r.knockdown < .05) for (let i = 0; i < 3; i++) {
                     const angle = now / 240 + i * PI * 2 / 3;
                     const star = append(M.identity(), M.translate(x + Math.cos(angle) * .31, 2.05 - r.down * .34 + Math.sin(angle * 2) * .04, .3 + Math.sin(angle) * .21), M.rz(angle));
                     this._draw('cube', append(star, M.scale(.085, .025, .025)), rgb('#ffe183'), r.down * .9, 1);
@@ -1145,6 +1260,7 @@
             this.impacts.length = 0;
             this.reactions.player.length = 0;
             this.reactions.opponent.length = 0;
+            this.knockdowns.player = this.knockdowns.opponent = null;
             this.pendingCelebration = false;
             cancelAnimationFrame(this.frame);
             if (this.observer) this.observer.disconnect();

@@ -171,7 +171,7 @@ test('Fast kana and word readings gain real damage, with no bonus for absent or 
       const fight = dojo.startFight(progress);
       const outcome = dojo.resolveAnswer(fight, { correct: true, readingMs });
       assert.equal(outcome.speedBonus, speedBonus); assert.equal(outcome.speedTier, speedTier);
-      assert.equal(outcome.opponentDamage, 14 + speedBonus); assert.equal(fight.opponentHp, 86 - speedBonus);
+      assert.equal(outcome.opponentDamage, 14 + speedBonus); assert.equal(fight.opponentHp, 136 - speedBonus);
       assert.equal(fight.journal[0].readingMs, readingMs);
     }
   }
@@ -192,9 +192,11 @@ test('Speed damage stacks with clean combos and earned specials before the remai
   const combo = dojo.resolveAnswer(fight, { correct: true, readingMs: 1500 });
   assert.equal(first.opponentDamage, 20); assert.equal(second.opponentDamage, 20);
   assert.equal(combo.combo, true); assert.equal(combo.opponentDamage, 35); assert.equal(combo.speedBonus, 6);
+  const fourth = dojo.resolveAnswer(fight, { correct: true, readingMs: 1200, move: 'whirlwind-combo', challengeKind: 'special' });
+  assert.equal(fourth.specialBonus, 25); assert.equal(fourth.speedBonus, 6); assert.equal(fourth.speedTier, 'lightning');
+  assert.equal(fourth.opponentDamage, 54); assert.equal(fight.opponentHp, 21); assert.equal(fourth.won, false);
   const finisher = dojo.resolveAnswer(fight, { correct: true, readingMs: 1200, move: 'whirlwind-combo', challengeKind: 'special' });
-  assert.equal(finisher.specialBonus, 25); assert.equal(finisher.speedBonus, 6); assert.equal(finisher.speedTier, 'lightning');
-  assert.equal(finisher.opponentDamage, 25); assert.equal(fight.opponentHp, 0); assert.equal(finisher.won, true);
+  assert.equal(finisher.opponentDamage, 21); assert.equal(fight.opponentHp, 0); assert.equal(finisher.won, true);
   assert.equal(dojo.resolveAnswer(fight, { correct: true, readingMs: 1000 }).speedBonus, 0);
 });
 test('Writing, hints, mistakes, and defensive answers never earn reading speed damage', () => {
@@ -240,7 +242,7 @@ test('Assisted defense fully blocks, earns learning credit, and never attacks or
   const blocked = dojo.resolveAnswer(fight, { correct: true, assisted: true, move: 'tornado-kick' });
   assert.equal(blocked.blocked, true); assert.equal(blocked.blockedDamage, 10);
   assert.equal(blocked.playerDamage, 0); assert.equal(blocked.opponentDamage, 0); assert.equal(blocked.streak, 0); assert.equal(blocked.combo, false);
-  assert.equal(fight.playerHp, 100); assert.equal(fight.opponentHp, 100); assert.equal(fight.blocks, 1); assert.equal(fight.blockedDamage, 10);
+  assert.equal(fight.playerHp, 100); assert.equal(fight.opponentHp, 150); assert.equal(fight.blocks, 1); assert.equal(fight.blockedDamage, 10);
   assert.equal(fight.correct, 1); assert.equal(fight.assisted, 1); assert.equal(fight.pendingDamage, 0);
   assert.equal(dojo.completeFight(dojo.createProgress(), fight).promoted, false);
 });
@@ -361,7 +363,7 @@ test('Earned specials remain available while replaying an earlier rival', () => 
   const answer = { correct: true, move: question.techniqueId, challengeKind: question.challengeKind };
   assert.equal(dojo.resolveAnswer(fight, answer).opponentDamage, 46);
   const restored = dojo.sanitizeFight(JSON.parse(JSON.stringify(fight)), progress);
-  assert.ok(restored); assert.equal(restored.opponentHp, 54); assert.equal(restored.originBelt, 10); assert.equal(restored.beltIndex, 0);
+  assert.ok(restored); assert.equal(restored.opponentHp, 104); assert.equal(restored.originBelt, 10); assert.equal(restored.beltIndex, 0);
   assert.equal(dojo.resolveAnswer(restored, answer).opponentDamage, 49);
   const fresh = dojo.startFight(dojo.createProgress());
   assert.equal(dojo.resolveAnswer(fresh, answer).opponentDamage, 14);
@@ -409,7 +411,7 @@ test('Every Master Steif mistake immediately costs one-third health with no bloc
     assert.ok(restored); assert.equal(restored.playerHp, fight.playerHp); assert.equal(restored.pendingDamage, 0);
     assert.equal(restored.lost, fight.lost); assert.equal(restored.mistakes, mistake);
   }
-  assert.equal(fight.playerHp, 0); assert.equal(fight.opponentHp, 69);
+  assert.equal(fight.playerHp, 0); assert.equal(fight.opponentHp, 119);
   const result = dojo.completeFight(progress, fight);
   assert.equal(result.lost, true); assert.equal(result.promoted, false); assert.equal(result.mastered, false);
   assert.equal(progress.belt, 10); assert.equal(progress.losses, 1); assert.equal(progress.rewards.kanji.unlocked, false);
@@ -445,7 +447,7 @@ test('Increasing mistakes cause defeat without promotion, rematches remain avail
     else { assert.equal(outcome.blockFailed, true); damage.push(outcome.playerDamage); }
   }
   assert.deepEqual(damage, [10, 14, 18, 22, 24, 12]);
-  assert.equal(fight.playerHp, 0); assert.equal(fight.opponentHp, 100);
+  assert.equal(fight.playerHp, 0); assert.equal(fight.opponentHp, 150);
   const result = dojo.completeFight(progress, fight);
   assert.equal(result.lost, true); assert.equal(result.promoted, false); assert.equal(progress.belt, 0); assert.equal(progress.losses, 1);
   assert.equal(dojo.startFight(progress).playerHp, 100);
@@ -496,14 +498,14 @@ test('Writable outcome flags and fake fights cannot forge a victory', () => {
   assert.equal(dojo.completeFight(progress, fight).recorded, false); assert.equal(progress.belt, 0);
   assert.equal(dojo.completeFight(progress, { won: true, status: 'won', opponentHp: 0, playerHp: 100 }).recorded, false);
   dojo.resolveAnswer(fight, { correct: true });
-  assert.equal(fight.opponentHp, 86); assert.equal(fight.correct, 1); assert.equal(fight.status, 'fighting');
+  assert.equal(fight.opponentHp, 136); assert.equal(fight.correct, 1); assert.equal(fight.status, 'fighting');
 });
 test('Saved fights replay verified answers and ignore damaged HP/streak metadata', () => {
   const progress = dojo.createProgress(), fight = dojo.startFight(progress);
   dojo.resolveAnswer(fight, { correct: true }); dojo.resolveAnswer(fight, { correct: false });
   const raw = JSON.parse(JSON.stringify(fight)); raw.opponentHp = 0; raw.playerHp = -8; raw.streak = 999;
   const restored = dojo.sanitizeFight(raw, progress);
-  assert.ok(restored); assert.equal(restored.opponentHp, 86); assert.equal(restored.playerHp, 100); assert.equal(restored.streak, 0); assert.equal(restored.pendingDamage, 10);
+  assert.ok(restored); assert.equal(restored.opponentHp, 136); assert.equal(restored.playerHp, 100); assert.equal(restored.streak, 0); assert.equal(restored.pendingDamage, 10);
   while (restored.status === 'fighting') dojo.resolveAnswer(restored, { correct: true });
   assert.equal(dojo.completeFight(progress, restored).promoted, true);
   assert.equal(dojo.sanitizeFight({ ...raw, journal: [{ correct: true, assisted: false, move: 'tornado-kick' }] }), null);
@@ -668,7 +670,7 @@ test('Repeated successful blocks can extend a legitimate bout past the old turn 
   for (let attempt = 0; attempt < 80; attempt++) {
     dojo.resolveAnswer(fight, { correct: false }); dojo.resolveAnswer(fight, { correct: true });
   }
-  assert.equal(fight.turns, 160); assert.equal(fight.playerHp, 100); assert.equal(fight.opponentHp, 100);
+  assert.equal(fight.turns, 160); assert.equal(fight.playerHp, 100); assert.equal(fight.opponentHp, 150);
   const restored = dojo.sanitizeFight(JSON.parse(JSON.stringify(fight)));
   assert.ok(restored); assert.equal(restored.blocks, 80); assert.equal(restored.pendingDamage, 0);
   restored.pendingDamage = 100; restored.blocks = 999;
@@ -806,4 +808,109 @@ test('Course markers and legacy stage metadata cannot make journal replay silent
   const noCourse = { ...current }; delete noCourse.courseVersion;
   assert.equal(dojo.sanitizeFight(noCourse), null);
 });
+test('Five clean attacks in five seconds trigger one flurry without changing scoring', () => {
+  const fight = dojo.startFight(dojo.createProgress());
+  let history = [], last;
+  const damages = [];
+  for (const now of [0, 1000, 2000, 3000, 4000]) {
+    damages.push(dojo.resolveAnswer(fight, { correct: true, readingMs: 1000 }).opponentDamage);
+    last = dojo.advanceFlurry(history, now);
+    history = last.times;
+  }
+  assert.deepEqual(damages, [20, 23, 35, 29, 32]);
+  assert.equal(last.knockdown, true); assert.equal(last.count, 5); assert.equal(last.elapsedMs, 4000);
+  assert.deepEqual(last.times, []); assert.equal(fight.opponentHp, 11); assert.equal(fight.won, false);
+  assert.equal(fight.correct, 5); assert.equal(fight.turns, 5); assert.equal(fight.playerHp, 100);
+});
+test('Flurry timing includes exactly five seconds and excludes the next fractional millisecond', () => {
+  const history = Object.freeze([0, 1000, 2000, 3000]);
+  assert.deepEqual(dojo.advanceFlurry(history, 5000), { times: [], count: 5, knockdown: true, elapsedMs: 5000 });
+  const late = dojo.advanceFlurry(history, 5000.1);
+  assert.deepEqual(late.times, [1000, 2000, 3000, 5000.1]);
+  assert.equal(late.count, 4); assert.equal(late.knockdown, false); assert.ok(Math.abs(late.elapsedMs - 4000.1) < 1e-9);
+  assert.deepEqual(history, [0, 1000, 2000, 3000]);
+});
+test('Flurries evict stale arrivals, stay bounded, and require a fresh fifth after each knockdown', () => {
+  const stale = dojo.advanceFlurry([0, 200, 900, 6000], 6500);
+  assert.deepEqual(stale.times, [6000, 6500]); assert.equal(stale.count, 2);
+  let history = [], knockdowns = 0;
+  for (let i = 0; i < 15; i++) {
+    const next = dojo.advanceFlurry(history, i * 100);
+    assert.ok(next.times.length <= 4);
+    knockdowns += Number(next.knockdown); history = next.times;
+    assert.equal(next.knockdown, i % 5 === 4);
+  }
+  assert.equal(knockdowns, 3); assert.deepEqual(history, []);
+  assert.deepEqual(dojo.advanceFlurry([0, 1, 2, 3, 4], 5).times, []);
+});
+test('Mistakes, assistance, blocks, and invalid clocks reset the flurry chain', () => {
+  for (const reason of ['mistake', 'assistance', 'block']) {
+    const reset = dojo.advanceFlurry([0, 100, 200, 300], 400, false);
+    assert.deepEqual(reset, { times: [], count: 0, knockdown: false, elapsedMs: 0 }, reason);
+    assert.deepEqual(dojo.advanceFlurry(reset.times, 500).times, [500]);
+  }
+  for (const now of [NaN, Infinity, -Infinity, -1, '500', null, undefined]) {
+    assert.deepEqual(dojo.advanceFlurry([0, 100, 200, 300], now), { times: [], count: 0, knockdown: false, elapsedMs: 0 });
+  }
+  for (const eligible of [false, 0, 1, '', 'true', null]) assert.equal(dojo.advanceFlurry([], 1, eligible).count, 0);
+});
+test('Flurry clock rollback and corrupt histories start a new chain instead of scoring old arrivals', () => {
+  for (const history of [[1000, 1100, 1200, 1300], [0, 300, 200, 400], [0, NaN, 200, 300], [-1, 0, 1, 2], [0, '1', 2, 3]]) {
+    const copy = history.slice();
+    assert.deepEqual(dojo.advanceFlurry(history, 500).times, [500]);
+    assert.deepEqual(history, copy);
+  }
+  for (const history of [null, {}, undefined]) assert.deepEqual(dojo.advanceFlurry(history, 0).times, [0]);
+});
+test('New fights persist their 150 HP stamina without trusting writable view fields', () => {
+  const progress = dojo.createProgress(), fight = dojo.startFight(progress);
+  assert.equal(fight.staminaVersion, 1); assert.equal(fight.opponentMaxHp, 150); assert.equal(fight.opponentHp, 150);
+  fight.opponentMaxHp = 1; fight.opponentHp = 0;
+  dojo.resolveAnswer(fight, { correct: true });
+  assert.equal(fight.opponentMaxHp, 150); assert.equal(fight.opponentHp, 136);
+  const raw = JSON.parse(JSON.stringify(fight)); raw.opponentMaxHp = 900; raw.opponentHp = 0;
+  const restored = dojo.sanitizeFight(raw, progress);
+  assert.equal(restored.staminaVersion, 1); assert.equal(restored.opponentMaxHp, 150); assert.equal(restored.opponentHp, 136);
+  assert.deepEqual(restored.journal, fight.journal);
+});
+test('Existing current-rule saves keep 100 HP and their exact terminal results after two reloads', () => {
+  const progress = dojo.createProgress();
+  const old = { version: dojo.SAVE_VERSION, courseVersion: dojo.COURSE_VERSION, rulesVersion: dojo.FIGHT_VERSION,
+    beltIndex: 0, originBelt: 0, opponentMaxHp: 150, opponentHp: 999,
+    journal: Array.from({ length: 4 }, () => ({ correct: true, assisted: false, move: 'front-kick', challengeKind: 'basic', rulesVersion: dojo.FIGHT_VERSION, readingMs: 1000 })) };
+  const restored = dojo.sanitizeFight(old, progress);
+  assert.ok(restored); assert.equal(restored.staminaVersion, 0); assert.equal(restored.opponentMaxHp, 100);
+  assert.equal(restored.opponentHp, 0); assert.equal(restored.won, true); assert.equal(restored.journal.length, 4);
+  assert.deepEqual(restored.journal, old.journal);
+  const twice = dojo.sanitizeFight(JSON.parse(JSON.stringify(restored)), progress);
+  assert.equal(twice.opponentMaxHp, 100); assert.equal(twice.opponentHp, 0); assert.equal(twice.won, true);
+  assert.deepEqual(twice.journal, old.journal);
+  const summary = dojo.completeFight(progress, twice);
+  assert.equal(summary.promoted, true); assert.equal(progress.belt, 1);
+});
+test('Missing and zero stamina markers preserve in-progress health, pending blocks, and subsequent damage', () => {
+  const base = { version: dojo.SAVE_VERSION, courseVersion: dojo.COURSE_VERSION, rulesVersion: dojo.FIGHT_VERSION,
+    beltIndex: 0, originBelt: 0, opponentMaxHp: 150, opponentHp: 1,
+    journal: [
+      { correct: true, assisted: false, move: 'front-kick', challengeKind: 'basic', rulesVersion: dojo.FIGHT_VERSION },
+      { correct: false, assisted: false, move: 'front-kick', challengeKind: 'basic', rulesVersion: dojo.FIGHT_VERSION }
+    ] };
+  for (const fields of [{}, { staminaVersion: 0 }]) {
+    const restored = dojo.sanitizeFight({ ...base, ...fields });
+    assert.equal(restored.opponentMaxHp, 100); assert.equal(restored.opponentHp, 86); assert.equal(restored.pendingDamage, 10);
+    assert.equal(dojo.resolveAnswer(restored, { correct: true }).blocked, true);
+    assert.equal(dojo.resolveAnswer(restored, { correct: true, readingMs: 1000 }).opponentDamage, 20);
+    const twice = dojo.sanitizeFight(JSON.parse(JSON.stringify(restored)));
+    assert.equal(twice.opponentMaxHp, 100); assert.equal(twice.opponentHp, 66); assert.equal(twice.blocks, 1);
+  }
+});
+test('Unknown stamina markers and new stamina combined with historical rules are rejected', () => {
+  const fresh = JSON.parse(JSON.stringify(dojo.startFight(dojo.createProgress())));
+  for (const staminaVersion of [null, '1', -1, 2, true, {}, NaN]) assert.equal(dojo.sanitizeFight({ ...fresh, staminaVersion }), null);
+  for (const rulesVersion of [2, 3, 4, 5]) assert.equal(dojo.sanitizeFight({ ...fresh, rulesVersion }), null);
+  assert.equal(dojo.sanitizeFight({ ...fresh, courseVersion: 1 }), null);
+  assert.equal(dojo.sanitizeFight({ ...fresh, legacyBeltIndex: 0, legacyOriginBelt: 0 }), null);
+  assert.equal(dojo.sanitizeFight({ ...fresh, journal: [{ correct: true, assisted: false, move: 'front-kick', challengeKind: 'basic', rulesVersion: 5 }] }), null);
+});
+
 console.log('\n' + passed + ' dojo engine checks passed.');

@@ -124,6 +124,9 @@
     // This ephemeral fight uses the real rules; it is never saved or completed
     // into progress. Black belt Fiona can preview every available technique.
     fight = window.DojoGame.startFight({ ...window.DojoGame.createProgress(), belt: window.DojoGame.BELTS.length - 1 }, window.DojoGame.BELTS.findIndex(belt => belt.id === 'red'));
+    // Preserve this short exhibition's original 100-energy choreography. New
+    // campaign bouts use the longer 150-energy match for five-answer flurries.
+    fight = window.DojoGame.sanitizeFight({ ...fight, staminaVersion: 0 });
     api.fight = fight;
     scene.setFighters({ playerBelt: 'black', opponent: window.DojoGame.OPPONENTS.find(opponent => opponent.belt === 'red') });
     index = -1;

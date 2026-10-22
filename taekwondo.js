@@ -45,6 +45,7 @@
   let voiceStatus = 'idle';
   let handsFree = false;
   let autoListenTimer, autoAdvanceTimer, speedNoticeTimer;
+  let flurryTimes = [], flurryNoticeTimer;
   let readingStartedAt = 0, readingSpeedEligible = false, quietRetries = 0;
   let calloutTimer;
   let soundEnabled = saved && saved.soundEnabled === true;
@@ -74,10 +75,10 @@
       audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
       if (audioContext.state === 'suspended') audioContext.resume();
       const now = audioContext.currentTime;
-      const notes = kind === 'win' ? [440, 554, 659, 880] : kind === 'combo' ? [440, 660, 880] : kind === 'wrong' ? [180, 135] : [520, 700];
+      const notes = kind === 'win' ? [440, 554, 659, 880] : kind === 'knockdown' ? [220, 110, 65] : kind === 'combo' ? [440, 660, 880] : kind === 'wrong' ? [180, 135] : [520, 700];
       notes.forEach((frequency, index) => {
         const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
-        oscillator.type = kind === 'wrong' ? 'triangle' : 'sine';
+        oscillator.type = kind === 'wrong' || kind === 'knockdown' ? 'triangle' : 'sine';
         oscillator.frequency.value = frequency;
         oscillator.connect(gain); gain.connect(audioContext.destination);
         const start = now + index * .085;
@@ -96,9 +97,10 @@
     if (scene) scene.setReducedMotion(reducedMotion);
   }
   function formatHealth(value) { return String(Math.round(value * 10) / 10); }
-  function setHealth(id, value) {
+  function setHealth(id, value, maximum = 100) {
     $(id).setAttribute('aria-valuenow', formatHealth(value));
-    $(id).querySelector('span').style.width = value + '%';
+    $(id).setAttribute('aria-valuemax', String(maximum));
+    $(id).querySelector('span').style.width = Math.max(0, Math.min(100, value / maximum * 100)) + '%';
   }
   function updateHud() {
     const belt = G.BELTS[selectedBelt], opponent = G.OPPONENTS[selectedBelt];
@@ -106,9 +108,10 @@
     $('player-belt').textContent = G.BELTS[progress.belt].name + ' belt';
     $('opponent-name').textContent = opponent.name;
     $('opponent-style').textContent = opponent.title;
-    const playerHp = fight ? fight.playerHp : 100, opponentHp = fight ? fight.opponentHp : 100;
-    setHealth('player-health', playerHp); setHealth('opponent-health', opponentHp);
-    $('player-hp').textContent = formatHealth(playerHp) + ' / 100'; $('opponent-hp').textContent = formatHealth(opponentHp) + ' / 100';
+    const opponentMaxHp = fight ? fight.opponentMaxHp || 100 : 150;
+    const playerHp = fight ? fight.playerHp : 100, opponentHp = fight ? fight.opponentHp : opponentMaxHp;
+    setHealth('player-health', playerHp); setHealth('opponent-health', opponentHp, opponentMaxHp);
+    $('player-hp').textContent = formatHealth(playerHp) + ' / 100'; $('opponent-hp').textContent = formatHealth(opponentHp) + ' / ' + opponentMaxHp;
     $('master-rule').hidden = !opponent.unblockableMistakes;
     $('master-rule-description').textContent = `${opponent.name} hits immediately for 33.3% of your full energy after each mistake. Three mistakes end the match.`;
     $('dojo-canvas').setAttribute('aria-label', `Fiona, an orange-haired female fighter with shoulder-length hair and bangs, faces ${opponent.name}${opponent.unblockableMistakes ? ', the final master with short grey hair' : ''} in a 3D dojo`);
@@ -200,6 +203,7 @@
     });
   }
   function renderLobby() {
+    resetFlurry(true);
     stopHandsFree();
     document.querySelector('.practice-card').setAttribute('aria-labelledby', 'practice-heading');
     phase = 'lobby';
@@ -212,6 +216,7 @@
   }
   function beginFight() {
     if (!fight || fight.beltIndex !== selectedBelt || fight.recorded) {
+      resetFlurry(true);
       fight = G.startFight(progress, selectedBelt); question = null; challengeSet = null; writingDraft = null; recent = []; answerResolved = false; phase = 'question';
     }
     if (fight.status !== 'fighting') { finishFight(); return; }
@@ -293,6 +298,7 @@
     document.querySelector('.arena').classList.toggle('handsfree-active', handsFree);
   }
   function stopHandsFree(note) {
+    resetFlurry();
     handsFree = false; quietRetries = 0;
     cancelVoice();
     if (phase === 'question') { lockInputs(false); renderMoves(); }
@@ -326,12 +332,25 @@
   function showSpeedBonus(outcome, milliseconds) {
     const node = $('speed-notice'); clearTimeout(speedNoticeTimer);
     node.classList.toggle('combo-speed', Boolean(outcome.combo));
-    node.hidden = !outcome.speedBonus;
-    if (!outcome.speedBonus) return;
+    node.hidden = !outcome.speedBonus || !$('flurry-notice').hidden;
+    if (node.hidden) return;
     node.dataset.tier = outcome.speedTier;
     node.textContent = `${outcome.speedTier === 'lightning' ? '⚡ LIGHTNING' : '✦ QUICK STRIKE'} · +${outcome.speedBonus} DAMAGE · ${(milliseconds / 1000).toFixed(1)}s${outcome.combo ? ' · COMBO BOOST!' : ''}`;
     node.classList.remove('speed-pop'); void node.offsetWidth; node.classList.add('speed-pop');
     speedNoticeTimer = setTimeout(() => { node.hidden = true; }, 2200);
+  }
+  function resetFlurry(clearNotice = false) {
+    flurryTimes = [];
+    if (clearNotice) { clearTimeout(flurryNoticeTimer); $('flurry-notice').hidden = true; }
+  }
+  function showFlurry(elapsedMs) {
+    const node = $('flurry-notice');
+    clearTimeout(flurryNoticeTimer); clearTimeout(speedNoticeTimer);
+    $('speed-notice').hidden = true;
+    node.textContent = `KNOCKDOWN! · 5 ANSWERS IN ${(elapsedMs / 1000).toFixed(1)}s`;
+    node.hidden = false;
+    node.classList.remove('flurry-pop'); void node.offsetWidth; node.classList.add('flurry-pop');
+    flurryNoticeTimer = setTimeout(() => { node.hidden = true; }, 3000);
   }
   function lockInputs(locked) {
     $('listen-button').disabled = locked || listening || !voice || !voice.supported;
@@ -404,7 +423,7 @@
   }
   function showHint(mark = true) {
     if (!question || phase !== 'question') return;
-    if (mark) { assisted = true; if (challengeSet) challengeSet.locked = true; }
+    if (mark) { resetFlurry(); assisted = true; if (challengeSet) challengeSet.locked = true; }
     const note = question.mode === 'kana-read' ? `The sound is “${question.answer}”. Say it aloud to practise.` : question.mode === 'word-read' ? `Read “${question.prompt}” as “${question.reading}” (${question.answer}). Say it aloud.` : `Model: ${question.answer}${question.mode === 'kanji-write' ? ' · reading: ' + question.reading : ''}. Follow the numbered strokes; you can clear and try again.`;
     $('hint-text').textContent = note + (fight.pendingDamage > 0 ? ' A correct guided block still stops all damage.' : ' Guided attacks give half damage and no streak credit.');
     $('hint-text').hidden = false; $('hint-button').textContent = 'Hint shown · assisted';
@@ -417,6 +436,9 @@
     answerWasBlock = fight.pendingDamage > 0;
     const outcome = G.resolveAnswer(fight, { correct, assisted, move: question.techniqueId || 'front-kick', challengeKind: question.challengeKind || 'basic', readingMs });
     if (!outcome.resolved) return;
+    const flurry = G.advanceFlurry(flurryTimes, performance.now(), correct && !assisted && !outcome.defensive && outcome.opponentDamage > 0);
+    flurryTimes = flurry.times;
+    const knockdown = flurry.knockdown;
     phase = 'answered'; answerResolved = true;
     lockInputs(true); updateHud(); renderMoves();
     const moveName = outcome.move.name;
@@ -424,12 +446,14 @@
     const answerText = question.mode === 'kana-read' ? `${question.prompt} = ${question.answer}` : question.mode === 'word-read' ? `${question.prompt} (${question.reading}) = ${question.answer}` : `${question.answer}${question.mode === 'kanji-write' ? ' · ' + question.reading : ' = ' + question.reading}`;
     const prefix = `${detail ? detail + ' ' : ''}${answerText}. `;
     const copy = prefix + (outcome.immediateCounter ? `Master Steif's strike takes one-third of your full energy immediately. No block chance. ${outcome.lost ? 'The match is over; your earned belts stay safe.' : 'Your next answer is an attack. Take your time.'}` : outcome.blocked ? `You stopped all ${outcome.blockedDamage} damage. Your next answer is an attack; build a fresh combo.` : outcome.blockFailed ? `${outcome.playerDamage} queued damage lands. That counter is complete; your next answer is an attack.` : outcome.counterQueued ? `No damage yet. Complete the next activity correctly to block ${outcome.pendingDamage} damage.` : `${outcome.opponentDamage} damage${assisted ? ' · guided practice, no streak credit' : outcome.combo ? ' · combo bonus included' : ' · ' + fight.streak + ' clean in a row'}.`);
-    renderFeedback(title, copy + (outcome.speedBonus ? ` Includes +${outcome.speedBonus} ${outcome.speedTier} speed damage!` : ''), !correct);
+    renderFeedback(knockdown ? 'Five in five! Knockdown!' : title, copy + (outcome.speedBonus ? ` Includes +${outcome.speedBonus} ${outcome.speedTier} speed damage!` : '') + (knockdown ? ' Five clean answers within five seconds knocked your rival to the mat!' : ''), !correct);
     showSpeedBonus(outcome, readingMs);
+    if (knockdown) showFlurry(flurry.elapsedMs);
     $('arena-caption').textContent = outcome.immediateCounter ? 'MASTER STEIF STRIKES · 33.3% damage · no block chance' : outcome.blocked ? `BLOCKED · ${outcome.blockedDamage} damage stopped` : outcome.counterQueued ? `COUNTER INCOMING · ${outcome.pendingDamage} damage queued · next challenge is your block` : outcome.blockFailed ? `${G.OPPONENTS[selectedBelt].name} counters · ${outcome.playerDamage} damage` : `${moveName}${outcome.combo ? ' combination' : ''} · ${outcome.opponentDamage} damage`;
-    callout(outcome.immediateCounter ? '33.3% · MASTER STRIKE' : outcome.blocked ? 'BLOCKED!' : outcome.counterQueued ? 'BLOCK CHANCE NEXT' : outcome.blockFailed ? 'COUNTER' : outcome.combo ? `${fight.streak} HIT COMBO!${outcome.speedBonus ? ' ⚡' : ''}` : outcome.speedBonus ? outcome.speedTier === 'lightning' ? '⚡ LIGHTNING STRIKE!' : 'QUICK STRIKE!' : moveName);
-    if (scene) scene.play({ actor: outcome.immediateCounter || outcome.counterQueued || outcome.blockFailed ? 'opponent' : 'player', move: outcome.immediateCounter ? 'dragon-finisher' : outcome.blocked ? 'block' : outcome.counterQueued ? 'guard' : outcome.blockFailed ? ['front-kick', 'roundhouse', 'side-kick', 'jump-front-kick', 'axe-kick', 'turning-kick', 'double-kick', 'back-kick', 'jump-roundhouse', 'tornado-kick', 'dragon-finisher'][selectedBelt] : outcome.move.id, hit: !(outcome.counterQueued || outcome.blocked), combo: outcome.combo ? fight.streak : 0, speedTier: outcome.speedTier, damage: outcome.opponentDamage, victory: outcome.won });
-    sound(correct ? outcome.combo ? 'combo' : 'hit' : 'wrong');
+    if (knockdown) $('arena-caption').textContent = `KNOCKDOWN · five clean answers within five seconds · ${outcome.opponentDamage} damage`;
+    callout(knockdown ? 'FIVE IN FIVE · KNOCKDOWN!' : outcome.immediateCounter ? '33.3% · MASTER STRIKE' : outcome.blocked ? 'BLOCKED!' : outcome.counterQueued ? 'BLOCK CHANCE NEXT' : outcome.blockFailed ? 'COUNTER' : outcome.combo ? `${fight.streak} HIT COMBO!${outcome.speedBonus ? ' ⚡' : ''}` : outcome.speedBonus ? outcome.speedTier === 'lightning' ? '⚡ LIGHTNING STRIKE!' : 'QUICK STRIKE!' : moveName);
+    if (scene) scene.play({ actor: outcome.immediateCounter || outcome.counterQueued || outcome.blockFailed ? 'opponent' : 'player', move: outcome.immediateCounter ? 'dragon-finisher' : outcome.blocked ? 'block' : outcome.counterQueued ? 'guard' : outcome.blockFailed ? ['front-kick', 'roundhouse', 'side-kick', 'jump-front-kick', 'axe-kick', 'turning-kick', 'double-kick', 'back-kick', 'jump-roundhouse', 'tornado-kick', 'dragon-finisher'][selectedBelt] : outcome.move.id, hit: !(outcome.counterQueued || outcome.blocked), combo: outcome.combo ? fight.streak : 0, speedTier: outcome.speedTier, damage: outcome.opponentDamage, victory: outcome.won, knockdown });
+    sound(knockdown ? 'knockdown' : correct ? outcome.combo ? 'combo' : 'hit' : 'wrong');
     save();
     if (!handsFree) $('next-button').focus({ preventScroll: true });
     quietRetries = 0;
@@ -438,7 +462,7 @@
   }
   function callout(text) {
     clearTimeout(calloutTimer);
-    const node = $('action-callout'); node.textContent = text; node.classList.toggle('combo-callout', /COMBO/.test(text)); node.classList.remove('pop'); void node.offsetWidth; node.classList.add('pop');
+    const node = $('action-callout'); node.textContent = text; node.classList.toggle('combo-callout', /COMBO|KNOCKDOWN/.test(text)); node.classList.remove('pop'); void node.offsetWidth; node.classList.add('pop');
     if (reducedMotion) node.style.opacity = '1';
     calloutTimer = setTimeout(() => { node.classList.remove('pop'); node.style.opacity = ''; }, 1300);
   }
@@ -492,6 +516,7 @@
   function openReward(id) {
     const selected = typeof id === 'string' ? G.REWARDS.find(reward => reward.id === id) : G.REWARDS.find(reward => progress.rewards[reward.id].unlocked && !progress.rewards[reward.id].claimed) || G.REWARDS.find(reward => progress.rewards[reward.id].unlocked);
     if (!selected || !progress.rewards[selected.id].unlocked) return;
+    resetFlurry();
     cancelVoice();
     rewardId = selected.id;
     flavor = progress.rewards[rewardId].flavor || 'strawberry';
@@ -555,6 +580,9 @@
         submit(result.correct, `Heard “${result.transcript}”.`, readingMs);
       },
       onError: error => {
+        // Unclear speech is not an answer. Its retry uses the same real-time
+        // window without adding a hit or erasing accepted correct answers.
+        if (!['no-speech', 'no-match'].includes(error.code)) resetFlurry();
         listening = false; $('stop-listening').hidden = true;
         if (error.transcript) { $('voice-transcript').textContent = 'Heard: ' + error.transcript + ' · unclear; try again'; $('voice-transcript').hidden = false; }
         readingSpeedEligible = false;
@@ -592,9 +620,9 @@
   $('clear-writing').addEventListener('click', () => { if (phase === 'question' && writing) writing.clear(); });
   $('undo-writing').addEventListener('click', () => { if (phase === 'question' && writing) writing.undo(); });
   $('hint-button').addEventListener('click', () => showHint());
-  $('help-button').addEventListener('click', () => { cancelVoice(); open($('help-dialog')); });
+  $('help-button').addEventListener('click', () => { resetFlurry(); cancelVoice(); open($('help-dialog')); });
   document.querySelectorAll('[data-close]').forEach(button => { button.addEventListener('click', () => button.closest('dialog').close()); });
-  $('pause-button').addEventListener('click', () => { cancelVoice(); save(); open($('pause-dialog')); });
+  $('pause-button').addEventListener('click', () => { resetFlurry(); cancelVoice(); save(); open($('pause-dialog')); });
   $('resume-button').addEventListener('click', () => $('pause-dialog').close());
   [$('pause-dialog'), $('help-dialog'), $('reward-dialog')].forEach(dialog => dialog.addEventListener('close', () => {
     if (phase === 'answered') advanceHandsFree(); else queueHandsFree();
