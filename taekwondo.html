@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f1e8">
+  <title>Fiona's Dojo · Japanese Taekwondo Adventure</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="taekwondo.css">
+  <script>
+    // Install updates independently of game startup, including recovery from an
+    // older cached controller paired with a newly fetched page.
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      let dojoRecovering = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!dojoRecovering && document.documentElement.dataset.dojoReady !== 'true') {
+          dojoRecovering = true;
+          location.reload();
+        }
+      });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+    }
+  </script>
+  <script defer src="curriculum_y1.js"></script>
+  <script defer src="year1-review-data.js"></script>
+  <script defer src="garden-material.js"></script>
+  <script defer src="kanjivg_data.js"></script>
+  <script defer src="taekwondo-engine.js"></script>
+  <script defer src="taekwondo-writing.js"></script>
+  <script defer src="taekwondo-voice.js"></script>
+  <script defer src="taekwondo-scene.js"></script>
+  <script defer src="taekwondo.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="taekwondo.html" aria-label="Fiona's Dojo home"><span class="brand-mark" aria-hidden="true">F<span>道</span></span><span>FIONA’S DOJO<small>TAEKWONDO × JAPANESE</small></span></a>
+      <nav aria-label="Game navigation"><a href="arcade.html">← Arcade</a><a href="taekwondo-demo.html">Watch a fight ↗</a><button id="sound-toggle" type="button" aria-pressed="false">Sound off</button><button id="motion-toggle" type="button" aria-pressed="false">Calm motion</button><button id="help-button" type="button">How to play <span aria-hidden="true">↗</span></button></nav>
+    </header>
+    <main>
+      <div class="page-heading"><div><p class="eyebrow">YOUR BLACK BELT JOURNEY</p><h1>Small steps. <em>Big kicks.</em></h1><p>Read. Write. Find your fighting spirit.</p></div><div class="save-badge" id="save-status"><span aria-hidden="true">●</span> Progress saved on this device</div></div>
+      <div class="game-layout">
+        <div class="main-column">
+          <section class="arena" aria-label="3D Taekwondo arena">
+            <canvas id="dojo-canvas" aria-label="Fiona, an orange-haired female fighter with shoulder-length hair and bangs, and her opponent in a 3D dojo"></canvas>
+            <p id="graphics-status" class="graphics-status" hidden></p>
+            <div class="arena-top"><span class="live-tag"><i></i> THE LEARNING DOJO</span><span id="round-label">WHITE BELT · MATCH 01</span></div>
+            <div class="fight-hud">
+              <div class="fighter-stat"><div><strong>Fiona</strong><span id="player-belt">White belt</span></div><div class="health-track" role="progressbar" id="player-health" aria-label="Fiona's energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span></span></div><small id="player-hp">100 / 100</small></div>
+              <span class="versus">VS</span>
+              <div class="fighter-stat opponent-stat"><div><strong id="opponent-name">Haru</strong><span id="opponent-style">A new beginning</span></div><div class="health-track" role="progressbar" id="opponent-health" aria-label="Opponent's energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span></span></div><small id="opponent-hp">100 / 100</small></div>
+            </div>
+            <div id="action-callout" class="action-callout" aria-hidden="true"></div>
+            <div id="speed-notice" class="speed-notice" role="status" aria-live="polite" hidden></div>
+            <div class="arena-bottom"><span id="arena-caption">Your next chapter starts on the mat.</span><span class="streak-pill" id="streak-label">0 hit streak</span></div>
+          </section>
+
+          <section class="practice-card" aria-labelledby="practice-heading">
+            <div class="practice-top"><span class="eyebrow" id="activity-label">01 / MEET YOUR FIGHTER</span><span class="no-timer">◷ Take your time</span></div>
+            <div id="master-rule" class="master-rule" role="status" hidden><strong>FINAL MASTER · NO BLOCK CHANCE</strong><span id="master-rule-description">Master Steif hits immediately for 33.3% of your full energy after each mistake. Three mistakes end the match.</span></div>
+            <div id="welcome-panel" class="welcome-panel"><div><h2 id="practice-heading">A little courage goes a long way.</h2><p>You’re Fiona, the orange-haired fighter with a big goal. Speak Japanese, draw your characters, and defeat eleven rivals. Six ice cream rewards celebrate your progress.</p><button class="primary" id="start-button" type="button">Step onto the mat <span aria-hidden="true">→</span></button><p class="small-note" id="welcome-note">Speak the hiragana to attack. Your microphone powers reading rounds.</p></div><div class="welcome-seal" aria-hidden="true"><span>始</span><small>BEGIN</small></div></div>
+            <div id="challenge-panel" hidden>
+              <div id="technique-challenge" class="technique-challenge"><strong id="technique-label">Front kick · basic technique</strong><span id="challenge-difficulty">Standard activity · 14 starting damage</span></div>
+              <div id="block-banner" class="block-banner" role="status" hidden><strong>BLOCK CHANCE</strong><span id="block-description">Answer correctly to stop the incoming counter.</span></div>
+              <div class="challenge-layout"><div class="question-area"><h2 id="question-instruction">Read this hiragana</h2><div id="question-glyph" class="question-glyph" lang="ja"></div><p id="question-context"></p><div id="word-progress" class="word-progress" hidden></div></div>
+                <div class="answer-area">
+                  <div id="voice-area"><p class="voice-instruction">Read it aloud in Japanese.</p><div class="handsfree-controls"><button id="handsfree-toggle" class="handsfree-toggle" type="button" aria-pressed="false">● Start hands-free</button><p id="handsfree-status" role="status">Start once, then speak each new prompt. Fast clean answers earn +3 or +6 damage.</p></div><button class="primary voice-button" id="listen-button" type="button"><span aria-hidden="true">●</span> Speak to strike</button><button class="text-button" id="stop-listening" type="button" hidden>Finish speaking</button><p id="voice-status" role="status" aria-live="polite">Tap the microphone, then say the sound.</p><p id="voice-transcript" class="voice-transcript" lang="ja" hidden></p><p class="voice-note">Microphone access and browser speech recognition are required. Recognition may need an internet connection.</p></div>
+                  <div id="writing-area" hidden><div class="writing-label"><span id="writing-caption">Write from memory</span><span id="stroke-count">0 strokes</span></div><canvas id="writing-canvas" width="300" height="300" aria-label="Handwriting area. Draw each stroke in order using a mouse, pen, or finger."></canvas><div class="writing-tools"><button id="undo-writing" type="button">Undo</button><button id="clear-writing" type="button">Clear</button><button class="primary" id="check-writing" type="button">Check & strike</button></div></div>
+                  <div class="answer-tools"><button id="hint-button" type="button">Need a hint?</button><button id="pause-button" type="button">Pause</button></div>
+                </div>
+              </div>
+              <div id="feedback" class="feedback" role="status" aria-live="polite" tabindex="-1" hidden><div><strong id="feedback-title"></strong><p id="feedback-detail"></p></div><button class="primary" id="next-button" type="button">Next challenge →</button></div>
+              <p id="hint-text" class="hint-text" role="status" hidden></p>
+            </div>
+          </section>
+
+          <section class="moves-card" aria-labelledby="moves-heading"><div class="section-heading"><div><p class="eyebrow">YOUR MOVE, FIGHTER</p><h2 id="moves-heading">Basics first. Specials earned.</h2></div><span id="move-count">7 basics · 0 / 10 specials</span></div><div id="move-list" class="move-list" aria-label="Choose a Taekwondo technique"></div><p class="small-note">All basics are ready at white belt. Each new belt earns one special with a harder activity and more damage. Pick before answering; three clean attacks still unleash a combo.</p></section>
+        </div>
+
+        <aside class="journey-column" aria-label="Belt journey and rewards">
+          <section class="journey-card"><div class="section-heading"><div><p class="eyebrow">ONE BELT AT A TIME</p><h2>The road to black.</h2></div><span class="journey-number" id="belt-counter">1<span>/11</span></span></div><div id="belt-path" class="belt-path"></div><p class="journey-footnote">Win a match to earn the next belt.<br>Earned belts are yours to keep.</p></section>
+          <section class="reward-card"><span class="reward-icon" aria-hidden="true">🍦</span><div><p class="eyebrow">SIX SWEET MILESTONES</p><h2>Your ice cream collection.</h2><p id="reward-description">Finish each learning section to earn its very own ice cream reward.</p></div><div id="reward-list" class="reward-list" aria-label="Six saved ice cream rewards"></div><button id="reward-button" type="button" disabled>0 / 6 rewards earned</button></section>
+          <section class="record-card" aria-label="Personal record"><p class="eyebrow">LITTLE WINS ADD UP</p><div><span><strong id="record-wins">0</strong>Matches won</span><span><strong id="record-combo">0</strong>Best streak</span></div><p id="rival-note">Meet a new rival at every belt.</p></section>
+        </aside>
+      </div>
+      <footer>Built for practice, powered by persistence. <a href="writing.html">Visit the writing studio ↗</a><span>Progress stays in this browser.</span></footer>
+    </main>
+  </div>
+
+  <dialog id="help-dialog" aria-labelledby="help-heading"><button class="dialog-close" data-close type="button" aria-label="Close instructions">×</button><p class="eyebrow">WELCOME TO THE DOJO</p><h2 id="help-heading">Your learning is your superpower.</h2><ol class="help-list"><li><strong>Choose a move.</strong> All seven basics are ready at white belt. Each new belt earns one stronger special. Picking a special gives you a harder activity, shown with its extra damage. Choose before answering; completed basics cannot become finishers afterward.</li><li><strong>Speak to fight.</strong> Reading rounds require the microphone: pronounce the hiragana, katakana, or word in Japanese. Allow microphone access when your browser asks. No recognised speech or a microphone error costs no energy.</li><li><strong>Block the counter.</strong> A mistake breaks your streak and queues a rival counter. Your next activity is a block chance: correct prevents all its damage; incorrect lets that counter land. Then you return to attacking. The final opponent, Master Steif, has short grey hair and a special rule: each mistake deals 33.3% of your full energy immediately, with no block chance. Three mistakes end his match.</li><li><strong>Hands-free flow.</strong> In reading rounds, tap Start hands-free once and allow the microphone. Say each new prompt as the mic starts automatically. Fast, clean attacks earn +6 damage within two seconds or +3 within four seconds, with speed callouts and brighter combos. Mistakes still offer a block chance against ordinary rivals. Stop hands-free, Pause, or leave the page to stop listening. Silence costs no energy; the mic pauses after two quiet retries.</li><li><strong>Find your rhythm.</strong> Clean attack answers grow damage; every third triggers a combo. Guided attacks deal half damage and earn no streak. Correct guided blocks still stop the counter. There is no timer.</li><li><strong>Earn your belts.</strong> Rank changes only after you defeat a rival. Two belts each teach hiragana reading, katakana reading, hiragana writing, and katakana writing. The first belt of each pair covers 23 characters; the second covers all 46. High belts read words aloud; black belt writes words with kanji.</li><li><strong>Collect six treats.</strong> Finish hiragana reading, katakana reading, hiragana writing, katakana writing, word reading, and kanji writing. Each section earns its own ice cream, with its flavour saved on this device.</li></ol><p>Draw with a finger, pen, or mouse. KanjiVG checks stroke shape, order, and direction. Use Tab and Enter for buttons. If your browser lacks speech recognition, open the game in a browser with Japanese recognition and microphone access. Writing practice works offline after the course has been cached; voice recognition may need a connection.</p><button class="primary" data-close type="button">Let’s do this →</button></dialog>
+  <dialog id="result-dialog" aria-labelledby="result-heading"><p class="eyebrow" id="result-eyebrow">MATCH COMPLETE</p><div class="result-symbol" id="result-symbol" aria-hidden="true">✦</div><h2 id="result-heading">A new belt. A new beginning.</h2><p id="result-copy"></p><div id="result-stats" class="result-stats"></div><button class="primary" id="result-continue" type="button">Keep going →</button><button class="text-button" id="result-rest" type="button">Rest in the dojo</button></dialog>
+  <dialog id="pause-dialog" aria-labelledby="pause-heading"><p class="eyebrow">A MOMENT TO BREATHE</p><h2 id="pause-heading">The mat will wait.</h2><p>Your fight is saved. Come back whenever you’re ready.</p><button class="primary" id="resume-button" type="button">Back to the match →</button><button class="text-button" id="leave-button" type="button">Return to the dojo</button></dialog>
+  <dialog id="reward-dialog" aria-labelledby="reward-heading"><button class="dialog-close" data-close type="button" aria-label="Close ice cream parlour">×</button><p class="eyebrow" id="reward-eyebrow">FIONA’S ICE CREAM PARLOUR</p><div id="ice-cream-art" class="ice-cream-art" aria-hidden="true"><i></i><i></i><b></b><span>✦</span></div><h2 id="reward-heading">You earned every scoop.</h2><p id="reward-milestone">Choose this reward’s celebration flavour.</p><div class="flavour-options" id="flavour-options"><button type="button" data-flavour="Strawberry" style="--flavour:#eaa2ae">Strawberry</button><button type="button" data-flavour="Matcha" style="--flavour:#9ab67b">Matcha</button><button type="button" data-flavour="Vanilla" style="--flavour:#f7e6b6">Vanilla</button></div><p id="reward-message" class="reward-message" aria-live="polite"></p><button class="primary" id="claim-reward" type="button">Save this ice cream reward →</button></dialog>
+  <noscript><p class="noscript">Enable JavaScript to enter the dojo.</p></noscript>
+</body>
+</html>

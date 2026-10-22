@@ -8,7 +8,7 @@ const path = require('path');
 const PAGES = [
     'index.html', 'writing.html', 'ocean.html', 'spaceship.html', 'review.html',
     'questions.html', 'voicepractice.html', 'sentencebuilder.html', 'ebook.html',
-    'workbook.html', 'weekly-workbook.html', 'arcade.html', 'kanjiride.html', 'year1-review.html'
+    'workbook.html', 'weekly-workbook.html', 'arcade.html', 'kanjiride.html', 'year1-review.html', 'taekwondo.html', 'taekwondo-demo.html'
 ];
 
 const assets = ['./'];
@@ -19,6 +19,8 @@ assets.push('wordcats.js');
 assets.push('activities.js');
 assets.push('weekly-workbook.js');
 assets.push('year1-review.js', 'year1-review.css');
+assets.push('taekwondo.css', 'taekwondo-engine.js', 'taekwondo-writing.js', 'taekwondo-voice.js', 'taekwondo-scene.js', 'taekwondo.js');
+assets.push('taekwondo-demo.js');
 assets.push('year1-review-data.js', 'garden-material.js', 'garden-games.js', 'garden-games.css',
     'garden-session.js', 'garden-legacy.js', 'garden-embed.css', 'activity-styles.css');
 for (let y = 1; y <= 5; y++) assets.push('curriculum_y' + y + '.js');
@@ -87,8 +89,10 @@ function rangedResponse(req, res) {
 self.addEventListener('fetch', e => {
     if (e.request.method !== 'GET') return;
     const accept = e.request.headers.get('accept') || '';
-    if (e.request.mode === 'navigate' || accept.includes('text/html')) {
-        // Pages: network first so updates apply on the next load,
+    const dojoName = new URL(e.request.url).pathname.split('/').pop();
+    const dojoAsset = dojoName.startsWith('taekwondo') && (dojoName.endsWith('.js') || dojoName.endsWith('.css'));
+    if (e.request.mode === 'navigate' || accept.includes('text/html') || dojoAsset) {
+        // Pages and dojo code: network first so updates apply on the next load,
         // cache fallback keeps them working offline
         e.respondWith(
             fetch(e.request).then(resp => {
