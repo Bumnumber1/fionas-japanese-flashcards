@@ -122,6 +122,7 @@
             this.guideVisible = false;
             this.activeStroke = null;
             this.pointerId = null;
+            this.strokeBounds = null;
             this.destroyed = false;
             this.oldTouchAction = canvas.style.touchAction;
             this.oldLabel = canvas.getAttribute('aria-label');
@@ -135,7 +136,13 @@
                 lostpointercapture: event => this.cancelStroke(event)
             };
             for (const [name, handler] of Object.entries(this.handlers)) canvas.addEventListener(name, handler, { passive: false });
-            this.resize = () => this.render();
+            this.resize = () => {
+                // Rotation, fullscreen, or a panel reflow can move the pad under
+                // a captured finger. Keep completed ink; discard that unfinished
+                // stroke rather than splice coordinates from two different boxes.
+                if (this.activeStroke && this.strokeBoundsChanged()) this.cancelStroke();
+                else this.render();
+            };
             if (typeof ResizeObserver !== 'undefined') {
                 this.observer = new ResizeObserver(this.resize);
                 this.observer.observe(canvas);
@@ -203,8 +210,8 @@
             });
         }
 
-        coordinates(event) {
-            const rect = this.canvas.getBoundingClientRect();
+        coordinates(event, bounds) {
+            const rect = bounds || this.canvas.getBoundingClientRect();
             const side = Math.max(1, Math.min(rect.width, rect.height));
             return {
                 x: clamp((event.clientX - rect.left - (rect.width - side) / 2) / side, -0.1, 1.1),
@@ -212,11 +219,19 @@
             };
         }
 
+        strokeBoundsChanged() {
+            if (!this.strokeBounds) return false;
+            const rect = this.canvas.getBoundingClientRect();
+            return ['left', 'top', 'width', 'height'].some(key => Math.abs(rect[key] - this.strokeBounds[key]) > 0.5);
+        }
+
         startStroke(event) {
             if (this.destroyed || !this.reference || this.pointerId !== null || event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
             event.preventDefault();
             this.pointerId = event.pointerId;
-            this.activeStroke = [this.coordinates(event)];
+            const rect = this.canvas.getBoundingClientRect();
+            this.strokeBounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+            this.activeStroke = [this.coordinates(event, rect)];
             try { this.canvas.setPointerCapture(event.pointerId); } catch (_) { /* Older browser: canvas events still work. */ }
             this.render();
         }
@@ -224,6 +239,7 @@
         moveStroke(event) {
             if (!this.activeStroke || event.pointerId !== this.pointerId) return;
             event.preventDefault();
+            if (this.strokeBoundsChanged()) { this.cancelStroke(event); return; }
             const events = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [event];
             for (const sample of events.length ? events : [event]) this.appendPoint(sample);
             this.render();
@@ -240,6 +256,7 @@
         finishStroke(event) {
             if (!this.activeStroke || event.pointerId !== this.pointerId) return;
             event.preventDefault();
+            if (this.strokeBoundsChanged()) { this.cancelStroke(event); return; }
             this.appendPoint(event);
             this.strokes.push(this.activeStroke);
             this.activeStroke = null;
@@ -259,6 +276,7 @@
         releasePointer() {
             const pointerId = this.pointerId;
             this.pointerId = null;
+            this.strokeBounds = null;
             try { if (pointerId !== null && this.canvas.hasPointerCapture(pointerId)) this.canvas.releasePointerCapture(pointerId); } catch (_) { /* Capture may already be released. */ }
         }
 

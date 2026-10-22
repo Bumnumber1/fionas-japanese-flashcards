@@ -56,6 +56,8 @@ Fast combinations keep their full choreography even when answers arrive quickly.
 
 ## Existing systems and references
 
+**iPad play layout:** touch screens from 600–1400 CSS pixels wide automatically use a viewport-filling fight view while answering. Landscape keeps a large arena beside the active lesson controls; portrait places the arena above them. The page uses dynamic viewport height and safe-area insets, with at least 44-pixel touch controls. Moves and the belt/reward journey open as dismissible drawers with focus containment; opening one pauses microphone capture and automatic advancement, and returning restores one listener when hands-free is active. Existing fixed questions and handwriting remain intact. Normal desktop and small-phone layouts remain available. Full screen is offered only when the browser supports it, with a working inline fallback after denial. Safari’s Add to Home Screen can launch a standalone view. Page zoom remains enabled. Resizing the pad cancels only an unfinished stroke; completed normalized ink, assistance, and question locks are preserved.
+
 - `curriculum_y1.js` and `year1-review-data.js`: canonical Year 1, weeks 1–13 vocabulary, including established grammar-example words.
 - `garden-material.js`: the garden's established 15 kanji word forms and readings, rather than a second dictionary.
 - `kanjivg_data.js` and the approach in `writing.html`: local stroke geometry and bidirectional stroke/endpoint comparison. The new component also checks stroke direction, ordered samples, and reasonable length. KanjiVG attribution and CC BY-SA 3.0 links remain in the writing module.

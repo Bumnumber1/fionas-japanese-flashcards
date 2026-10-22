@@ -1388,3 +1388,210 @@ dialog p{
 .technique-challenge.special-challenge strong{color:#97602c}
 @media(max-width:1050px) and (min-width:761px){.technique-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.technique-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.move-button{display:flex;gap:8px;text-align:left;padding:10px 7px}.move-button .move-icon{margin:0;font-size:20px}.move-button small{font-size:8px}.technique-challenge{gap:3px;font-size:9px}.technique-challenge strong{width:100%}}
+
+/* Tablet play uses the available screen as a fight deck. The canvas and ink
+   remain in their original DOM positions when the iPad changes orientation. */
+.dojo-toolbar,.tablet-panel-close,.tablet-panel-backdrop{display:none}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse){
+  body{-webkit-text-size-adjust:100%}
+  button,a{touch-action:manipulation}
+  .app-shell{max-width:none;padding:0 max(18px,env(safe-area-inset-right)) 0 max(18px,env(safe-area-inset-left))}
+  .topbar{min-height:76px;gap:16px}
+  .topbar nav{gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .topbar nav a,.topbar nav button{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:8px;font-size:12px}
+  .topbar nav button:last-child{padding:8px 12px}
+  .primary,.text-button,.answer-tools button,.writing-tools>button,.flavour-options button,.dialog-close{min-height:44px;min-width:44px}
+  .primary{font-size:14px;padding:11px 18px}
+  .answer-tools button,.writing-tools>button:not(.primary){font-size:13px;padding:8px 12px;border:1px solid var(--line);border-radius:7px;text-decoration:none;background:#f8f6ed}
+  .answer-tools button:disabled,.writing-tools>button:disabled{opacity:.45}
+  .writing-tools .primary{font-size:13px;padding:9px 12px}
+  .move-button{min-height:64px;display:flex;text-align:left;padding:10px;font-size:13px}
+  .move-button .move-icon{display:inline-block;margin:0;width:26px;font-size:23px}
+  .move-button small{font-size:11px;line-height:1.4}
+  .belt-step{min-height:62px;padding:10px 6px}
+  .belt-step strong{font-size:13px}
+  .belt-step small,.belt-step .belt-state{font-size:11px}
+  .reward-item{min-height:64px;font-size:13px}
+  .reward-item small{font-size:11px}
+  .reward-card>button{min-height:44px;font-size:13px}
+  .dialog-close{right:8px;top:6px}
+  dialog{padding:32px;max-height:calc(100dvh - max(24px,env(safe-area-inset-top)) - max(24px,env(safe-area-inset-bottom)))}
+  dialog p,.help-list{font-size:14px;line-height:1.65}
+  .text-button{font-size:13px;padding:8px 14px}
+  .flavour-options button{font-size:13px}
+  .page-heading{padding:24px 0 20px}
+  .game-layout{grid-template-columns:minmax(0,1fr) 270px;gap:16px}
+  .arena{height:430px}
+  .practice-card,.moves-card{padding:20px}
+  .welcome-panel h2{font-size:25px}
+  .welcome-panel p{font-size:14px;line-height:1.65}
+  .welcome-seal{width:84px;height:84px}
+  .small-note{font-size:12px!important}
+  .technique-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .question-glyph{font-size:88px}
+  .voice-button,.handsfree-toggle{min-height:48px;font-size:14px}
+  #handsfree-status,#voice-status{font-size:12px}
+  .voice-note{font-size:11px}
+  .feedback strong{font-size:14px}
+  .feedback p,.hint-text{font-size:12px}
+
+  body.is-playing{height:100vh;height:100dvh;overflow:hidden;overscroll-behavior:none;background:#e9e8dc}
+  body.is-playing .app-shell{height:100%;width:100%;padding:max(4px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));display:grid;grid-template-rows:auto minmax(0,1fr)}
+  body.is-playing .topbar{min-height:52px;gap:10px;border-bottom:0;flex-wrap:nowrap;padding:0}
+  body.is-playing .brand{font-size:12px;letter-spacing:1.3px;gap:9px;flex-shrink:0}
+  body.is-playing .brand-mark{width:33px;height:33px;font-size:22px}
+  body.is-playing .brand-mark span{font-size:10px}
+  body.is-playing .brand small{display:none}
+  body.is-playing .topbar nav{width:auto;gap:4px;flex-wrap:nowrap}
+  body.is-playing .topbar nav a{display:none}
+  body.is-playing .topbar nav button{font-size:12px;padding:8px 12px;border-radius:7px}
+  body.is-playing .topbar nav button:last-child{border:0;background:#ffffff8c}
+  body.is-playing main{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr)}
+  body.is-playing .page-heading,body.is-playing footer,body.is-playing .flurry-rule{display:none}
+  body.is-playing .dojo-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:2px 0 8px;min-height:54px}
+  .tablet-move-label{flex:1;min-width:0;padding-left:4px;font-size:13px;font-weight:900;color:#536860;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .screen-mode-note{flex-basis:100%;min-width:0;font-size:11px;line-height:1.4;color:#536860;background:#fffdf7;border-radius:6px;padding:5px 9px;overflow-wrap:anywhere}
+  .dojo-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;min-width:44px;padding:9px 14px;border:1px solid #cdd2c2;border-radius:8px;background:#fffdf7;font-size:13px;font-weight:900;line-height:1.2;box-shadow:0 2px 3px #253d3710}
+  .dojo-toolbar button[aria-expanded=true]{border-color:var(--coral);background:#f8e5d8;color:#a23b29}
+  .dojo-toolbar #screen-mode-button{margin-left:auto;background:#263f43;color:#fff;border-color:#263f43}
+  body.is-playing .game-layout{height:100%;min-height:0;grid-template-columns:minmax(0,1fr) clamp(340px,33vw,420px);grid-template-rows:minmax(0,1fr);gap:10px;align-items:stretch}
+  body.is-playing .main-column{display:contents}
+  body.is-playing .arena{height:auto;min-height:0;grid-column:1;grid-row:1;border-radius:10px;box-shadow:0 3px 16px #203d351c}
+  body.is-playing .arena.handsfree-active{outline-width:2px;outline-offset:-2px}
+  body.is-playing .arena-top{top:14px;left:18px;right:18px;font-size:9px;letter-spacing:1px}
+  body.is-playing .fight-hud{left:18px;right:18px;top:42px;gap:14px}
+  body.is-playing .fighter-stat>div:first-child{display:flex;align-items:baseline}
+  body.is-playing .fighter-stat>div:first-child>span{margin-top:0}
+  body.is-playing .fighter-stat strong{font-size:20px}
+  body.is-playing .fighter-stat span:not(.health-track span){font-size:10px}
+  body.is-playing .fighter-stat small{font-size:11px}
+  body.is-playing .health-track{height:9px;margin:7px 0 4px}
+  body.is-playing .arena-bottom{min-height:48px;padding:10px 16px;font-size:12px}
+  body.is-playing .streak-pill{font-size:11px;padding:7px 10px}
+  body.is-playing .practice-card{grid-column:2;grid-row:1;min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px;border-radius:10px;scrollbar-width:thin;scroll-padding-block:12px}
+  body.is-playing .practice-top{margin-bottom:9px;min-height:16px}
+  body.is-playing .practice-top .eyebrow{font-size:10px;letter-spacing:1.3px;line-height:1.4}
+  body.is-playing .practice-top .no-timer{display:none}
+  body.is-playing .technique-challenge{display:block;padding:7px 9px;margin-bottom:10px;font-size:11px;line-height:1.4}
+  body.is-playing .technique-challenge strong{font-size:12px}
+  body.is-playing .technique-challenge span{display:block;margin-top:2px}
+  body.is-playing .challenge-layout{grid-template-columns:minmax(0,1fr);gap:10px;align-items:start}
+  body.is-playing .question-area{display:grid;grid-template-columns:minmax(72px,.8fr) minmax(0,1fr);gap:3px 12px;align-items:center}
+  body.is-playing .question-area h2{grid-column:2;grid-row:1;align-self:end;font-size:15px;line-height:1.3;margin:0}
+  body.is-playing .question-glyph{grid-column:1;grid-row:1/3;font-size:92px;line-height:1.1;min-height:96px;text-align:center}
+  body.is-playing .question-area p{grid-column:2;grid-row:2;align-self:start;font-size:12px;line-height:1.45;margin:0}
+  body.is-playing .question-area:has(.question-glyph.word),body.is-playing.is-writing .question-area{display:block}
+  body.is-playing .question-glyph.word{font-size:36px;line-height:1.3;min-height:46px;text-align:left}
+  body.is-playing .question-glyph.write-prompt{font-size:35px;line-height:1.25;min-height:44px;text-align:left;margin-top:5px}
+  body.is-playing .question-area:has(.question-glyph.word) h2,body.is-playing.is-writing .question-area h2{margin-bottom:4px}
+  body.is-playing .question-area:has(.question-glyph.word) p,body.is-playing.is-writing .question-area p{margin-top:5px}
+  body.is-playing .word-progress{margin-top:7px;gap:5px;flex-wrap:wrap}
+  body.is-playing .word-progress span{padding:4px 7px;min-width:30px;font-size:14px}
+  body.is-playing .voice-instruction{display:none}
+  body.is-playing .handsfree-controls{padding:8px;margin-bottom:8px;border-radius:8px}
+  body.is-playing .handsfree-toggle{font-size:14px;min-height:46px;padding:9px 12px;border-radius:6px}
+  body.is-playing #handsfree-status{font-size:12px;line-height:1.4;margin-top:6px}
+  body.is-playing .voice-button{font-size:15px;min-height:48px;border-radius:7px}
+  body.is-playing #stop-listening{margin-top:6px;width:100%;background:#eef2e9;border-radius:6px}
+  body.is-playing #voice-status{font-size:12px;line-height:1.45;margin:8px 0 0}
+  body.is-playing .voice-transcript{font-size:14px;line-height:1.4;padding:7px 9px;margin-top:8px}
+  body.is-playing .voice-note{display:none}
+  body.is-playing .answer-tools{gap:10px;margin-top:8px}
+  body.is-playing .answer-tools button{flex:1;min-height:44px}
+  body.is-playing .writing-label{font-size:12px;margin-bottom:6px}
+  body.is-playing #writing-canvas{width:min(100%,var(--tablet-ink-size,280px));max-height:none;aspect-ratio:1;touch-action:none;border-radius:9px}
+  body.is-playing .writing-tools{gap:6px;margin-top:7px}
+  body.is-playing .writing-tools>button{min-height:44px;min-width:44px;padding:8px 9px}
+  body.is-playing .writing-tools .primary{flex:1;font-size:13px;white-space:nowrap}
+  body.is-playing .feedback{margin-top:10px;padding:10px;gap:8px;flex-direction:column;align-items:stretch}
+  body.is-playing .feedback strong{font-size:14px;line-height:1.35}
+  body.is-playing .feedback p{font-size:12px;line-height:1.45;margin-top:4px}
+  body.is-playing .feedback .primary{min-height:44px;font-size:13px;padding:9px 12px;align-self:stretch}
+  body.is-playing .hint-text{font-size:12px;line-height:1.45;padding:9px 10px;margin-top:8px}
+  body.is-playing .block-banner,body.is-playing .master-rule{gap:4px 10px;font-size:12px;line-height:1.4;padding:8px 10px;margin-bottom:9px}
+  body.is-playing .block-banner strong,body.is-playing .master-rule strong{font-size:10px;letter-spacing:1px}
+  body.is-playing .moves-card,body.is-playing .journey-column{display:none}
+  body.is-playing .tablet-panel-backdrop:not([hidden]){display:block;position:fixed;inset:0;z-index:11;border:0;border-radius:0;background:#173b4359;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);touch-action:none}
+  body.is-playing[data-tablet-panel="moves"] .moves-card,body.is-playing[data-tablet-panel="journey"] .journey-column{display:block;position:fixed;z-index:12;top:max(66px,calc(env(safe-area-inset-top) + 58px));bottom:max(12px,env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right));width:min(560px,calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--card);border:1px solid #bfcbbb;border-radius:14px;padding:24px;box-shadow:0 18px 90px #122d3566;scrollbar-width:thin;scroll-padding-top:70px}
+  body.is-playing[data-tablet-panel="moves"] .moves-card{padding-top:62px}
+  body.is-playing[data-tablet-panel="journey"] .journey-column{padding-top:62px}
+  .tablet-panel-close{position:fixed;z-index:13;top:max(76px,calc(env(safe-area-inset-top) + 68px));right:max(24px,calc(env(safe-area-inset-right) + 12px));min-height:44px;min-width:88px;padding:9px 14px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:#f5f1e8;font-size:13px;font-weight:900;box-shadow:0 2px 7px #173b4320}
+  body.is-playing[data-tablet-panel="moves"] .moves-card .tablet-panel-close,body.is-playing[data-tablet-panel="journey"] .journey-column>.tablet-panel-close{display:inline-flex}
+  body.is-playing[data-tablet-panel="moves"] .moves-card .technique-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  body.is-playing[data-tablet-panel="journey"] .journey-column>section+section{margin-top:16px}
+  body.is-playing[data-tablet-panel="journey"] .journey-card{border:0;box-shadow:none;padding:0 0 18px}
+  body.is-playing[data-tablet-panel="journey"] .belt-path{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+  body.is-playing[data-tablet-panel="journey"] .belt-path:before{display:none}
+  body.is-playing[data-tablet-panel="journey"] .belt-step.current{margin:0;width:100%;padding:9px 5px}
+}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse) and (orientation:portrait){
+  .topbar{flex-wrap:wrap;gap:8px;padding:12px 0}
+  .game-layout{grid-template-columns:minmax(0,1fr)}
+  .journey-column{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .journey-card{grid-row:span 2}
+  .arena{height:440px}
+  .technique-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.is-playing .topbar{flex-wrap:nowrap;padding:0}
+  body.is-playing .game-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,.88fr);gap:10px}
+  body.is-playing .arena{grid-column:1;grid-row:1}
+  body.is-playing .practice-card{grid-column:1;grid-row:2;padding:16px 18px}
+  body.is-playing .practice-top{margin-bottom:8px}
+  body.is-playing .technique-challenge{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 10px;padding:7px 10px;margin-bottom:10px}
+  body.is-playing .technique-challenge span{margin:0}
+  body.is-playing .challenge-layout{grid-template-columns:minmax(0,.86fr) minmax(0,1.14fr);gap:22px;align-items:center}
+  body.is-playing .question-area{display:block;min-width:0;align-self:center}
+  body.is-playing .question-area h2{font-size:18px;line-height:1.3;margin-bottom:8px}
+  body.is-playing .question-glyph{font-size:clamp(104px,15vw,140px);line-height:1.15;min-height:124px;text-align:left}
+  body.is-playing .question-glyph.word{font-size:clamp(32px,4.8vw,42px);min-height:54px}
+  body.is-playing .question-glyph.write-prompt{font-size:37px;min-height:50px}
+  body.is-playing .question-area p{font-size:13px;line-height:1.55;margin-top:8px}
+  body.is-playing .feedback{flex-direction:row;align-items:center}
+  body.is-playing .feedback .primary{align-self:center}
+  body.is-playing.is-writing .game-layout{grid-template-rows:minmax(0,.78fr) minmax(0,1fr)}
+  body.is-playing.is-writing .practice-card{padding:12px 18px}
+  body.is-playing.is-writing .challenge-layout{align-items:center}
+  body.is-playing #writing-canvas{width:min(100%,var(--tablet-ink-size,280px))}
+}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse) and (orientation:landscape) and (max-height:820px){
+  body.is-playing .practice-card{padding:11px 12px}
+  body.is-playing .practice-top{margin-bottom:6px}
+  body.is-playing .technique-challenge{margin-bottom:7px;padding:6px 8px}
+  body.is-playing .question-glyph{font-size:82px;min-height:86px}
+  body.is-playing .question-glyph.write-prompt{font-size:30px;min-height:38px}
+  body.is-playing .question-glyph.word{font-size:32px;min-height:42px}
+  body.is-playing .challenge-layout{gap:8px}
+  body.is-playing #writing-canvas{width:min(100%,var(--tablet-ink-size,280px))}
+  body.is-playing.is-writing .question-area p{font-size:11px;line-height:1.4}
+  body.is-playing .handsfree-controls{padding:7px}
+  body.is-playing #handsfree-status{font-size:11px}
+  body.is-playing .feedback{padding:8px;gap:6px;margin-top:8px}
+  body.is-playing .feedback p{font-size:11px}
+  body.is-playing .block-banner,body.is-playing .master-rule{font-size:11px;padding:6px 8px;margin-bottom:7px}
+  body.is-playing.is-writing .practice-card:has(#feedback:not([hidden])) #writing-canvas,body.is-playing.is-writing .practice-card:has(#hint-text:not([hidden])) #writing-canvas{width:min(100%,var(--tablet-ink-size,220px))}
+}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse) and (orientation:landscape){
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])){padding:12px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .question-area h2{font-size:14px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .question-glyph.write-prompt{font-size:28px;line-height:1.2}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) #writing-canvas{width:min(100%,var(--tablet-ink-size,230px))}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .writing-label{font-size:11px;line-height:1.4;gap:8px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .writing-tools{gap:5px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .writing-tools>button{padding:8px 7px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .writing-tools .primary{font-size:12px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .answer-tools{gap:6px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])) .answer-tools button{padding:8px 6px;font-size:12px}
+  body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])):has(#feedback:not([hidden])) #writing-canvas,body.is-playing.is-writing .practice-card:has(#master-rule:not([hidden])):has(#hint-text:not([hidden])) #writing-canvas{width:min(100%,var(--tablet-ink-size,220px))}
+}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse) and (orientation:landscape) and (min-height:800px){
+  body.is-playing.is-writing .practice-card:not(:has(#master-rule:not([hidden]))) #writing-canvas{width:min(100%,var(--tablet-ink-size,340px))}
+  body.is-playing.is-writing .practice-card:not(:has(#master-rule:not([hidden]))):has(#feedback:not([hidden])) #writing-canvas,body.is-playing.is-writing .practice-card:not(:has(#master-rule:not([hidden]))):has(#hint-text:not([hidden])) #writing-canvas{width:min(100%,var(--tablet-ink-size,280px))}
+}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse) and (orientation:portrait) and (max-height:1080px){
+  body.is-playing #writing-canvas{width:min(100%,var(--tablet-ink-size,250px))}
+  body.is-playing.is-writing .practice-card:has(#feedback:not([hidden])) #writing-canvas,body.is-playing.is-writing .practice-card:has(#hint-text:not([hidden])) #writing-canvas{width:min(100%,var(--tablet-ink-size,220px))}
+}
+@media (min-width:600px) and (max-width:1400px) and (any-pointer:coarse) and (orientation:landscape) and (min-height:950px){
+  body.is-playing.is-writing .practice-card:not(:has(#master-rule:not([hidden]))) #writing-canvas{width:min(100%,var(--tablet-ink-size,380px))}
+  body.is-playing.is-writing .practice-card:not(:has(#master-rule:not([hidden]))):has(#feedback:not([hidden])) #writing-canvas,body.is-playing.is-writing .practice-card:not(:has(#master-rule:not([hidden]))):has(#hint-text:not([hidden])) #writing-canvas{width:min(100%,var(--tablet-ink-size,320px))}
+}
+@media (hover:none){button:hover:enabled{transform:none}}

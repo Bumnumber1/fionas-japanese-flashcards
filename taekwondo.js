@@ -54,6 +54,10 @@
   let rewardId = 'reading';
   let flavor = 'strawberry';
   let audioContext;
+  const tabletQuery = window.matchMedia('(min-width:600px) and (max-width:1400px) and (any-pointer:coarse)');
+  let tabletPanel = '', tabletReturnFocus = null, screenModeBusy = false;
+  let tabletInkFrame = 0, revealTabletFeedback = false;
+  const panelBackground = new Map();
   const moveIcons = { punch: '➝', 'front-kick': '↗', roundhouse: '◔', 'side-kick': '→', 'axe-kick': '↓', 'turning-kick': '↻', 'back-kick': '↶', 'double-kick': '⇉', 'jump-front-kick': '⇧', 'jump-side-kick': '⇗', 'spinning-hook-kick': '⤴', 'tornado-kick': '✧', 'flying-double-kick': '⇈', 'jump-roundhouse': '⤴', 'spinning-back-kick': '⤶', 'whirlwind-combo': '⟳', 'dragon-finisher': '✦' };
   const modeLabels = { 'word-read': 'WORD READING', 'kanji-write': 'KANJI WORD WRITING' };
   const modeShort = { 'word-read': 'Read words', 'kanji-write': 'Write kanji words' };
@@ -61,6 +65,90 @@
   const activityLabel = activity => activity.mode === 'kana-read' || activity.mode === 'kana-write' ? `${scriptName(activity).toUpperCase()} ${activity.mode === 'kana-read' ? 'READING' : 'WRITING'}` : modeLabels[activity.mode];
   const activityShort = activity => activity.mode === 'kana-read' || activity.mode === 'kana-write' ? `${activity.mode === 'kana-read' ? 'Read' : 'Write'} ${scriptName(activity)}` : modeShort[activity.mode];
   const open = dialog => { if (!dialog.open) dialog.showModal(); };
+
+  function updateScreenMode() {
+    const full = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    const supported = Boolean((document.fullscreenEnabled && document.documentElement.requestFullscreen) ||
+      (document.webkitFullscreenEnabled && document.documentElement.webkitRequestFullscreen));
+    $('screen-mode-button').hidden = !supported;
+    $('screen-mode-button').disabled = screenModeBusy;
+    $('screen-mode-button').setAttribute('aria-pressed', String(full));
+    $('screen-mode-button').textContent = full ? 'Exit full screen' : 'Full screen';
+  }
+  function updatePlayView() {
+    const active = phase === 'question' || phase === 'answered';
+    document.body.classList.toggle('is-playing', active);
+    document.body.classList.toggle('is-writing', active && Boolean(writingMode()));
+    document.body.classList.toggle('is-answered', phase === 'answered');
+    if ((!active || !tabletQuery.matches) && tabletPanel) closeTabletPanel({ resume: active, focus: false });
+    const move = G.MOVES.find(item => item.id === (question && active ? question.techniqueId : selectedMove));
+    $('tablet-move-label').textContent = fight && fight.pendingDamage > 0 && phase === 'question' ? 'Guard & block' : move ? move.name : 'Your move';
+    updateScreenMode();
+    fitTabletWriting();
+  }
+  function fitTabletWriting(revealFeedback = false) {
+    revealTabletFeedback = revealTabletFeedback || revealFeedback;
+    cancelAnimationFrame(tabletInkFrame);
+    tabletInkFrame = requestAnimationFrame(() => {
+      tabletInkFrame = 0;
+      const card = document.querySelector('.practice-card'), canvas = $('writing-canvas');
+      const active = tabletQuery.matches && ['question', 'answered'].includes(phase);
+      if (active && writingMode() && canvas.getClientRects().length) {
+        // Use the actual remaining lesson height, including master warnings,
+        // compound prompts, hints and feedback, rather than one fixed pad size.
+        const cardBox = card.getBoundingClientRect(), padBox = canvas.getBoundingClientRect();
+        const bottom = Math.max(...[...card.children].filter(node => node.getClientRects().length).map(node => node.getBoundingClientRect().bottom));
+        const otherContent = bottom - cardBox.top + card.scrollTop - padBox.height;
+        const room = card.clientHeight - parseFloat(getComputedStyle(card).paddingBottom) - otherContent - 3;
+        const minimum = phase === 'answered' ? 120 : 220, maximum = phase === 'answered' ? 220 : 380;
+        const size = Math.max(minimum, Math.floor(Math.min(maximum, $('writing-area').clientWidth, room)));
+        canvas.style.setProperty('--tablet-ink-size', size + 'px');
+      } else if (!active) canvas.style.removeProperty('--tablet-ink-size');
+      if (revealTabletFeedback && active && !tabletPanel && !$('feedback').hidden) $('feedback').scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      revealTabletFeedback = false;
+    });
+  }
+  function closeTabletPanel(options = {}) {
+    if (!tabletPanel) return;
+    const panel = $(tabletPanel === 'moves' ? 'moves-panel' : 'journey-panel');
+    tabletPanel = '';
+    delete document.body.dataset.tabletPanel;
+    panel.removeAttribute('role'); panel.removeAttribute('aria-modal');
+    $('tablet-panel-backdrop').hidden = true;
+    for (const [node, previous] of panelBackground) {
+      node.inert = previous.inert;
+      if (previous.hidden === null) node.removeAttribute('aria-hidden'); else node.setAttribute('aria-hidden', previous.hidden);
+    }
+    panelBackground.clear();
+    $('show-moves-button').setAttribute('aria-expanded', 'false');
+    $('show-journey-button').setAttribute('aria-expanded', 'false');
+    if (options.focus !== false && tabletReturnFocus && tabletReturnFocus.isConnected && tabletReturnFocus.getClientRects().length) tabletReturnFocus.focus({ preventScroll: true });
+    tabletReturnFocus = null;
+    fitTabletWriting();
+    if (options.resume !== false) { if (phase === 'answered') advanceHandsFree(); else queueHandsFree(); }
+  }
+  function openTabletPanel(kind) {
+    if (!tabletQuery.matches || !['question', 'answered'].includes(phase)) return;
+    if (tabletPanel === kind) { closeTabletPanel(); return; }
+    closeTabletPanel({ resume: false, focus: false });
+    tabletReturnFocus = $('show-' + kind + '-button');
+    resetFlurry(); cancelVoice();
+    tabletPanel = kind;
+    const panel = $(kind === 'moves' ? 'moves-panel' : 'journey-panel');
+    document.body.dataset.tabletPanel = kind;
+    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
+    $('tablet-panel-backdrop').hidden = false;
+    $('show-' + kind + '-button').setAttribute('aria-expanded', 'true');
+    const background = ['.topbar', '.page-heading', '.dojo-toolbar', '.arena', '.practice-card', '.flurry-rule', 'footer', kind === 'moves' ? '.journey-column' : '.moves-card'];
+    background.forEach(selector => {
+      const node = document.querySelector(selector);
+      if (!node) return;
+      panelBackground.set(node, { inert: node.inert === true, hidden: node.getAttribute('aria-hidden') });
+      node.inert = true; node.setAttribute('aria-hidden', 'true');
+    });
+    panel.scrollTop = 0;
+    panel.querySelector('[data-close-panel]').focus({ preventScroll: true });
+  }
 
   function save() {
     try {
@@ -103,6 +191,7 @@
     $(id).querySelector('span').style.width = Math.max(0, Math.min(100, value / maximum * 100)) + '%';
   }
   function updateHud() {
+    updatePlayView();
     const belt = G.BELTS[selectedBelt], opponent = G.OPPONENTS[selectedBelt];
     $('round-label').textContent = `${belt.name.toUpperCase()} BELT · MATCH ${String(selectedBelt + 1).padStart(2, '0')}`;
     $('player-belt').textContent = G.BELTS[progress.belt].name + ' belt';
@@ -189,13 +278,16 @@
         label.append(Object.assign(document.createElement('small'), { textContent: move.kind === 'basic' ? 'Standard drill · 14 base damage' : `${move.unlock > progress.belt ? G.BELTS[move.unlock].name + ' belt · ' : ''}Harder activity · +${move.bonus} damage` }));
         button.append(icon, label);
         button.addEventListener('click', () => {
-          if (button.disabled || move.id === selectedMove) return;
+          if (button.disabled) return;
+          if (move.id === selectedMove) { if (tabletPanel === 'moves') closeTabletPanel(); return; }
           cancelVoice(); selectedMove = move.id;
           if (phase === 'question') {
             if (challengeSet) challengeSet.switched = true;
             selectQuestion();
           }
           else { renderMoves(); save(); if (scene) scene.play({ actor: 'player', move: move.id, hit: false, combo: 0 }); }
+          if (tabletPanel === 'moves') closeTabletPanel();
+          updatePlayView();
         });
         grid.append(button);
       });
@@ -203,6 +295,7 @@
     });
   }
   function renderLobby() {
+    closeTabletPanel({ resume: false, focus: false });
     resetFlurry(true);
     stopHandsFree();
     document.querySelector('.practice-card').setAttribute('aria-labelledby', 'practice-heading');
@@ -287,7 +380,7 @@
     $('stop-listening').hidden = true;
   }
   function readingReady() {
-    return phase === 'question' && fight && fight.status === 'fighting' && !writingMode() && !document.hidden &&
+    return phase === 'question' && fight && fight.status === 'fighting' && !writingMode() && !document.hidden && !tabletPanel &&
       !$('pause-dialog').open && !$('help-dialog').open && !$('result-dialog').open && !$('reward-dialog').open;
   }
   function updateHandsFree(note) {
@@ -322,11 +415,11 @@
   }
   function advanceHandsFree(delay = 650) {
     clearTimeout(autoAdvanceTimer);
-    if (!handsFree || phase !== 'answered' || !fight || fight.status !== 'fighting' || document.hidden || $('pause-dialog').open || $('help-dialog').open || $('reward-dialog').open || $('result-dialog').open) return;
+    if (!handsFree || phase !== 'answered' || !fight || fight.status !== 'fighting' || document.hidden || tabletPanel || $('pause-dialog').open || $('help-dialog').open || $('reward-dialog').open || $('result-dialog').open) return;
     const target = question, bout = fight;
     updateHandsFree('Hands-free flow · the next prompt is coming. Say it when the mic is ready.');
     autoAdvanceTimer = setTimeout(() => {
-      if (handsFree && phase === 'answered' && question === target && fight === bout && !document.hidden && !$('pause-dialog').open && !$('help-dialog').open && !$('reward-dialog').open && !$('result-dialog').open) nextQuestion();
+      if (handsFree && phase === 'answered' && question === target && fight === bout && !document.hidden && !tabletPanel && !$('pause-dialog').open && !$('help-dialog').open && !$('reward-dialog').open && !$('result-dialog').open) nextQuestion();
     }, delay);
   }
   function showSpeedBonus(outcome, milliseconds) {
@@ -359,6 +452,8 @@
     updateHandsFree();
   }
   function renderQuestion() {
+    updatePlayView();
+    if (phase === 'question' && tabletQuery.matches) document.querySelector('.practice-card').scrollTop = 0;
     document.querySelector('.practice-card').setAttribute('aria-labelledby', 'question-instruction');
     $('welcome-panel').hidden = true; $('challenge-panel').hidden = false;
     $('voice-area').hidden = writingMode();
@@ -412,6 +507,7 @@
     lockInputs(phase !== 'question');
     if (phase === 'answered') renderFeedbackFromFight();
     $('arena-caption').textContent = phase === 'answered' ? 'Breathe. Learn from the feedback. Then go again.' : defense ? `COUNTER READY · ${fight.pendingDamage} damage · complete this challenge to block!` : `${G.OPPONENTS[selectedBelt].name} is guarding. Your answer powers the next move.`;
+    fitTabletWriting(phase === 'answered');
   }
   function renderWordProgress() {
     $('word-progress').replaceChildren();
@@ -428,6 +524,7 @@
     $('hint-text').textContent = note + (fight.pendingDamage > 0 ? ' A correct guided block still stops all damage.' : ' Guided attacks give half damage and no streak credit.');
     $('hint-text').hidden = false; $('hint-button').textContent = 'Hint shown · assisted';
     if (writingMode() && writing) writing.revealGuide();
+    fitTabletWriting();
     if (mark) { renderMoves(); save(); }
   }
   function submit(correct, detail = '', readingMs = null) {
@@ -469,6 +566,7 @@
   function renderFeedback(title, copy, wrong) {
     $('feedback-title').textContent = title; $('feedback-detail').textContent = copy;
     $('feedback').classList.toggle('wrong', wrong); $('feedback').hidden = false;
+    fitTabletWriting(true);
     $('next-button').textContent = fight.status === 'fighting' ? fight.pendingDamage > 0 ? 'Take your block chance →' : 'Next attack →' : 'See match result →';
   }
   function renderFeedbackFromFight() {
@@ -500,7 +598,7 @@
     });
     $('result-continue').textContent = resultSummary.rewardUnlocked ? 'To the ice cream parlour →' : won ? selectedBelt === FINAL_BELT ? 'Back to the dojo →' : 'Meet your next rival →' : 'Rematch · full energy →';
     if (won && scene) scene.celebrate();
-    sound(won ? 'win' : 'wrong'); phase = 'result'; renderProgress(); save(); open($('result-dialog'));
+    sound(won ? 'win' : 'wrong'); phase = 'result'; updatePlayView(); renderProgress(); save(); open($('result-dialog'));
   }
   function checkWriting() {
     if (phase !== 'question' || !writing || !writingMode()) return;
@@ -516,6 +614,7 @@
   function openReward(id) {
     const selected = typeof id === 'string' ? G.REWARDS.find(reward => reward.id === id) : G.REWARDS.find(reward => progress.rewards[reward.id].unlocked && !progress.rewards[reward.id].claimed) || G.REWARDS.find(reward => progress.rewards[reward.id].unlocked);
     if (!selected || !progress.rewards[selected.id].unlocked) return;
+    closeTabletPanel({ resume: false, focus: false });
     resetFlurry();
     cancelVoice();
     rewardId = selected.id;
@@ -601,6 +700,50 @@
       }
     });
   } catch (_) { voice = null; }
+  $('show-moves-button').addEventListener('click', () => openTabletPanel('moves'));
+  $('show-journey-button').addEventListener('click', () => openTabletPanel('journey'));
+  document.querySelectorAll('[data-close-panel]').forEach(button => button.addEventListener('click', () => closeTabletPanel()));
+  $('tablet-panel-backdrop').addEventListener('click', () => closeTabletPanel());
+  document.addEventListener('keydown', event => {
+    if (!tabletPanel) return;
+    if (event.key === 'Escape') { event.preventDefault(); closeTabletPanel(); return; }
+    if (event.key !== 'Tab') return;
+    const panel = $(tabletPanel === 'moves' ? 'moves-panel' : 'journey-panel');
+    const items = [...panel.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')]
+      .filter(node => node.getClientRects().length && !node.closest('[inert]'));
+    const first = items[0], last = items[items.length - 1];
+    if (!first) { event.preventDefault(); panel.focus(); }
+    else if (!panel.contains(document.activeElement) || (event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+      event.preventDefault(); (event.shiftKey ? last : first).focus();
+    }
+  });
+  $('screen-mode-button').addEventListener('click', async () => {
+    if (screenModeBusy) return;
+    resetFlurry(); cancelVoice();
+    screenModeBusy = true; updateScreenMode(); $('screen-mode-note').hidden = true;
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) await exit.call(document);
+      } else {
+        const enter = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+        if (enter) await enter.call(document.documentElement);
+      }
+    } catch (_) {
+      $('screen-mode-note').textContent = 'Keep playing here, or use Safari’s Share menu → Add to Home Screen for a standalone view.';
+      $('screen-mode-note').hidden = false;
+    } finally {
+      screenModeBusy = false; updateScreenMode();
+      if (phase === 'answered') advanceHandsFree(); else queueHandsFree();
+    }
+  });
+  document.addEventListener('fullscreenchange', updateScreenMode);
+  document.addEventListener('webkitfullscreenchange', updateScreenMode);
+  if (tabletQuery.addEventListener) tabletQuery.addEventListener('change', updatePlayView);
+  else if (tabletQuery.addListener) tabletQuery.addListener(updatePlayView);
+  window.addEventListener('resize', () => fitTabletWriting());
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => fitTabletWriting());
+  if (window.ResizeObserver) new ResizeObserver(() => fitTabletWriting()).observe(document.querySelector('.practice-card'));
   $('listen-button').addEventListener('click', () => {
     if (handsFree) stopHandsFree();
     startReading();

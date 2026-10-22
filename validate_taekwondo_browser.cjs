@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
   });
 });
 let browser, ws, send, evaluate;
-const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [], impactEvidence = [], voiceLatencyEvidence = [], flurryEvidence = [];
+const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [], impactEvidence = [], voiceLatencyEvidence = [], flurryEvidence = [], tabletEvidence = [];
 let comboRecording, flurryRecording;
 const moveCount = 17, beltCount = 11;
 const beltNames = ['white','yellow','orange','gold','green','blue','purple','brown','red','red-black','black'];
@@ -1362,12 +1362,206 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   pass('Version-3 final-master history keeps its already queued block, then adopts immediate Master Steif damage and replays mixed saves faithfully');
   await loadIsolatedSave(championSave);
   assert.equal((await snapshot()).save.progress.mastered, true);
+
+  // iPad-sized viewports use native Chromium touch emulation, the actual WebGL
+  // renderer, actual pointer input, and a disposable save. This is layout/input
+  // evidence, not a claim about Safari, Apple Pencil, or an iPad microphone.
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  const tabletSizes = [[1024,768],[1180,820],[1366,1024],[768,1024],[820,1180]];
+  async function tabletViewport(width, height) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true,
+      screenOrientation: { type: width > height ? 'landscapePrimary' : 'portraitPrimary', angle: width > height ? 90 : 0 } });
+    await pause(140);
+    assert.equal(await evaluate(`matchMedia('(any-pointer:coarse)').matches`), true, 'Native touch emulation exposes coarse input');
+  }
+  async function touchTap(selector) {
+    const point = await evaluate(`(() => { const element=document.querySelector(${JSON.stringify(selector)});
+      if(!element||element.disabled||!element.getClientRects().length)throw Error('Unavailable touch target '+${JSON.stringify(selector)});
+      const box=element.getBoundingClientRect();return {x:box.left+box.width/2,y:box.top+box.height/2}; })()`);
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...point, id: 71, radiusX: 4, radiusY: 4, force: 0.7 }] });
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await pause(50);
+  }
+  async function tabletGeometry(label, writingMode, extra = []) {
+    const answered=await evaluate(`document.body.classList.contains('is-answered')`);
+    const selectors = answered ? ['#dojo-canvas','#show-moves-button','#show-journey-button','#screen-mode-button','#next-button'] :
+      ['#dojo-canvas','#question-glyph','#hint-button','#pause-button','#show-moves-button','#show-journey-button','#screen-mode-button',
+      ...(writingMode ? ['#writing-canvas','#undo-writing','#clear-writing','#check-writing'] : ['#handsfree-toggle','#listen-button']), ...extra];
+    const evidence = await evaluate(`(() => {
+      const selectors=${JSON.stringify(selectors)}, box=element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+      const targets=selectors.map(selector=>{const element=document.querySelector(selector);if(!element)return {selector,missing:true};
+        const rect=box(element),style=getComputedStyle(element),button=element.matches('button');
+        return {selector,...rect,hidden:element.hidden||style.visibility==='hidden'||!element.getClientRects().length,
+          button,disabled:element.disabled,scrollWidth:element.scrollWidth,clientWidth:element.clientWidth,
+          scrollHeight:element.scrollHeight,clientHeight:element.clientHeight};});
+      return {label:${JSON.stringify(label)},width:innerWidth,height:innerHeight,scrollX,scrollY,
+        documentWidth:document.documentElement.scrollWidth,documentHeight:document.documentElement.scrollHeight,
+        playing:document.body.classList.contains('is-playing'),writing:document.body.classList.contains('is-writing'),targets};
+    })()`);
+    tabletEvidence.push(evidence);
+    assert.equal(evidence.playing,true,label+' uses the compact active-play layout');
+    assert.equal(evidence.writing,writingMode,label+' uses the correct answer layout');
+    assert.ok(evidence.documentWidth<=evidence.width+1,label+' has no horizontal document overflow: '+JSON.stringify(evidence));
+    assert.ok(evidence.documentHeight<=evidence.height+1,label+' keeps the play surface within one screen: '+JSON.stringify(evidence));
+    for (const target of evidence.targets) {
+      assert.ok(!target.missing&&!target.hidden,label+' shows '+target.selector);
+      assert.ok(target.selector==='#hint-text'||(target.x>=-1&&target.y>=-1&&target.right<=evidence.width+1&&target.bottom<=evidence.height+1),
+        label+' keeps '+target.selector+' inside the usable screen: '+JSON.stringify(target));
+      if(target.button&&!target.disabled)assert.ok(target.width>=43.5&&target.height>=43.5,
+        label+' provides a 44px touch target for '+target.selector+': '+JSON.stringify(target));
+    }
+    const arena=evidence.targets.find(target=>target.selector==='#dojo-canvas');
+    assert.ok(arena.width>=280&&arena.height>=240,label+' leaves a substantial 3D arena: '+JSON.stringify(arena));
+    const glyph=evidence.targets.find(target=>target.selector==='#question-glyph');
+    if(glyph)assert.ok(glyph.scrollWidth<=glyph.clientWidth+1,label+' wraps the entire canonical Japanese/meaning prompt');
+    if(writingMode&&!answered){const ink=evidence.targets.find(target=>target.selector==='#writing-canvas');assert.ok(ink.width>=219.5&&ink.height>=219.5,label+' keeps a large pen/finger pad');}
+    if(extra.includes('#hint-text')){
+      const hintAccess=await evaluate(`(() => {const card=document.querySelector('.practice-card'),hint=document.querySelector('#hint-text'),prior=card.scrollTop;
+        hint.scrollIntoView({block:'nearest'});const rect=hint.getBoundingClientRect();const value={overflow:getComputedStyle(card).overflowY,
+          top:rect.top,bottom:rect.bottom,height:innerHeight,scrollY};card.scrollTop=prior;return value;})()`);
+      assert.equal(hintAccess.overflow,'auto',label+' preserves the full hint in a reachable internal scroll area');
+      assert.ok(hintAccess.top>=0&&hintAccess.bottom<=hintAccess.height+1,label+' permits reading the entire untruncated hint');
+      assert.equal(hintAccess.scrollY,0,label+' scrolls the hint internally while the graphics stay fixed');
+    }
+    return evidence;
+  }
+  const tabletFixtures=await evaluate(`(() => {
+    const saved=JSON.parse(${JSON.stringify(championSave)}),words=Year1Review.catalog.words,advanced=new Map();
+    words.forEach(word=>DojoVoice.spellingsFor({mode:'word-read',prompt:word.jp,reading:word.romaji}).forEach(form=>{
+      if(/^[一-龯]{2,}$/u.test(form)&&[...form].every(char=>DojoWriting.hasCharacter(char)))advanced.set(form,{char:form,read:word.jp,mean:word.en});
+    }));
+    const material={words,kanji:GardenMaterial.build(words.map(word=>word.id)).kanji,advancedKanji:[...advanced.values()]};
+    return [['hiragana',0,'front-kick'],['katakana',3,'front-kick'],['long-word',9,'dragon-finisher'],
+      ['kana-writing',5,'front-kick'],['kanji-writing',10,'dragon-finisher']].map(([name,belt,move])=>{
+      const candidates=Array.from({length:101},(_,index)=>DojoGame.createQuestion(belt,material,[],()=>index/101,move,10));
+      const question=candidates.sort((a,b)=>b.prompt.length-a.prompt.length)[0];
+      return {name,writing:question.mode.endsWith('write'),save:JSON.stringify({...saved,
+        progress:DojoGame.sanitizeProgress({...saved.progress,mastered:false}),fight:DojoGame.startFight(saved.progress,belt),
+        phase:'question',answerResolved:false,answerWasBlock:false,assisted:false,writingIndex:0,
+        selectedMove:move,recent:[question.id],question,challengeSet:null,writingDraft:null})};
+    });
+  })()`);
+  for(const fixture of tabletFixtures){
+    await tabletViewport(1024,768);await loadIsolatedSave(fixture.save);await click('#start-button');
+    const original=await snapshot();
+    for(const [width,height] of tabletSizes){
+      await tabletViewport(width,height);await tabletGeometry(fixture.name+' '+width+'×'+height,fixture.writing);
+      const current=await snapshot();assert.equal(current.save.question.id,original.save.question.id,'Rotation keeps the assigned activity');
+      assert.equal(JSON.stringify(current.save.fight.journal),JSON.stringify(original.save.fight.journal),'Rotation never grades or deals damage');
+      if((fixture.name==='hiragana'&&(width===1024||width===768))||(fixture.name==='kana-writing'&&width===1180)||(fixture.name==='kanji-writing'&&width===820))
+        await screenshot('ipad-'+fixture.name+'-'+width+'x'+height);
+      pass('iPad '+width+'×'+height+' '+fixture.name+' keeps graphics, prompt, and 44px controls on screen');
+    }
+    await tabletViewport(1024,768);await touchTap('#hint-button');await tabletGeometry(fixture.name+' with hint',fixture.writing,['#hint-text']);
+    if(!fixture.writing){await speak((await snapshot()).save.question.prompt);await tabletGeometry(fixture.name+' feedback',false,['#next-button']);}
+  }
+  pass('iPad hints and answer feedback keep the next required touch control on screen');
+
+  const kanaTabletFixture=tabletFixtures.find(fixture=>fixture.name==='kana-writing');
+  await tabletViewport(1180,820);await loadIsolatedSave(kanaTabletFixture.save);await click('#start-button');
+  await evaluate(`document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))`);
+  const touchCharacter=(await snapshot()).save.question.chars[0];
+  const touchStrokes=await evaluate(`(() => {
+    const canvas=document.querySelector('#writing-canvas'),rect=canvas.getBoundingClientRect(),side=Math.min(rect.width,rect.height);
+    return KVG_DATA[${JSON.stringify(touchCharacter)}].map(data=>{const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',data);
+      const length=path.getTotalLength();return Array.from({length:35},(_,index)=>{const point=path.getPointAtLength(length*index/34);
+        return {x:rect.left+(rect.width-side)/2+(0.08+point.x/109*0.84)*side,y:rect.top+(rect.height-side)/2+(0.08+point.y/109*0.84)*side};});});
+  })()`);
+  for(const points of touchStrokes){
+    await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...points[0],id:73,radiusX:3,radiusY:3,force:0.7}]});
+    for(const point of points.slice(1))await send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...point,id:73,radiusX:3,radiusY:3,force:0.7}]});
+    await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }
+  let tabletState=await snapshot();assert.equal(tabletState.save.writingDraft.strokes.length,touchStrokes.length,'Actual touch input records every complete stroke');
+  const touchDraft=JSON.stringify(tabletState.save.writingDraft),touchQuestion=tabletState.save.question.id;
+  await tabletViewport(820,1180);await tabletGeometry('native touch ink after portrait rotation',true);
+  assert.equal(JSON.stringify((await snapshot()).save.writingDraft),touchDraft,'Completed normalized ink survives orientation change');
+  const pad=await evaluate(`(() => {const r=document.querySelector('#writing-canvas').getBoundingClientRect();return{x:r.left+r.width*.3,y:r.top+r.height*.3};})()`);
+  await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...pad,id:74,radiusX:3,radiusY:3,force:0.7}]});
+  await send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pad.x+12,y:pad.y+12,id:74,radiusX:3,radiusY:3,force:0.7}]});
+  await tabletViewport(1180,820);await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.equal(JSON.stringify((await snapshot()).save.writingDraft),touchDraft,'Rotation cancels only the unfinished touch stroke and preserves finished ink');
+  pass('Native touch ink and the assigned question survive orientation changes; an unfinished rotating stroke is safely discarded');
+  for(const panel of ['moves','journey']){
+    await touchTap(panel==='moves'?'#show-moves-button':'#show-journey-button');
+    await waitFor(`document.body.dataset.tabletPanel===${JSON.stringify(panel)}`,'Touch opens '+panel+' panel');
+    const container=panel==='moves'?'.moves-card':'.journey-column';
+    const overlay=await evaluate(`(() => {const element=document.querySelector(${JSON.stringify(container)}),r=element.getBoundingClientRect();
+      return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,viewportWidth:innerWidth,viewportHeight:innerHeight,
+        active:element.contains(document.activeElement),close:!!element.querySelector('.tablet-panel-close')};})()`);
+    assert.ok(overlay.x>=-1&&overlay.y>=-1&&overlay.right<=overlay.viewportWidth+1&&overlay.bottom<=overlay.viewportHeight+1,'The '+panel+' overlay fits the screen');
+    assert.equal(overlay.active,true,'Focus moves inside the '+panel+' overlay');assert.equal(overlay.close,true);
+    await screenshot('ipad-'+panel+'-panel');await touchTap(container+' .tablet-panel-close');
+    await waitFor(`!document.body.dataset.tabletPanel`,'Touch closes '+panel+' panel');
+    tabletState=await snapshot();assert.equal(tabletState.save.question.id,touchQuestion);assert.equal(JSON.stringify(tabletState.save.writingDraft),touchDraft);
+    await tabletGeometry('after '+panel+' panel',true);
+  }
+  await touchTap('#check-writing');tabletState=await snapshot();assert.equal(tabletState.feedback,true);assert.ok(tabletState.opponent<tabletState.save.fight.opponentMaxHp,'Resized native touch character still grades correctly');
+  await tabletGeometry('native touch writing feedback',true,['#next-button']);
+  await screenshot('ipad-writing-touch-success');
+  pass('Moves and Journey overlays preserve touch ink and question; the same drawing still lands a correct strike after rotation');
+
+  await tabletViewport(1024,768);await loadIsolatedSave(tabletFixtures.find(fixture=>fixture.name==='hiragana').save);await click('#start-button');
+  await touchTap('#handsfree-toggle');await waitFor(`window.__dojoSpeech.instances.at(-1)?.ready`,'Tablet hands-free microphone ready');
+  const splitQuestion=(await snapshot()).save.question.id,splitSpeech=await speechCount();
+  await touchTap('#show-moves-button');assert.equal(await evaluate(`document.body.dataset.tabletPanel`),'moves');
+  assert.equal(await evaluate(`window.__dojoSpeech.instances.filter(recognition=>recognition.started).length`),0,'Opening Moves pauses the microphone');
+  await tabletViewport(500,900);
+  await waitFor(`!document.body.dataset.tabletPanel&&window.__dojoSpeech.instances.length>${splitSpeech}&&window.__dojoSpeech.instances.at(-1).ready`,'Split View closes panel and resumes hands-free');
+  assert.equal(await evaluate(`document.querySelectorAll('[inert]').length`),0,'Split View restores every background interaction');
+  await pause(500);assert.equal(await speechCount(),splitSpeech+1,'Split View rearms exactly one microphone');
+  assert.equal(await evaluate(`window.__dojoSpeech.instances.filter(recognition=>recognition.started).length`),1);
+  assert.equal((await snapshot()).save.question.id,splitQuestion);assert.equal((await snapshot()).save.fight.turns,0);
+  pass('Narrow iPad Split View closes an open panel, restores controls, and resumes exactly one hands-free microphone without changing the question');
+
+  await tabletViewport(1024,768);
+  const failedFullscreenSpeech=await speechCount();
+  await evaluate(`(() => {const element=document.documentElement;window.__dojoFullscreenOriginal={own:Object.hasOwn(element,'requestFullscreen'),value:element.requestFullscreen};
+    element.requestFullscreen=()=>Promise.reject(new DOMException('Isolated fullscreen rejection','NotAllowedError'));})()`);
+  await touchTap('#screen-mode-button');
+  await waitFor(`!document.querySelector('#screen-mode-note').hidden&&window.__dojoSpeech.instances.length>${failedFullscreenSpeech}&&window.__dojoSpeech.instances.at(-1).ready`,'Rejected fullscreen remains playable and resumes speech');
+  assert.match(await evaluate(`document.querySelector('#screen-mode-note').textContent`),/Add to Home Screen/);
+  assert.equal(await evaluate(`document.querySelector('#screen-mode-button').disabled`),false);
+  assert.equal(await evaluate(`window.__dojoSpeech.instances.filter(recognition=>recognition.started).length`),1);
+  assert.equal((await snapshot()).save.question.id,splitQuestion);assert.equal((await snapshot()).save.fight.turns,0);
+  await evaluate(`(() => {const prior=window.__dojoFullscreenOriginal;if(prior.own)document.documentElement.requestFullscreen=prior.value;else delete document.documentElement.requestFullscreen;delete window.__dojoFullscreenOriginal;})()`);
+  await touchTap('#handsfree-toggle');
+  pass('A rejected fullscreen request explains the Home Screen fallback and restores a single microphone without losing the activity');
+
+  await tabletViewport(768,1024);
+  async function tabletDialog(selector,name){
+    await waitFor(`document.querySelector(${JSON.stringify(selector)}).open`,name+' opens');
+    const geometry=await evaluate(`(() => {const dialog=document.querySelector(${JSON.stringify(selector)}),r=dialog.getBoundingClientRect();
+      return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight,
+        buttons:[...dialog.querySelectorAll('button')].map(button=>{const r=button.getBoundingClientRect();return{width:r.width,height:r.height};})};})()`);
+    assert.ok(geometry.x>=0&&geometry.y>=0&&geometry.right<=geometry.width+1&&geometry.bottom<=geometry.height+1,name+' stays inside the portrait screen');
+    assert.ok(geometry.buttons.every(button=>button.width>=43.5&&button.height>=43.5),name+' has 44px touch targets');
+    await evaluate(`[...document.querySelector(${JSON.stringify(selector)}).querySelectorAll('button')].at(-1).scrollIntoView({block:'nearest'})`);
+    const last=await evaluate(`(() => {const r=[...document.querySelector(${JSON.stringify(selector)}).querySelectorAll('button')].at(-1).getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:innerHeight};})()`);
+    assert.ok(last.top>=0&&last.bottom<=last.height+1,name+' permits reaching its final action by internal scrolling');
+    await screenshot('ipad-'+name+'-dialog');
+  }
+  await touchTap('#help-button');await tabletDialog('#help-dialog','help');await touchTap('#help-dialog .primary[data-close]');
+  await touchTap('#show-journey-button');
+  await evaluate(`document.querySelector('#reward-button').scrollIntoView({block:'center'})`);await touchTap('#reward-button');
+  await tabletDialog('#reward-dialog','reward');
+  await evaluate(`document.querySelector('#reward-dialog .dialog-close').scrollIntoView({block:'nearest'})`);await touchTap('#reward-dialog .dialog-close');
+  if(await evaluate(`document.body.dataset.tabletPanel==='journey'`))await touchTap('.journey-column .tablet-panel-close');
+  const tabletResultSave=await evaluate(`(() => {const saved=JSON.parse(${JSON.stringify(tabletFixtures.find(fixture=>fixture.name==='hiragana').save)}),fight=DojoGame.startFight(saved.progress,saved.fight.beltIndex);
+    for(let turn=0;turn<32&&fight.status==='fighting';turn++)DojoGame.resolveAnswer(fight,{correct:true,assisted:false,move:'front-kick',challengeKind:'basic'});
+    if(fight.status!=='won')throw Error('Result dialog fixture did not finish');
+    return JSON.stringify({...saved,fight,phase:'answered',answerResolved:true});})()`);
+  await loadIsolatedSave(tabletResultSave);await click('#start-button');await tabletDialog('#result-dialog','result');
+  pass('Help, ice cream, and match-result dialogs fit portrait iPad screens with reachable actions and 44px touch targets');
+  await send('Emulation.setTouchEmulationEnabled',{enabled:false,maxTouchPoints:1});
+  await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});
+  await loadIsolatedSave(championSave);
   assert.equal(external.length, 0, 'Dojo must not request remote runtime assets: ' + JSON.stringify(external));
   assert.equal(errors.length, 0, 'No browser runtime exceptions: ' + JSON.stringify(errors));
   assert.equal(requests.filter(request => request.status === 404 && request.name !== '/favicon.ico').length, 0,
     'No missing local assets: ' + JSON.stringify(requests.filter(request => request.status === 404)));
   pass('No external asset dependencies, missing dojo assets, or runtime exceptions');
-  const report = { passed: true, checks, campaign, rapidEvidence, impactEvidence, voiceLatencyEvidence, flurryEvidence, comboRecording, flurryRecording, webgl: pixels, recognition: 'Synthetic SpeechRecognition final/interim/error events, delayed native startup, interim revisions, endpoint requests, and delayed final delivery; real hands-free timers, native tab visibility, combat, saves, and WebGL exercised. Live microphone and speech service not tested', elapsedSeconds: Math.round((Date.now() - started) / 1000), screenshots: artifacts, errors, external };
+  const report = { passed: true, checks, campaign, rapidEvidence, impactEvidence, voiceLatencyEvidence, flurryEvidence, tabletEvidence, comboRecording, flurryRecording, webgl: pixels, recognition: 'Synthetic SpeechRecognition final/interim/error events, delayed native startup, interim revisions, endpoint requests, and delayed final delivery; real hands-free timers, native tab visibility, combat, saves, and WebGL exercised. Live microphone and speech service not tested', elapsedSeconds: Math.round((Date.now() - started) / 1000), screenshots: artifacts, errors, external };
   fs.writeFileSync(path.join(artifacts, 'report.json'), JSON.stringify(report, null, 2));
   console.log('PASS: ' + checks.length + ' dojo browser checks in ' + report.elapsedSeconds + ' seconds. Evidence: ' + artifacts);
   await send('Browser.close').catch(() => {});
@@ -1377,6 +1571,6 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     try { const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(artifacts,'FAILURE.png'),Buffer.from(shot.data,'base64')); } catch (_) {}
     try { fs.writeFileSync(path.join(artifacts,'failure-state.json'),JSON.stringify(await evaluate(`(async()=>({save:localStorage.getItem(typeof DojoGame!=='undefined'?DojoGame.SAVE_VERSION:'fiona-taekwondo-v1'),body:document.body.innerText,voice:window.__dojoSpeech&&{transcripts:window.__dojoSpeech.transcripts,instances:window.__dojoSpeech.instances.map(rec=>({started:rec.started,ready:rec.ready,readyAt:rec.readyAt})),startDelay:window.__dojoSpeech.startDelay,stopEndDelay:window.__dojoSpeech.stopEndDelay,scheduled:window.__dojoSpeech.scheduled},serviceWorkers:await navigator.serviceWorker?.getRegistrations().then(items=>items.map(item=>({scope:item.scope,active:item.active?.state,installing:item.installing?.state,waiting:item.waiting?.state}))),caches:await caches.keys()}))()`),null,2)); } catch (_) {}
   }
-  fs.writeFileSync(path.join(artifacts, 'failure.json'), JSON.stringify({ message: String(error.stack || error), checks, campaign, voiceLatencyEvidence, errors, workerErrors, external, requests, elapsedSeconds: Math.round((Date.now() - started) / 1000) }, null, 2));
+  fs.writeFileSync(path.join(artifacts, 'failure.json'), JSON.stringify({ message: String(error.stack || error), checks, campaign, voiceLatencyEvidence, tabletEvidence, errors, workerErrors, external, requests, elapsedSeconds: Math.round((Date.now() - started) / 1000) }, null, 2));
   console.error('Evidence: ' + artifacts); process.exitCode = 1;
 }).finally(() => { ws?.close(); browser?.kill(); server.close(); });
