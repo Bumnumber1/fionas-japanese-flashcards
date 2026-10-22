@@ -222,6 +222,38 @@
         return pulse(u, .48, .72);
     }
 
+    // Contacts belong to the choreography, rather than the UI's answer timer.
+    // This lets a rapid answer queue the next technique without cancelling the
+    // second kick, its impact, or the rival's recovery from the previous one.
+    function contactBeats(action) {
+        const beats = [];
+        const add = (move, from, to) => {
+            const fractions = move === 'double-kick' || move === 'flying-double-kick' ? [.355, .675]
+                : move === 'spinning-hook-kick' ? [.64] : [.6];
+            fractions.forEach(fraction => beats.push({ at: mix(from, to, fraction), move, done: false, index: beats.length }));
+        };
+        if (action.chain) {
+            const split = DURATION[action.move] / (DURATION[action.move] + DURATION[action.followup]);
+            add(action.move, 0, split); add(action.followup, split, 1);
+        } else if (SEQUENCES[action.move]) {
+            let from = 0;
+            for (const part of SEQUENCES[action.move]) { add(part.move, from, part.end); from = part.end; }
+        } else if (MOVE_NAMES.includes(action.move)) add(action.move, 0, 1);
+        return beats;
+    }
+
+    function ribbonMatrix(from, to, width) {
+        const delta = to.map((v, i) => v - from[i]), length = Math.hypot(...delta);
+        if (length < .0001) return null;
+        const y = delta.map(v => v / length), helper = Math.abs(y[2]) < .9 ? [0, 0, 1] : [1, 0, 0];
+        let x = [y[1] * helper[2] - y[2] * helper[1], y[2] * helper[0] - y[0] * helper[2], y[0] * helper[1] - y[1] * helper[0]];
+        const normalLength = Math.hypot(...x); x = x.map(v => v / normalLength);
+        const z = [x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0]];
+        return new Float32Array([x[0] * width, x[1] * width, x[2] * width, 0,
+            y[0] * length, y[1] * length, y[2] * length, 0, z[0] * width, z[1] * width, z[2] * width, 0,
+            (from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2, 1]);
+    }
+
     class DojoScene {
         constructor(canvas, options = {}) {
             this.canvas = canvas;
@@ -230,6 +262,10 @@
             this.available = false;
             this.destroyed = false;
             this.action = null;
+            this.actionQueue = [];
+            this.pendingCelebration = false;
+            this.reactions = { player: [], opponent: [] };
+            this.impacts = [];
             this.clockOffset = 0;
             this.frame = 0;
             this.lastFrame = 0;
@@ -344,10 +380,18 @@
             if (config.playerBelt !== undefined) this.playerBelt = rgb(config.playerBelt);
             if (config.opponent) this.opponent = this._opponent(config.opponent);
             this.action = null;
+            this.actionQueue.length = 0;
+            this.pendingCelebration = false;
+            this.reactions.player.length = 0;
+            this.reactions.opponent.length = 0;
+            this.impacts.length = 0;
             this.trails.length = 0;
         }
 
         play(options = {}) {
+            // Speech callbacks can arrive between animation frames. Complete
+            // any contacts whose time already passed before accepting a move.
+            this._advanceActions(performance.now());
             let move = String(options.move || 'front-kick').toLowerCase().replace(/_/g, '-');
             move = ALIASES[move] || move;
             if (!DURATION[move]) move = 'front-kick';
@@ -357,15 +401,100 @@
             const speedTier = attack && (options.speedTier === 'lightning' || Number(options.speedBonus) >= 6) ? 'lightning'
                 : attack && (options.speedTier === 'quick' || Number(options.speedBonus) >= 3) ? 'quick' : '';
             const speed = speedTier === 'lightning' ? 2 : speedTier === 'quick' ? 1 : 0;
-            const duration = Math.round((DURATION[move] + (chain ? DURATION[followup] : 0)) * (speed === 2 ? .7 : speed ? .84 : 1));
-            this.action = { actor: options.actor === 'opponent' ? 'opponent' : 'player', move, hit: options.hit !== false,
-                combo: clamp(Number(options.combo) || 1, 1, 12), chain, followup, speedTier, speed, start: performance.now(), duration };
-            this.trails.length = 0;
+            const duration = Math.round((DURATION[move] + (chain ? DURATION[followup] : 0)) * (speed === 2 ? .57 : speed ? .72 : 1));
+            const next = { actor: options.actor === 'opponent' ? 'opponent' : 'player', move, hit: options.hit !== false,
+                combo: clamp(Number(options.combo) || 1, 1, 12), chain, followup, speedTier, speed,
+                damage: Math.max(0, Number(options.damage) || 0), victory: !!options.victory,
+                finisher: !!options.finisher || move === 'dragon-finisher' || move === 'whirlwind-combo', start: performance.now(), duration };
+            next.contacts = contactBeats(next);
+            const a = this.action, now = next.start;
+            const rapid = attack && a && a.actor === 'player' && a.hit && MOVE_NAMES.includes(a.move)
+                && (speed || chain || a.speed || a.chain) && now - a.start < a.duration;
+            this.pendingCelebration = false;
+            if (rapid) {
+                // Two buffered techniques keep the arena responsive even if a
+                // speech provider delivers several transcripts in one burst.
+                // Retain the first complete follow-up; the newest final move
+                // replaces only an unstarted third animation, never a contact.
+                if (this.actionQueue.length < 2) this.actionQueue.push(next);
+                else this.actionQueue[1] = next;
+                return Math.max(0, a.duration - (now - a.start)) + this.actionQueue.reduce((sum, item) => sum + item.duration, 0);
+            }
+            this.actionQueue.length = 0;
+            this.action = next;
             this.lastTrail = 0;
+            if (!attack) this.trails.length = 0;
             return duration;
         }
 
-        celebrate() { return this.play({ actor: 'player', move: 'celebrate', hit: false, combo: 1 }); }
+        celebrate() {
+            if (this.action && this.action.hit && MOVE_NAMES.includes(this.action.move)) {
+                this.pendingCelebration = true;
+                return Math.max(0, this.action.duration - (performance.now() - this.action.start))
+                    + this.actionQueue.reduce((sum, item) => sum + item.duration, 0) + 220 + DURATION.celebrate;
+            }
+            return this.play({ actor: 'player', move: 'celebrate', hit: false, combo: 1 });
+        }
+
+        _advanceActions(now) {
+            let a = this.action;
+            while (a) {
+                const elapsed = now - a.start;
+                if (a.hit && MOVE_NAMES.includes(a.move)) for (const contact of a.contacts) {
+                    if (!contact.done && elapsed >= contact.at * a.duration) {
+                        contact.done = true;
+                        const victim = a.actor === 'player' ? 'opponent' : 'player', side = victim === 'opponent' ? 1 : -1;
+                        const time = a.start + contact.at * a.duration - this.clockOffset;
+                        const previous = this._reaction(victim, time + this.clockOffset);
+                        const last = contact.index === a.contacts.length - 1;
+                        const hit = { time, power: Math.min(1.7, .66 + a.speed * .24 + Math.min(a.combo, 6) * .065 + (a.finisher && last ? .2 : 0)),
+                            speed: a.speed, combo: a.combo, index: contact.index + this.reactions[victim].length,
+                            knockout: a.victory && last, finisher: a.finisher && last };
+                        this.reactions[victim].push(hit);
+                        this.reactions[victim] = this.reactions[victim].filter(item => time - item.time < 2800).slice(-8);
+                        this.impacts.push({ ...hit, actor: a.actor, victim, point: [side * (1.04 + previous.push),
+                            contact.move === 'axe-kick' ? 1.88 : contact.move === 'back-kick' ? 1.3 : 1.57, .48] });
+                    }
+                }
+                if (elapsed < a.duration) break;
+                const end = a.start + a.duration;
+                if (this.actionQueue.length) {
+                    a = this.actionQueue.shift(); a.start = end; this.lastTrail = 0;
+                    this.action = a;
+                } else if (this.pendingCelebration && elapsed >= a.duration + 220) {
+                    this.pendingCelebration = false;
+                    a = { actor: 'player', move: 'celebrate', hit: false, combo: 1, chain: false, speed: 0,
+                        start: end + 220, duration: DURATION.celebrate, contacts: [] };
+                    this.action = a;
+                } else {
+                    if (!this.pendingCelebration) this.action = null;
+                    break;
+                }
+            }
+            const time = now - this.clockOffset;
+            this.impacts = this.impacts.filter(item => time - item.time < 680);
+        }
+
+        _reaction(actor, now) {
+            const time = now - this.clockOffset, history = this.reactions[actor] || [];
+            let amount = 0, push = 0, twist = 0, fold = 0, down = 0, pressure = 0, speed = 0;
+            for (const hit of history) {
+                const age = (time - hit.time) / 1000;
+                if (age < 0 || age > 3) continue;
+                const recoil = ease(age / .035) * Math.exp(-age * 5.3) * hit.power;
+                const stagger = (1 - ease((age - .14) / (hit.speed || hit.combo >= 3 ? 1.08 : .65))) * hit.power;
+                amount += recoil;
+                push += stagger * (.13 + hit.speed * .065 + Math.min(hit.combo, 6) * .012);
+                twist += recoil * (hit.index % 2 ? -.36 : .27);
+                fold += stagger * (hit.index % 3 === 1 ? .5 : .1);
+                pressure += stagger;
+                speed = Math.max(speed, hit.speed);
+                if (hit.knockout) down = Math.max(down, ease(age / .44) * (1 - ease((age - 2.1) / .6)));
+                else if (hit.finisher) down = Math.max(down, ease(age / .18) * (1 - ease((age - .42) / .7)) * .5);
+            }
+            return { amount: clamp(amount, 0, 1.55), push: clamp(push, 0, .68), twist: clamp(twist, -.55, .55),
+                fold: clamp(fold, 0, .8), down, pressure: clamp(pressure, 0, 1.6), speed };
+        }
 
         setReducedMotion(value) { this.reducedMotion = !!value; this.trails.length = 0; }
 
@@ -463,6 +592,35 @@
             // Front edge is intentionally kept clear for complete views of both feet.
         }
 
+        _reactPose(p, actor, now) {
+            const reaction = this._reaction(actor, now), calm = this.reducedMotion ? .28 : 1;
+            const h = reaction.amount * calm, stagger = reaction.pressure * calm, down = reaction.down * (this.reducedMotion ? .45 : 1);
+            const side = actor === 'player' ? -1 : 1;
+            p.hit = h;
+            p.x += side * reaction.push * calm;
+            p.z += reaction.twist * .22 * calm;
+            p.yaw += reaction.twist * calm;
+            // Alternate a snapped-back guard, a folded body reaction, and a
+            // deep stumble. The knees and planted foot keep all of these poses
+            // supported on the mat, including the final two-knee defeat pose.
+            p.lean = -.43 * h + reaction.fold * .72 * calm + .65 * down;
+            p.tilt = reaction.twist * .35 * calm;
+            p.head -= .38 * h + .15 * down;
+            p.headY += reaction.twist * .7 * calm;
+            p.kneeL += .28 * stagger + .88 * down;
+            p.kneeR += .38 * stagger + 1.18 * down;
+            p.hipL[0] -= .09 * stagger + .38 * down;
+            p.hipR[0] -= .16 * stagger + .62 * down;
+            p.bob -= .095 * stagger + .22 * down;
+            p.armL[0] += .64 * h - .35 * reaction.fold * calm;
+            p.armR[0] += .8 * h - .2 * reaction.fold * calm;
+            p.armL[2] -= .58 * h; p.armR[2] += .66 * h;
+            p.elbowL += .83 * h + .2 * down; p.elbowR += 1.07 * h + .2 * down;
+            p.beltSwing += .25 * h;
+            p.dazed = h > .22 || down > .3;
+            return p;
+        }
+
         _pose(actor, now) {
             const t = (now - this.clockOffset) / 1000, isPlayer = actor === 'player';
             const phase = t * 2.8 + (isPlayer ? 0 : 1.5), motion = this.reducedMotion ? 0 : 1;
@@ -477,21 +635,12 @@
             p.armL[0] += Math.sin(phase) * .025 * motion;
             p.armR[0] -= Math.sin(phase) * .025 * motion;
             const a = this.action;
-            if (!a) return p;
+            if (!a) return this._reactPose(p, actor, now);
             const progress = clamp((now - a.start) / a.duration, 0, 1);
-            if (progress >= 1) return p;
+            if (progress >= 1) return this._reactPose(p, actor, now);
             const part = attackPhase(a, progress), u = part.u, move = part.move;
             if (a.actor !== actor) {
-                if (a.hit && MOVE_NAMES.includes(a.move)) {
-                    const hit = strikePulse(move, u);
-                    p.hit = hit;
-                    p.x += (isPlayer ? -1 : 1) * hit * .26;
-                    p.lean = -.23 * hit;
-                    p.head -= .18 * hit;
-                    p.armL[0] -= hit * .3; p.armR[0] -= hit * .4;
-                    p.bob -= .06 * hit;
-                }
-                return p;
+                return this._reactPose(p, actor, now);
             }
             if (a.move === 'bow') {
                 const b = pulse(u, .08, .94);
@@ -537,7 +686,8 @@
             const advance = multi ? ease(progress / .15) * (1 - ease((progress - .85) / .15)) : pulse(u, .04, .96);
             const chamber = pulse(u, .08, .91);
             const reach = part.sequence ? mix(1.3, APPROACH[move] || 1.4, chamber) : APPROACH[move] || 1.4;
-            p.x += (isPlayer ? 1 : -1) * advance * reach;
+            const targetReaction = this._reaction(isPlayer ? 'opponent' : 'player', now);
+            p.x += (isPlayer ? 1 : -1) * advance * (reach + targetReaction.push * (this.reducedMotion ? .2 : .78));
             p.bob = 0; p.striking = u > .22 && u < .79;
             p.yaw += part.spinOffset;
             p.beltSwing = Math.sin(u * PI * 3) * .35;
@@ -789,14 +939,19 @@
             draw('sphere', shape(head, 0, 0, 0, .207, .25, .192), skin);
             for (const side of [-1, 1]) {
                 draw('sphere', shape(head, side * .2, -.018, -.002, .035, .06, .035), skin);
-                draw('sphere', shape(head, side * .077, .023, .176, .048, .031, .017), rgb('#fbf3dd'));
-                draw('sphere', shape(head, side * .078, .024, .191, .021, .027, .008), eye);
-                draw('sphere', shape(head, side * .083 - .006, .033, .198, .006, .008, .003), rgb('#ffffff'), 1, .6);
+                if (pose.dazed) {
+                    draw('cube', append(head, M.translate(side * .078, .024, .183), M.rz(side * -.25), M.scale(.068, .012, .015)), eye);
+                } else {
+                    draw('sphere', shape(head, side * .077, .023, .176, .048, .031, .017), rgb('#fbf3dd'));
+                    draw('sphere', shape(head, side * .078, .024, .191, .021, .027, .008), eye);
+                    draw('sphere', shape(head, side * .083 - .006, .033, .198, .006, .008, .003), rgb('#ffffff'), 1, .6);
+                }
                 draw('cube', append(head, M.translate(side * .079, .081, .177), M.rz(side * -.1), M.scale(.083, .014, .013)), hair);
                 if (heroine) draw('sphere', shape(head, side * .123, -.057, .158, .037, .018, .009), rgb('#d88d7f'));
             }
             draw('sphere', shape(head, 0, -.026, .193, .026, .036, .027), skin);
-            draw('cube', shape(head, 0, -.104, .174, pose.smile ? .079 : .052, .012, .011), rgb('#985b53'));
+            if (pose.dazed) draw('sphere', shape(head, 0, -.102, .174, .027, .035, .012), rgb('#985b53'));
+            else draw('cube', shape(head, 0, -.104, .174, pose.smile ? .079 : .052, .012, .011), rgb('#985b53'));
             if (pose.smile) draw('cube', shape(head, 0, -.098, .183, .051, .01, .007), rgb('#fff8e6'));
             // Fiona has orange shoulder-length hair with a clear forehead fringe.
             draw('sphere', shape(head, 0, .119, -.041, .216, .168, .19), hair);
@@ -874,44 +1029,72 @@
 
         _effects(now, foot) {
             const a = this.action;
-            if (!a || this.reducedMotion) return;
-            const progress = (now - a.start) / a.duration;
-            const part = attackPhase(a, progress), t = part.u;
-            const speed = a.speed || 0, trailLife = speed ? 290 : 240;
+            if (this.reducedMotion) return;
+            const progress = a ? clamp((now - a.start) / a.duration, 0, 1) : 1;
+            const part = a ? attackPhase(a, progress) : { move: '', u: 1 }, t = part.u;
+            const speed = a && a.speed || 0;
+            const color = a && a.actor === 'opponent' ? rgb('#dd9e91') : rgb(speed === 2 ? '#8df9ef' : speed ? '#ffd46d' : '#ffe5a1');
             if (foot && (!this.lastTrail || now - this.lastTrail > (speed ? 16 : 24))) {
-                this.trails.push({ point: foot, time: now }); this.lastTrail = now;
+                this.trails.push({ point: foot, time: now, speed, color }); this.lastTrail = now;
             }
-            this.trails = this.trails.filter(p => now - p.time < trailLife);
+            this.trails = this.trails.filter(p => now - p.time < (p.speed ? 350 : 240));
             this.gl.depthMask(false);
-            const color = a.actor === 'player' ? rgb(speed === 2 ? '#a9f6ed' : speed ? '#ffdb73' : '#ffe5a1') : rgb('#dd9e91');
+            let previous = null;
             for (const p of this.trails) {
-                const age = (now - p.time) / trailLife, size = (1 - age) * (speed ? .15 : .12);
-                this._draw('sphere', shape(M.identity(), ...p.point, size, size, size), color, (1 - age) * (speed ? .5 : .38), 1);
+                const age = (now - p.time) / (p.speed ? 350 : 240), size = (1 - age) * (p.speed ? .1 : .085);
+                if (previous && Math.hypot(...p.point.map((v, i) => v - previous.point[i])) < .85) {
+                    const outer = ribbonMatrix(previous.point, p.point, size * 1.8), inner = ribbonMatrix(previous.point, p.point, size * .45);
+                    if (outer) this._draw('cube', outer, p.color || color, (1 - age) * .2, 1);
+                    if (inner) this._draw('cube', inner, p.color || color, (1 - age) * .76, 1);
+                }
+                this._draw('sphere', shape(M.identity(), ...p.point, size * .6, size * .6, size * .6), p.color || color, (1 - age) * .32, 1);
+                previous = p;
             }
-            const impact = strikePulse(part.move, t);
-            if (speed && MOVE_NAMES.includes(a.move)) {
+            if (a && speed && MOVE_NAMES.includes(a.move)) {
                 // A few low-opacity streaks follow Fiona's approach instead of
                 // obscuring the characters with a full-screen flash.
                 const rush = pulse(t, .14, .9), sweep = ease(clamp((t - .14) / .66, 0, 1));
-                for (let i = 0; i < 4 + speed * 2; i++) {
+                for (let i = 0; i < 5 + speed * 3; i++) {
                     const x = -2.45 + sweep * 3.05 + (i % 3) * .29;
                     const y = .46 + (i % 4) * .48, z = -.18 + (i % 2) * .35;
-                    this._draw('cube', shape(M.identity(), x, y, z, .28 + speed * .08, .009, .009), color, rush * .22, 1);
+                    this._draw('cube', shape(M.identity(), x, y, z, .36 + speed * .12, .011, .011), color, rush * .34, 1);
                 }
             }
-            if (a.hit && MOVE_NAMES.includes(a.move) && impact > 0) {
-                const side = a.actor === 'player' ? 1 : -1;
-                const x = foot ? foot[0] + side * .04 : side * .98;
-                const y = foot ? foot[1] : 1.42, z = foot ? foot[2] + .08 : .55;
-                const sparks = 8 + speed * 2;
+            for (const hit of this.impacts) {
+                const age = (now - this.clockOffset - hit.time) / 1000;
+                if (age < 0 || age > .58) continue;
+                const side = hit.actor === 'player' ? 1 : -1, [x, y, z] = hit.point;
+                const impact = 1 - ease(age / .42), expansion = ease(age / .5), sparks = 9 + hit.speed * 4;
+                const hue = rgb(hit.speed === 2 ? '#a8fff0' : hit.speed ? '#ffda78' : '#ffe5a1');
                 for (let i = 0; i < sparks; i++) {
-                    const angle = i / sparks * PI * 2, distance = (1 - impact) * (.45 + speed * .06) + .08;
-                    const matrix = append(M.identity(), M.translate(x + Math.cos(angle) * distance * .55, y + Math.sin(angle) * distance, z), M.rz(angle - PI / 2), M.scale(.025 + impact * .018, (.13 + speed * .025) * impact, .025));
-                    this._draw('cube', matrix, color, impact * .9, 1);
+                    const angle = i / sparks * PI * 2 + hit.index * .31, distance = .1 + expansion * (.55 + hit.speed * .16);
+                    const matrix = append(M.identity(), M.translate(x + side * expansion * .15 + Math.cos(angle) * distance * .7,
+                        y + Math.sin(angle) * distance, z + .02), M.rz(angle - PI / 2), M.scale(.024 + impact * .025, (.14 + hit.speed * .045) * impact, .024));
+                    this._draw('cube', matrix, hue, impact * .95, 1);
                 }
-                this._draw('torus', append(M.identity(), M.translate(x, y, z + .02), M.scale(.2 + (1 - impact) * .23, .2 + (1 - impact) * .23, 1)), color, impact * .55, 1);
+                this._draw('torus', append(M.identity(), M.translate(x, y, z + .04), M.scale(.12 + expansion * .7, .12 + expansion * .7, .6)), hue, impact * .68, 1);
+                if (hit.speed || hit.combo >= 3) {
+                    // A narrow directional shock streak makes the direction of
+                    // the knockback visible without hiding either fighter.
+                    const matrix = ribbonMatrix([x - side * .26, y, z + .04], [x + side * (.2 + expansion * .85), y + expansion * .13, z + .04], .035 * impact);
+                    if (matrix) this._draw('cube', matrix, rgb('#fff7d8'), impact * .84, 1);
+                    this._draw('torus', append(M.identity(), M.translate(x + side * expansion * .17, y, z + .055), M.scale(.07 + expansion * .45, .07 + expansion * .45, .6)), rgb('#fff7d8'), impact * .42, 1);
+                }
             }
-            if (a.move === 'celebrate') {
+            for (const actor of ['player', 'opponent']) {
+                const r = this._reaction(actor, now), side = actor === 'player' ? -1 : 1;
+                if (r.pressure < .2) continue;
+                const x = side * (1.23 + r.push), skid = Math.min(1, r.pressure);
+                for (let i = 0; i < 3; i++) this._draw('sphere', shape(M.identity(), x + side * (i * .1 + .11), .14 + i * .025, .21 + i * .1,
+                    .14 + i * .025, .024 + i * .012, .08 + i * .015), rgb('#e8d7a7'), skid * (.19 - i * .035), 1);
+                if (r.down > .45) for (let i = 0; i < 3; i++) {
+                    const angle = now / 240 + i * PI * 2 / 3;
+                    const star = append(M.identity(), M.translate(x + Math.cos(angle) * .31, 2.05 - r.down * .34 + Math.sin(angle * 2) * .04, .3 + Math.sin(angle) * .21), M.rz(angle));
+                    this._draw('cube', append(star, M.scale(.085, .025, .025)), rgb('#ffe183'), r.down * .9, 1);
+                    this._draw('cube', append(star, M.scale(.025, .085, .025)), rgb('#ffe183'), r.down * .9, 1);
+                }
+            }
+            if (a && a.move === 'celebrate') {
                 for (let i = 0; i < 24; i++) {
                     const seed = i * 2.399, spread = (t * 1.4 + .1), y = 2.2 + Math.sin(seed) * spread - t * 1.8;
                     if (y < .15) continue;
@@ -928,15 +1111,20 @@
             // Capping at 40 fps keeps mobile practice sessions cool while motion stays fluid.
             if (this.lastFrame && now - this.lastFrame < 24) { this._schedule(); return; }
             this.lastFrame = now;
+            this._advanceActions(now);
             const gl = this.gl;
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.useProgram(this.program);
             let shake = 0, speedPush = 0;
             if (this.action && this.action.hit && !this.reducedMotion && MOVE_NAMES.includes(this.action.move)) {
-                const progress = (now - this.action.start) / this.action.duration;
+                const progress = clamp((now - this.action.start) / this.action.duration, 0, 1);
                 const part = attackPhase(this.action, progress);
-                shake = Math.sin(now * .12) * strikePulse(part.move, part.u) * .025;
-                speedPush = (this.action.speed || 0) * .09 * pulse(part.u, .15, .9);
+                shake = Math.sin(now * .12) * strikePulse(part.move, part.u) * .018;
+                speedPush = (this.action.speed || 0) * .13 * pulse(part.u, .15, .9);
+            }
+            if (!this.reducedMotion && this.impacts.length) {
+                const hit = this.impacts[this.impacts.length - 1], age = (now - this.clockOffset - hit.time) / 1000;
+                if (age >= 0 && age < .12) shake += Math.sin(age * 68) * (1 - age / .12) * (.018 + hit.speed * .012);
             }
             const narrow = this.aspect < 1.15, distance = narrow ? 8.2 + (1.15 - this.aspect) * 4 : 7.2;
             const view = M.lookAt([shake, 3.05 + shake, distance - speedPush], [0, 1.27, -.3]);
@@ -947,13 +1135,17 @@
             this._shadows([player, opponent]);
             const playerFoot = this._fighter('player', player, now), opponentFoot = this._fighter('opponent', opponent, now);
             this._effects(now, this.action && this.action.actor === 'opponent' ? opponentFoot : playerFoot);
-            if (this.action && now - this.action.start >= this.action.duration) { this.action = null; this.trails.length = 0; }
             this._schedule();
         }
 
         destroy() {
             if (this.destroyed) return;
             this.destroyed = true;
+            this.actionQueue.length = 0;
+            this.impacts.length = 0;
+            this.reactions.player.length = 0;
+            this.reactions.opponent.length = 0;
+            this.pendingCelebration = false;
             cancelAnimationFrame(this.frame);
             if (this.observer) this.observer.disconnect();
             document.removeEventListener('visibilitychange', this._onVisibility);

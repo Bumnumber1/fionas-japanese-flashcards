@@ -28,7 +28,8 @@ const server = http.createServer((req, res) => {
   });
 });
 let browser, ws, send, evaluate;
-const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [];
+const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [], impactEvidence = [];
+let comboRecording;
 const moveCount = 17, beltCount = 11;
 const beltNames = ['white','yellow','orange','gold','green','blue','purple','brown','red','red-black','black'];
 const rewardMilestones = [['reading',1,'Strawberry'],['katakana-reading',3,'Strawberry'],['writing',5,'Matcha'],
@@ -93,6 +94,60 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(path.join(artifacts, name + '.png'), Buffer.from(shot.data, 'base64'));
   };
+  async function startComboRecording() {
+    // Record the real game canvas and the real HUD values in this disposable
+    // profile. The draw hook copies only after a completed native WebGL frame;
+    // it never changes game state, animation timing, or grading.
+    return evaluate(`(() => {
+      const source=document.querySelector('#dojo-canvas'),gl=source.getContext('webgl');
+      const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=850;
+      const context=canvas.getContext('2d'),type=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(value=>MediaRecorder.isTypeSupported(value));
+      if(!gl||!type)throw Error('Native WebGL video capture is unavailable');
+      const stream=canvas.captureStream(30),recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:3600000});
+      const capture={canvas,context,stream,recorder,type,chunks:[],frames:0,notices:[],original:gl.drawElements,gl,started:performance.now()};
+      const text=(value,x,y,size,color='#eff6ff')=>{context.font='700 '+size+'px system-ui';context.fillStyle=color;context.fillText(value,x,y);};
+      let queued=false;
+      const draw=()=>{
+        queued=false;context.fillStyle='#101d33';context.fillRect(0,0,canvas.width,canvas.height);
+        text('FIONA’S DOJO',36,48,27);text('HANDS-FREE · LIGHTNING COMBO',650,48,22,'#ffda75');
+        const player=Number(document.querySelector('#player-health').getAttribute('aria-valuenow'));
+        const rival=Number(document.querySelector('#opponent-health').getAttribute('aria-valuenow'));
+        const bar=(value,x,name,color)=>{text(name+'  '+Math.round(value)+' / 100',x,86,18);context.fillStyle='#34435c';context.fillRect(x,98,550,13);context.fillStyle=color;context.fillRect(x,98,550*Math.max(0,value)/100,13);};
+        bar(player,36,'FIONA','#77e4bd');bar(rival,694,document.querySelector('#opponent-name').textContent.toUpperCase(),'#ff7e92');
+        const ratio=Math.min(1280/source.width,590/source.height),width=source.width*ratio,height=source.height*ratio;
+        context.drawImage(source,(1280-width)/2,128+(590-height)/2,width,height);
+        const notice=document.querySelector('#speed-notice'),value=!notice.hidden?notice.textContent.trim():'';
+        if(value){if(capture.notices.at(-1)!==value)capture.notices.push(value);text(value,36,762,27,'#ffda75');}
+        else text('Say the next Japanese prompt as the microphone starts.',36,762,24,'#adc5e7');
+        const title=document.querySelector('#feedback-title');
+        text(!document.querySelector('#feedback').hidden?title.textContent.trim():'CLEAN ANSWERS BUILD STRONGER COMBOS',36,809,22,'#ffffff');
+        capture.frames++;
+      };
+      gl.drawElements=function(...args){const result=capture.original.apply(this,args);if(!queued){queued=true;queueMicrotask(draw);}return result;};
+      recorder.ondataavailable=event=>{if(event.data.size)capture.chunks.push(event.data);};
+      recorder.start(500);window.__dojoComboRecording=capture;
+      return {width:canvas.width,height:canvas.height,mime:type};
+    })()`);
+  }
+  async function stopComboRecording() {
+    const result=await evaluate(`new Promise((resolve,reject)=>{
+      const capture=window.__dojoComboRecording;if(!capture)throw Error('No combo recording');
+      capture.recorder.onerror=event=>reject(Error(event.error?.message||'Recording failed'));
+      capture.recorder.onstop=()=>{
+        capture.gl.drawElements=capture.original;capture.stream.getTracks().forEach(track=>track.stop());
+        const blob=new Blob(capture.chunks,{type:capture.type}),reader=new FileReader();
+        reader.onload=()=>resolve({base64:reader.result.split(',')[1],bytes:blob.size,width:capture.canvas.width,height:capture.canvas.height,
+          mime:capture.type,frames:capture.frames,durationSeconds:(performance.now()-capture.started)/1000,notices:capture.notices});
+        reader.onerror=()=>reject(Error('Could not read recorded combo'));reader.readAsDataURL(blob);
+      };capture.recorder.stop();
+    })`);
+    fs.writeFileSync(path.join(artifacts,'fionas-dojo-lightning-combo.webm'),Buffer.from(result.base64,'base64'));
+    delete result.base64;
+    assert.ok(result.bytes>30000 && result.frames>25,'Actual native WebGL combo produces substantial moving video');
+    assert.ok(result.notices.some(notice=>/COMBO BOOST/.test(notice)),'Video includes the actual speed-combo notification');
+    comboRecording=result;
+    return result;
+  }
   async function loadIsolatedSave(serialized) {
     const key = await evaluate('DojoGame.SAVE_VERSION');
     // Seed at the next document start. Seeding before navigation would be
@@ -114,6 +169,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
       hint:visible(document.querySelector('#hint-text')), challenge:visible(document.querySelector('#challenge-panel')) };
   })()`);
   const moveButtons = () => evaluate(`Array.from(document.querySelectorAll('#move-list [data-move]'),button=>({id:button.dataset.move,kind:button.dataset.kind,disabled:button.disabled,selected:button.getAttribute('aria-pressed')==='true'}))`);
+  const canonicalQuestion = question => JSON.stringify({...question,techniqueId:undefined});
   async function assertUnlockedMoves(belt) {
     const buttons = await moveButtons();
     assert.equal(buttons.length, moveCount, 'All seventeen techniques are shown');
@@ -260,32 +316,77 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(techniqueIds.length, moveCount);
   assert.equal(new Set(techniqueIds).size, moveCount);
   for (const move of [...techniqueIds, 'block']) {
-    await evaluate(`(() => {const scene=dojoRenderReview;scene.play({actor:'player',move:${JSON.stringify(move)},hit:${move !== 'block'}});
+    await evaluate(`(() => {const scene=dojoRenderReview;scene.setFighters({});scene.play({actor:'player',move:${JSON.stringify(move)},hit:${move !== 'block'}});
       scene.action.start=performance.now()-scene.action.duration*0.55;scene._tick(performance.now());
       document.querySelector('#dojo-render-review-title').textContent=${JSON.stringify(move + ' · controlled animation phase 55%')};})()`);
     await screenshot('move-' + move + '-contact');
   }
   const rapidDurations = await evaluate(`(() => {
     const scene=dojoRenderReview;
-    return ['','quick','lightning'].map(speedTier=>({speedTier,
-      duration:scene.play({actor:'player',move:'front-kick',hit:true,combo:3,speedTier})}));
+    return ['','quick','lightning'].map(speedTier=>{scene.setFighters({});return {speedTier,
+      duration:scene.play({actor:'player',move:'front-kick',hit:true,combo:3,speedTier})};});
   })()`);
   assert.ok(rapidDurations[2].duration < rapidDurations[1].duration && rapidDurations[1].duration < rapidDurations[0].duration,
     'Quick and lightning combos have successively faster real choreography');
   for (const speedTier of ['quick','lightning']) {
-    await evaluate(`(() => {const scene=dojoRenderReview;scene.play({actor:'player',move:'front-kick',hit:true,combo:3,speedTier:${JSON.stringify(speedTier)}});
-      const now=performance.now();scene.action.start=now-scene.action.duration*0.75;scene.lastFrame=0;
+    await evaluate(`(() => {const scene=dojoRenderReview;scene.setFighters({});scene.play({actor:'player',move:'front-kick',hit:true,combo:3,speedTier:${JSON.stringify(speedTier)}});
+      const now=performance.now();scene.action.start=now-scene.action.duration*0.87;scene.lastFrame=0;
       for(let offset=80;offset>=0;offset-=20)scene._tick(now-offset);
-      document.querySelector('#dojo-render-review-title').textContent=${JSON.stringify(speedTier + ' speed bonus · two-strike combo')};})()`);
+      document.querySelector('#dojo-render-review-title').textContent=${JSON.stringify(speedTier + ' speed bonus · two impacts and a staggering rival')};})()`);
     await screenshot('move-speed-' + speedTier + '-combo');
     assert.ok(await evaluate('dojoRenderReview.trails.length>0'),'Speed attacks draw actual native WebGL trails');
   }
-  await evaluate(`(() => {const scene=dojoRenderReview;scene.setReducedMotion(true);scene.play({actor:'player',move:'front-kick',hit:true,combo:3,speedTier:'lightning'});
+  await evaluate(`(() => {const scene=dojoRenderReview;scene.setFighters({});scene.setReducedMotion(true);scene.play({actor:'player',move:'front-kick',hit:true,combo:3,speedTier:'lightning'});
     scene.action.start=performance.now()-scene.action.duration*0.75;scene.lastFrame=0;scene._tick(performance.now());})()`);
   assert.equal(await evaluate('dojoRenderReview.trails.length'),0,'Reduced motion suppresses rapid trail effects');
   await evaluate('dojoRenderReview.setReducedMotion(false)');
   pass('Quick and lightning combos render faster with native trails; reduced motion suppresses the added effects');
-  await evaluate(`(() => {const scene=dojoRenderReview;scene.play({actor:'player',move:'block',hit:false});scene.action.start=performance.now()-scene.action.duration*0.95;scene._tick(performance.now());document.querySelector('#dojo-render-review-title').textContent='Defensive block · controlled phase 95%';})()`);
+  const impactSamples=await evaluate(`(() => {
+    const scene=dojoRenderReview,finite=value=>typeof value==='number'?Number.isFinite(value):Array.isArray(value)?value.every(finite):value&&typeof value==='object'?Object.values(value).every(finite):true;
+    const samples=[];
+    for(const move of DojoGame.MOVES){
+      scene.setFighters({});scene.play({actor:'player',move:move.id,hit:true,combo:3,speedTier:'lightning',damage:35});
+      const action=scene.action,contacts=action.contacts.length;
+      for(let phase=0;phase<=24;phase++){
+        const now=action.start+action.duration*phase/24;scene._advanceActions(now);
+        const player=scene._pose('player',now),opponent=scene._pose('opponent',now),reaction=scene._reaction('opponent',now);
+        if(!finite(player)||!finite(opponent)||!finite(reaction))throw Error('Non-finite '+move.id+' at '+phase);
+        if(player.y<0||opponent.y<0||Math.abs(opponent.x)>2.1)throw Error('Unsafe arena pose '+move.id+' at '+phase);
+      }
+      samples.push({move:move.id,contacts,poses:50,finite:true});
+    }
+    const hit=options=>{
+      scene.setFighters({});scene.play({actor:'player',move:'front-kick',hit:true,...options});
+      const action=scene.action,lastContact=action.contacts.at(-1),now=action.start+lastContact.at*action.duration+55;
+      scene._advanceActions(now);const reaction=scene._reaction('opponent',now),pose=scene._pose('opponent',now);
+      const after=action.start+action.duration+100;scene._advanceActions(after);
+      return {contacts:action.contacts.length,recorded:scene.reactions.opponent.length,reaction,pose,persistent:scene._reaction('opponent',after),actionDone:!scene.action};
+    };
+    const normal=hit({combo:1}),lightning=hit({combo:3,speedTier:'lightning',damage:35});
+    scene.setFighters({});const options={actor:'player',move:'front-kick',hit:true,combo:3,speedTier:'lightning'};
+    scene.play(options);const first=scene.action;scene.play({...options,move:'side-kick'});scene.play({...options,move:'punch',victory:true});
+    const buffered=[scene.action,...scene.actionQueue],queued=scene.actionQueue.length;
+    scene.celebrate();const finish=first.start+buffered.reduce((sum,item)=>sum+item.duration,0);
+    scene._advanceActions(finish+210);const victory=scene._reaction('opponent',finish+210),beforeCelebrate=scene.action?.move||null;
+    scene._advanceActions(finish+230);const afterCelebrate=scene.action?.move||null;
+    const completed=buffered.map(action=>({move:action.move,contacts:action.contacts.length,done:action.contacts.every(contact=>contact.done)}));
+    const regularPose=scene._pose('opponent',finish+230);scene.setReducedMotion(true);const calmPose=scene._pose('opponent',finish+230);
+    scene._tick(finish+230);const calmTrails=scene.trails.length;scene.setReducedMotion(false);
+    return {samples,normal,lightning,queue:{queued,completed,victory,beforeCelebrate,afterCelebrate},calm:{regularX:regularPose.x,calmX:calmPose.x,trails:calmTrails}};
+  })()`);
+  assert.equal(impactSamples.samples.length,moveCount);assert.ok(impactSamples.samples.every(sample=>sample.finite&&sample.contacts>=1));
+  assert.equal(impactSamples.lightning.contacts,2);assert.equal(impactSamples.lightning.recorded,2,'Both combo contacts create separate rival reactions');
+  assert.ok(impactSamples.lightning.reaction.push>impactSamples.normal.reaction.push*1.3,'Lightning chain knocks the rival back more strongly than one ordinary strike');
+  assert.ok(impactSamples.lightning.persistent.push>.08,'Rival stagger persists after the attacker finishes');
+  assert.equal(impactSamples.queue.queued,2);assert.ok(impactSamples.queue.completed.every(action=>action.done),'Fast incoming techniques preserve every buffered contact');
+  assert.ok(impactSamples.queue.victory.down>0,'A winning final contact leaves the rival in a defeat reaction');
+  assert.notEqual(impactSamples.queue.beforeCelebrate,'celebrate');assert.equal(impactSamples.queue.afterCelebrate,'celebrate','Celebration waits for the final buffered contact');
+  assert.ok(Math.abs(impactSamples.calm.calmX-1.23)<Math.abs(impactSamples.calm.regularX-1.23),'Reduced motion keeps a smaller readable rival stagger');
+  assert.equal(impactSamples.calm.trails,0);
+  impactEvidence.push(impactSamples);
+  pass('All seventeen lightning techniques have finite arena poses; repeated contacts cause stronger lasting rival recoil, twisting, and knockback');
+  pass('Rapid techniques preserve buffered impacts; winning blows leave a defeat pose before celebration, with calmer reduced motion');
+  await evaluate(`(() => {const scene=dojoRenderReview;scene.setFighters({});scene.play({actor:'player',move:'block',hit:false});scene.action.start=performance.now()-scene.action.duration*0.95;scene._tick(performance.now());document.querySelector('#dojo-render-review-title').textContent='Defensive block · controlled phase 95%';})()`);
   await screenshot('move-block-guard-95');
   await evaluate(`dojoRenderReview.destroy();delete window.dojoRenderReview;document.querySelector('#dojo-render-review').remove()`);
   pass('Seventeen techniques and a defensive block rendered at controlled phase for visual review');
@@ -305,6 +406,18 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(state.save.question.challengeKind, 'basic');
   assert.equal([...state.save.question.prompt].length, 1);
   const questionId = state.save.question.id;
+  const initialQuestion=canonicalQuestion(state.save.question),initialRecent=JSON.stringify(state.save.recent),initialHistory=JSON.stringify(state.save.fight.journal);
+  for(const move of whiteMoves.filter(move=>move.unlock===0)){
+    await click('#move-list [data-move="'+move.id+'"]');state=await snapshot();
+    assert.equal(canonicalQuestion(state.save.question),initialQuestion,'Every basic retains the exact unresolved activity');
+    assert.equal(state.save.question.techniqueId,move.id);
+    assert.equal(JSON.stringify(state.save.recent),initialRecent,'Move choice cannot churn the question history');
+    assert.equal(JSON.stringify(state.save.fight.journal),initialHistory,'Move choice cannot create combat turns');
+  }
+  await click('#move-list [data-move="front-kick"]');state=await snapshot();
+  assert.equal(state.save.challengeSet.entries.basic.id,questionId);
+  assert.equal(state.save.challengeSet.switched,true);
+  pass('All seven basics share one unchanged unanswered question; A→B→A cannot reroll or alter history');
   await click('#listen-button'); await pause(10);
   assert.ok((await moveButtons()).every(button => button.disabled), 'Listening locks the move selection');
   await evaluate(`document.querySelector('#move-list [data-move="punch"]').click()`);
@@ -357,7 +470,17 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(state.save.fight.pendingDamage, 0); assert.equal(state.save.fight.blocks, 1);
   assert.equal(state.player, 100); assert.equal(state.opponent, 100);
   pass('Next activity is a successful assisted block: queued damage disappears with no HP loss or attack streak');
-  await nextQuestion(); await click('#hint-button'); state = await answerCorrect();
+  await nextQuestion(); await click('#hint-button');
+  const hintedQuestion=(await snapshot()).save.question.id,hintedCache=JSON.stringify((await snapshot()).save.challengeSet);
+  assert.ok((await moveButtons()).every(button=>button.disabled),'Requesting help fixes the selected activity');
+  await evaluate(`document.querySelector('#move-list [data-move="punch"]').click()`);
+  assert.equal((await snapshot()).save.question.id,hintedQuestion);
+  await click('#pause-button');await click('#leave-button');await click('#start-button');
+  await send('Page.reload',{ignoreCache:false});await waitFor(`document.documentElement.dataset.dojoReady==='true'`,'Hint lock reload');await click('#start-button');
+  state=await snapshot();assert.equal(state.save.assisted,true);assert.equal(state.hint,true);assert.equal(state.save.question.id,hintedQuestion);
+  assert.equal(JSON.stringify(state.save.challengeSet),hintedCache);assert.ok((await moveButtons()).every(button=>button.disabled));
+  pass('Hints lock the chosen activity globally; help credit, prompt, and move lock survive lobby and reload');
+  state = await answerCorrect();
   assert.equal(state.save.fight.streak, 0); assert.equal(state.save.fight.assisted, 2);
   assert.equal(state.opponent, 93); pass('Hinted attack deals half damage and earns no combo streak');
   await nextQuestion();
@@ -419,6 +542,53 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         assert.ok(await evaluate(`JSON.parse(localStorage.getItem(DojoGame.SAVE_VERSION)).question.chars.every(char=>KVG_DATA[char]?.length)`), 'Every finisher character has local stroke data');
       }
       await assertWritingRecall(state);
+      if(belt===2){
+        const harderA=canonicalQuestion(state.save.question),older=catalog.find(move=>move.kind==='special'&&move.unlock===1);
+        await click('#move-list [data-move="'+older.id+'"]');const olderState=await snapshot(),harderB=canonicalQuestion(olderState.save.question);
+        const cache=JSON.stringify(olderState.save.challengeSet.entries),recentAfterCreation=JSON.stringify(olderState.save.recent);
+        await click('#move-list [data-move="'+special.id+'"]');state=await snapshot();
+        assert.equal(canonicalQuestion(state.save.question),harderA,'Returning to special A restores its entire harder prompt');
+        await click('#move-list [data-move="front-kick"]');state=await snapshot();
+        assert.equal(canonicalQuestion(state.save.question),canonicalQuestion(basicQuestion),'The original basic prompt returns intact');
+        await click('#move-list [data-move="'+older.id+'"]');state=await snapshot();
+        assert.equal(canonicalQuestion(state.save.question),harderB,'Returning to special B restores its entire harder prompt');
+        assert.equal(JSON.stringify(state.save.challengeSet.entries),cache,'Repeated move changes create no new cached activities');
+        assert.equal(JSON.stringify(state.save.recent),recentAfterCreation,'Returning to cached techniques adds no question-history entries');
+        const savedCache=state.save.challengeSet;
+        await click('#pause-button');await click('#resume-button');assert.deepEqual((await snapshot()).save.challengeSet,savedCache);
+        await click('#pause-button');await click('#leave-button');await click('#start-button');
+        assert.deepEqual((await snapshot()).save.challengeSet,savedCache,'Leaving to the lobby preserves every cached activity');
+        await send('Page.reload',{ignoreCache:false});await waitFor(`document.documentElement.dataset.dojoReady==='true'`,'Cached technique reload');
+        await click('#start-button');state=await snapshot();
+        assert.equal(canonicalQuestion(state.save.question),harderB);assert.deepEqual(state.save.challengeSet,savedCache,'The entire technique cache survives reload');
+        await click('#move-list [data-move="'+special.id+'"]');state=await snapshot();
+        assert.equal(canonicalQuestion(state.save.question),harderA);
+        pass('Each special keeps its exact A→B→A activity, alongside the original basic, across pause, lobby, and reload');
+      }
+      if(belt===4){
+        const questionBeforeInk=canonicalQuestion(state.save.question),firstCharacter=state.save.question.chars[0];
+        await traceCharacter(firstCharacter);
+        state=await snapshot();assert.equal(state.save.challengeSet.locked,true,'Beginning an actual pen stroke fixes the activity');
+        assert.ok((await moveButtons()).every(button=>button.disabled),'Ink locks every technique before grading');
+        assert.ok(state.save.writingDraft.strokes.length>0,'Actual ungraded ink is saved');
+        const beforeUndo=state.save.writingDraft.strokes.length;await click('#undo-writing');state=await snapshot();
+        assert.equal(state.save.writingDraft.strokes.length,Math.max(0,beforeUndo-1));assert.equal(state.save.challengeSet.locked,true);
+        await click('#clear-writing');state=await snapshot();
+        assert.equal(state.save.writingDraft.strokes.length,0);assert.equal(state.save.challengeSet.locked,true,'Clearing all ink does not reopen question selection');
+        await traceCharacter(firstCharacter);const draft=JSON.stringify((await snapshot()).save.writingDraft);
+        await click('#pause-button');await click('#leave-button');await click('#start-button');
+        assert.equal(JSON.stringify((await snapshot()).save.writingDraft),draft,'Ungraded ink survives lobby return');
+        await send('Page.reload',{ignoreCache:false});await waitFor(`document.documentElement.dataset.dojoReady==='true'`,'Writing draft reload');await click('#start-button');
+        state=await snapshot();assert.equal(JSON.stringify(state.save.writingDraft),draft,'Ungraded ink survives document reload');
+        assert.equal(canonicalQuestion(state.save.question),questionBeforeInk);assert.ok((await moveButtons()).every(button=>button.disabled));
+        await click('#check-writing');state=await snapshot();assert.equal(state.save.writingIndex,1,'The first character remains completed in this multi-character activity');
+        const partialQuestion=state.save.question.id,partialIndex=state.save.writingIndex;
+        await click('#pause-button');await click('#leave-button');await click('#start-button');
+        await send('Page.reload',{ignoreCache:false});await waitFor(`document.documentElement.dataset.dojoReady==='true'`,'Partial word reload');await click('#start-button');state=await snapshot();
+        assert.equal(state.save.question.id,partialQuestion);assert.equal(state.save.writingIndex,partialIndex,'Completed word characters survive reload');
+        assert.equal(state.save.challengeSet.locked,true);assert.ok((await moveButtons()).every(button=>button.disabled));
+        pass('First ink fixes the question; undo, clear, lobby, and reload preserve the lock, current ink, and completed word characters');
+      }
       if (belt === 1) {
         const hardId = state.save.question.id;
         await send('Page.reload', { ignoreCache: false });
@@ -448,6 +618,13 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
       await assertAnswerMoveLock(special.id);
       pass('Earned ' + special.id + ' requires a harder ' + mode + ' answer and deals ' + specialDamage + ' damage');
       await nextQuestion();
+      if(belt===2){
+        state=await snapshot();assert.equal(state.save.challengeSet.exchange.turns,state.save.fight.turns);
+        assert.deepEqual(Object.keys(state.save.challengeSet.entries),[special.id],'A resolved answer begins a fresh technique cache');
+        assert.notEqual(state.save.question.id,basicQuestion.id);
+        assert.equal(state.save.challengeSet.locked,false);assert.equal(state.save.challengeSet.switched,false);
+        pass('Only a resolved answer followed by Next starts a new exchange and clears its old question cache');
+      }
       if (belt === 1) {
         // Keep the special selected through a mistake: the following challenge
         // must be a basic defense, then restore that special for the next attack.
@@ -601,6 +778,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   }
   await freshReadingFight();
   await click('#handsfree-toggle'); await autoReady(0);
+  await startComboRecording();await pause(350);
   const rapidDamage = [20,23,35];
   for(let strike=0;strike<3;strike++){
     if(strike){
@@ -633,6 +811,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(await speechCount(),3); state=await snapshot(); assert.equal(state.feedback,true); assert.equal(state.save.question.id,rapidQuestion);
   pass('One microphone activation strings three lightning attacks into a real combo, with +6 damage notices and stale-result protection');
   pass('Stopping hands-free during answer feedback cancels automatic advance and microphone rearming');
+  await pause(700);await stopComboRecording();
+  pass('Captured the actual native WebGL lightning chain with real health bars and speed-combo notifications as moving video');
 
   await click('#handsfree-toggle'); await autoReady(3);
   await deliverTranscript('definitely-wrong'); state=await snapshot();
@@ -653,6 +833,22 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(await evaluate(`document.querySelector('#speed-notice').hidden`),true);
   await click('#handsfree-toggle');
   pass('Hands-free mistakes still offer a block chance; blocks and guided answers never award speed damage or notices');
+
+  await freshReadingFight();state=await snapshot();const previewedQuestion=state.save.question.id;
+  await click('#listen-button');await pause(10);await evaluate('window.__dojoChangedMoveFinal=window.__dojoSpeech.instances.at(-1).onresult');
+  await evaluate(`window.__dojoSpeech.instances.at(-1).onerror?.({error:'no-speech'})`);await pause(20);
+  await click('#move-list [data-move="punch"]');await click('#move-list [data-move="front-kick"]');state=await snapshot();
+  assert.equal(state.save.question.id,previewedQuestion);assert.equal(state.save.challengeSet.switched,true);
+  await evaluate(`(() => {const transcript=JSON.parse(localStorage.getItem(DojoGame.SAVE_VERSION)).question.prompt;
+    const result=Object.assign([{transcript,confidence:0.99}],{isFinal:true});window.__dojoChangedMoveFinal?.({resultIndex:0,results:[result]});})()`);
+  assert.equal((await snapshot()).save.fight.turns,0,'A canceled recognizer cannot grade after a move choice');
+  await send('Page.reload',{ignoreCache:false});await waitFor(`document.documentElement.dataset.dojoReady==='true'`,'Previewed prompt reload');await click('#start-button');
+  state=await snapshot();assert.equal(state.save.question.id,previewedQuestion);assert.equal(state.save.challengeSet.switched,true);
+  await click('#handsfree-toggle');await autoReady(0);await deliverTranscript(state.save.question.prompt);state=await snapshot();
+  assert.equal(state.opponent,86,'A previously previewed prompt retains normal damage without a reset speed bonus');
+  assert.equal(Object.hasOwn(state.save.fight.journal.at(-1),'readingMs'),false);
+  assert.equal(await evaluate(`document.querySelector('#speed-notice').hidden`),true);await click('#handsfree-toggle');
+  pass('Changing moves and returning cannot reset speed eligibility, even after reload; stale speech results never grade the selected activity');
 
   await freshReadingFight(); await click('#handsfree-toggle'); await autoReady(0); await pause(2200);
   state=await snapshot(); await deliverTranscript(state.save.question.prompt); state=await snapshot();
@@ -906,7 +1102,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(requests.filter(request => request.status === 404 && request.name !== '/favicon.ico').length, 0,
     'No missing local assets: ' + JSON.stringify(requests.filter(request => request.status === 404)));
   pass('No external asset dependencies, missing dojo assets, or runtime exceptions');
-  const report = { passed: true, checks, campaign, rapidEvidence, webgl: pixels, recognition: 'Synthetic SpeechRecognition final/interim/error events; real hands-free timers, native tab visibility, combat, saves, and WebGL exercised. Live microphone and speech service not tested', elapsedSeconds: Math.round((Date.now() - started) / 1000), screenshots: artifacts, errors, external };
+  const report = { passed: true, checks, campaign, rapidEvidence, impactEvidence, comboRecording, webgl: pixels, recognition: 'Synthetic SpeechRecognition final/interim/error events; real hands-free timers, native tab visibility, combat, saves, and WebGL exercised. Live microphone and speech service not tested', elapsedSeconds: Math.round((Date.now() - started) / 1000), screenshots: artifacts, errors, external };
   fs.writeFileSync(path.join(artifacts, 'report.json'), JSON.stringify(report, null, 2));
   console.log('PASS: ' + checks.length + ' dojo browser checks in ' + report.elapsedSeconds + ' seconds. Evidence: ' + artifacts);
   await send('Browser.close').catch(() => {});

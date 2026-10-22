@@ -32,6 +32,9 @@
   let answerResolved = Boolean(saved && (saved.answerResolved === true || saved.phase === 'answered'));
   let answerWasBlock = Boolean(saved && saved.answerWasBlock);
   let writingIndex = 0;
+  let challengeSet = null;
+  let writingDraft = null;
+  let restoringWriting = false;
   let selectedMove = typeof (saved && saved.selectedMove) === 'string' ? saved.selectedMove : 'front-kick';
   let selectedBelt = fight ? fight.beltIndex : progress.belt;
   let resultSummary = null;
@@ -59,7 +62,7 @@
 
   function save() {
     try {
-      localStorage.setItem(G.SAVE_VERSION, JSON.stringify({ progress, fight, question, phase, recent, assisted, answerResolved, answerWasBlock, writingIndex, selectedMove, soundEnabled, reducedMotion }));
+      localStorage.setItem(G.SAVE_VERSION, JSON.stringify({ progress, fight, question, challengeSet, writingDraft, phase, recent, assisted, answerResolved, answerWasBlock, writingIndex, selectedMove, soundEnabled, reducedMotion }));
       storageAvailable = true;
     } catch (_) { storageAvailable = false; }
     $('save-status').textContent = storageAvailable ? '● Progress saved on this device' : 'Progress is temporary · browser storage unavailable';
@@ -132,7 +135,7 @@
       button.append(swatch, label, status);
       button.addEventListener('click', () => {
         selectedBelt = index;
-        if (fight && fight.beltIndex !== index) { fight = null; question = null; }
+        if (fight && fight.beltIndex !== index) { fight = null; question = null; challengeSet = null; writingDraft = null; }
         renderLobby();
       });
       $('belt-path').append(button);
@@ -162,6 +165,9 @@
     const basics = G.MOVES.filter(move => move.kind === 'basic');
     const specials = G.MOVES.filter(move => move.kind === 'special');
     const earned = unlocked.filter(move => move.kind === 'special').length;
+    const choiceLocked = Boolean(fight && question && !answerResolved && challengeSet && challengeSet.locked);
+    const choiceNote = $('move-choice-note');
+    if (choiceNote) choiceNote.textContent = phase === 'question' && fight && fight.pendingDamage > 0 ? 'Complete this block chance before choosing another technique.' : choiceLocked ? 'Your technique is locked for this turn because you used a hint or started writing. Finish this challenge to choose again.' : challengeSet && challengeSet.switched && phase === 'question' ? 'Your challenges stay fixed when you change technique. Speed bonuses return on the next fresh turn.' : 'Changing technique keeps its challenge. Hints and writing lock your choice for this turn.';
     $('move-count').textContent = `${basics.length} basics · ${earned} / ${specials.length} specials`;
     $('move-list').replaceChildren();
     [{ kind: 'basic', name: 'The basics', note: 'All available at white belt', moves: basics }, { kind: 'special', name: 'Specials & finishers', note: 'Earn one at every new belt · harder activities, bigger hits', moves: specials }].forEach(group => {
@@ -172,7 +178,7 @@
       group.moves.forEach(move => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'move-button' + (move.kind === 'special' ? ' special-move' : '');
         button.dataset.move = move.id; button.dataset.kind = move.kind;
-        button.disabled = move.unlock > progress.belt || phase === 'answered' || listening || (phase === 'question' && fight && fight.pendingDamage > 0);
+        button.disabled = move.unlock > progress.belt || phase === 'answered' || listening || choiceLocked || (phase === 'question' && fight && fight.pendingDamage > 0);
         button.setAttribute('aria-pressed', String(move.id === selectedMove)); button.title = move.description;
         const icon = document.createElement('span'); icon.className = 'move-icon'; icon.textContent = moveIcons[move.id] || '✦'; icon.setAttribute('aria-hidden', 'true');
         const label = document.createElement('span'); label.textContent = move.name;
@@ -181,7 +187,10 @@
         button.addEventListener('click', () => {
           if (button.disabled || move.id === selectedMove) return;
           cancelVoice(); selectedMove = move.id;
-          if (phase === 'question') nextQuestion({ keepAssistance: assisted });
+          if (phase === 'question') {
+            if (challengeSet) challengeSet.switched = true;
+            selectQuestion();
+          }
           else { renderMoves(); save(); if (scene) scene.play({ actor: 'player', move: move.id, hit: false, combo: 0 }); }
         });
         grid.append(button);
@@ -202,27 +211,66 @@
   }
   function beginFight() {
     if (!fight || fight.beltIndex !== selectedBelt || fight.recorded) {
-      fight = G.startFight(progress, selectedBelt); question = null; recent = []; answerResolved = false; phase = 'question';
+      fight = G.startFight(progress, selectedBelt); question = null; challengeSet = null; writingDraft = null; recent = []; answerResolved = false; phase = 'question';
     }
     if (fight.status !== 'fighting') { finishFight(); return; }
     const resumeAnswered = question && answerResolved;
-    if (!question) nextQuestion();
-    else { phase = resumeAnswered ? 'answered' : 'question'; renderQuestion(); }
+    if (!question) {
+      if (!answerResolved && challengeSet && sameExchange(challengeSet.exchange)) selectQuestion();
+      else nextQuestion();
+    }
+    else if (!resumeAnswered && challengeSet && !challengeSet.locked && selectedMove !== question.techniqueId) {
+      challengeSet.switched = true;
+      selectQuestion();
+    } else { phase = resumeAnswered ? 'answered' : 'question'; renderQuestion(); }
     saved = null;
     updateHud(); renderProgress(); renderMoves(); save();
     if (scene) scene.play({ actor: 'player', move: 'bow', hit: false });
     queueHandsFree();
   }
-  function nextQuestion(options = {}) {
+  function exchangeIdentity() {
+    return { beltIndex: fight.beltIndex, originBelt: fight.originBelt, turns: fight.journal.length, defense: fight.pendingDamage > 0 };
+  }
+  function sameExchange(identity) {
+    const current = exchangeIdentity();
+    return identity && Object.keys(current).every(key => identity[key] === current[key]);
+  }
+  function questionKey(entry) { return entry.challengeKind === 'special' ? entry.techniqueId : 'basic'; }
+  function newChallengeSet() {
+    challengeSet = { version: 1, exchange: exchangeIdentity(), entries: {}, locked: false, switched: false };
+  }
+  function selectQuestion() {
     cancelVoice();
     const move = G.availableMoves(progress.belt).find(item => item.id === selectedMove);
     if (!move) selectedMove = 'front-kick';
     const techniqueId = fight && fight.pendingDamage > 0 ? 'front-kick' : selectedMove;
-    question = G.createQuestion(selectedBelt, material, recent, Math.random, techniqueId, progress.belt);
-    recent.push(question.id); recent = recent.slice(-12);
-    assisted = options.keepAssistance === true; answerResolved = false; answerWasBlock = false; writingIndex = 0; phase = 'question';
+    const technique = G.MOVES.find(item => item.id === techniqueId);
+    if (!challengeSet || !sameExchange(challengeSet.exchange)) newChallengeSet();
+    const key = technique.kind === 'special' ? techniqueId : 'basic';
+    let entry = challengeSet.entries[key];
+    if (!entry) {
+      entry = G.createQuestion(selectedBelt, material, recent, Math.random, techniqueId, progress.belt);
+      // An unavailable special can fall back to a standard activity. It shares
+      // the existing basic prompt and never turns that prompt into bonus damage.
+      const canonicalKey = questionKey(entry);
+      if (challengeSet.entries[canonicalKey]) entry = challengeSet.entries[canonicalKey];
+      else {
+        challengeSet.entries[canonicalKey] = entry;
+        recent.push(entry.id); recent = recent.slice(-12);
+      }
+      challengeSet.entries[key] = entry;
+    }
+    question = { ...entry, ...(entry.challengeKind === 'basic' && technique.kind === 'basic' ? { techniqueId } : {}) };
+    writingIndex = 0; writingDraft = null; phase = 'question';
     renderQuestion(); renderMoves(); save();
     queueHandsFree();
+  }
+  function nextQuestion() {
+    // A new challenge set begins only after the previous exchange has resolved,
+    // including the transition into or out of a defensive block chance.
+    newChallengeSet();
+    assisted = false; answerResolved = false; answerWasBlock = false;
+    selectQuestion();
   }
   function writingMode() { return question && (question.mode === 'kana-write' || question.mode === 'kanji-write'); }
   function cancelVoice() {
@@ -253,7 +301,7 @@
     if (!readingReady() || !voice || !voice.supported) return;
     $('voice-transcript').hidden = true;
     if (!readingStartedAt) readingStartedAt = performance.now();
-    readingSpeedEligible = automatic && quietRetries === 0;
+    readingSpeedEligible = automatic && quietRetries === 0 && !(challengeSet && challengeSet.switched);
     const voiceAliases = question.mode === 'word-read' ? material.kanji.filter(form => form.read === question.prompt).map(form => form.char) : [];
     if (voice.start({ ...question, expectedKana: question.prompt, voiceAliases })) updateHandsFree();
   }
@@ -276,6 +324,7 @@
   }
   function showSpeedBonus(outcome, milliseconds) {
     const node = $('speed-notice'); clearTimeout(speedNoticeTimer);
+    node.classList.toggle('combo-speed', Boolean(outcome.combo));
     node.hidden = !outcome.speedBonus;
     if (!outcome.speedBonus) return;
     node.dataset.tier = outcome.speedTier;
@@ -324,8 +373,18 @@
       $('question-context').textContent = question.mode === 'kana-write' ? special ? `Write all ${question.chars.length} ${scriptName(question)} from memory to unleash ${technique.name}.` : `Draw the ${scriptName(question)} from memory, one stroke at a time.` : `Recall ${question.words ? 'both words' : 'the word'} and write ${question.words ? 'their' : 'its'} kanji · ${question.chars.length} character${question.chars.length === 1 ? '' : 's'}`;
       $('writing-caption').textContent = `Character ${writingIndex + 1} of ${question.chars.length} · from memory`;
       if (writing) {
+        restoringWriting = true;
         writing.setCharacter(question.chars[writingIndex]);
         if (assisted) writing.revealGuide();
+        if (writingDraft && writingDraft.questionId === question.id && writingDraft.writingIndex === writingIndex) {
+          writing.strokes = writingDraft.strokes.map((points, index) => {
+            const stroke = points.map(point => ({ x: point.x, y: point.y }));
+            if (writingDraft.overflow[index]) stroke.overflow = true;
+            return stroke;
+          });
+          writing.render(); writing.changed();
+        }
+        restoringWriting = false;
       }
       renderWordProgress();
     }
@@ -344,12 +403,12 @@
   }
   function showHint(mark = true) {
     if (!question || phase !== 'question') return;
-    if (mark) assisted = true;
+    if (mark) { assisted = true; if (challengeSet) challengeSet.locked = true; }
     const note = question.mode === 'kana-read' ? `The sound is “${question.answer}”. Say it aloud to practise.` : question.mode === 'word-read' ? `Read “${question.prompt}” as “${question.reading}” (${question.answer}). Say it aloud.` : `Model: ${question.answer}${question.mode === 'kanji-write' ? ' · reading: ' + question.reading : ''}. Follow the numbered strokes; you can clear and try again.`;
     $('hint-text').textContent = note + (fight.pendingDamage > 0 ? ' A correct guided block still stops all damage.' : ' Guided attacks give half damage and no streak credit.');
     $('hint-text').hidden = false; $('hint-button').textContent = 'Hint shown · assisted';
     if (writingMode() && writing) writing.revealGuide();
-    if (mark) save();
+    if (mark) { renderMoves(); save(); }
   }
   function submit(correct, detail = '', readingMs = null) {
     if (phase !== 'question' || !fight || fight.status !== 'fighting') return;
@@ -368,7 +427,7 @@
     showSpeedBonus(outcome, readingMs);
     $('arena-caption').textContent = outcome.immediateCounter ? 'MASTER STEIF STRIKES · 33.3% damage · no block chance' : outcome.blocked ? `BLOCKED · ${outcome.blockedDamage} damage stopped` : outcome.counterQueued ? `COUNTER INCOMING · ${outcome.pendingDamage} damage queued · next challenge is your block` : outcome.blockFailed ? `${G.OPPONENTS[selectedBelt].name} counters · ${outcome.playerDamage} damage` : `${moveName}${outcome.combo ? ' combination' : ''} · ${outcome.opponentDamage} damage`;
     callout(outcome.immediateCounter ? '33.3% · MASTER STRIKE' : outcome.blocked ? 'BLOCKED!' : outcome.counterQueued ? 'BLOCK CHANCE NEXT' : outcome.blockFailed ? 'COUNTER' : outcome.combo ? `${fight.streak} HIT COMBO!${outcome.speedBonus ? ' ⚡' : ''}` : outcome.speedBonus ? outcome.speedTier === 'lightning' ? '⚡ LIGHTNING STRIKE!' : 'QUICK STRIKE!' : moveName);
-    if (scene) scene.play({ actor: outcome.immediateCounter || outcome.counterQueued || outcome.blockFailed ? 'opponent' : 'player', move: outcome.immediateCounter ? 'dragon-finisher' : outcome.blocked ? 'block' : outcome.counterQueued ? 'guard' : outcome.blockFailed ? ['front-kick', 'roundhouse', 'side-kick', 'jump-front-kick', 'axe-kick', 'turning-kick', 'double-kick', 'back-kick', 'jump-roundhouse', 'tornado-kick', 'dragon-finisher'][selectedBelt] : outcome.move.id, hit: !(outcome.counterQueued || outcome.blocked), combo: outcome.combo ? fight.streak : 0, speedTier: outcome.speedTier });
+    if (scene) scene.play({ actor: outcome.immediateCounter || outcome.counterQueued || outcome.blockFailed ? 'opponent' : 'player', move: outcome.immediateCounter ? 'dragon-finisher' : outcome.blocked ? 'block' : outcome.counterQueued ? 'guard' : outcome.blockFailed ? ['front-kick', 'roundhouse', 'side-kick', 'jump-front-kick', 'axe-kick', 'turning-kick', 'double-kick', 'back-kick', 'jump-roundhouse', 'tornado-kick', 'dragon-finisher'][selectedBelt] : outcome.move.id, hit: !(outcome.counterQueued || outcome.blocked), combo: outcome.combo ? fight.streak : 0, speedTier: outcome.speedTier, damage: outcome.opponentDamage, victory: outcome.won });
     sound(correct ? outcome.combo ? 'combo' : 'hit' : 'wrong');
     save();
     if (!handsFree) $('next-button').focus({ preventScroll: true });
@@ -378,7 +437,7 @@
   }
   function callout(text) {
     clearTimeout(calloutTimer);
-    const node = $('action-callout'); node.textContent = text; node.classList.remove('pop'); void node.offsetWidth; node.classList.add('pop');
+    const node = $('action-callout'); node.textContent = text; node.classList.toggle('combo-callout', /COMBO/.test(text)); node.classList.remove('pop'); void node.offsetWidth; node.classList.add('pop');
     if (reducedMotion) node.style.opacity = '1';
     calloutTimer = setTimeout(() => { node.classList.remove('pop'); node.style.opacity = ''; }, 1300);
   }
@@ -454,8 +513,23 @@
   catch (_) { $('graphics-status').textContent = '3D graphics are unavailable in this browser. You can still practise and fight with the lesson controls below.'; $('graphics-status').hidden = false; }
   if (scene && scene.available === false) { $('graphics-status').textContent = '3D graphics are unavailable. Lesson battles are still ready below.'; $('graphics-status').hidden = false; }
   try {
-    writing = new DojoWriting($('writing-canvas'), { onChange: state => { $('stroke-count').textContent = `${state.strokeCount} / ${state.expectedStrokes} strokes`; } });
+    writing = new DojoWriting($('writing-canvas'), { onChange: state => {
+      $('stroke-count').textContent = `${state.strokeCount} / ${state.expectedStrokes} strokes`;
+      if (!restoringWriting && phase === 'question' && writing && writingMode()) {
+        if (state.strokeCount > 0 && challengeSet) challengeSet.locked = true;
+        writingDraft = { questionId: question.id, writingIndex,
+          strokes: writing.strokes.map(stroke => stroke.map(point => ({ x: point.x, y: point.y }))),
+          overflow: writing.strokes.map(stroke => stroke.overflow === true) };
+        renderMoves(); save();
+      }
+    } });
   } catch (_) { /* Surface unavailable writing when its belt is entered. */ }
+  $('writing-canvas').addEventListener('pointerdown', event => {
+    if (phase !== 'question' || !writingMode() || !writing || !writing.reference || event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    // Lock on first ink, even if the stroke is subsequently undone or cleared.
+    if (challengeSet) challengeSet.locked = true;
+    renderMoves(); save();
+  }, true);
   try {
     voice = new DojoVoice({
       onState: state => {
@@ -523,12 +597,12 @@
   $('leave-button').addEventListener('click', () => { $('pause-dialog').close(); saved = { phase }; renderLobby(); });
   $('result-continue').addEventListener('click', () => {
     const reward = resultSummary.rewardId, won = resultSummary.won;
-    $('result-dialog').close(); fight = null; question = null;
+    $('result-dialog').close(); fight = null; question = null; challengeSet = null; writingDraft = null;
     if (won) selectedBelt = progress.belt;
     renderLobby();
     if (reward) openReward(reward); else if (!(won && selectedBelt === FINAL_BELT && progress.mastered)) beginFight();
   });
-  $('result-rest').addEventListener('click', () => { $('result-dialog').close(); fight = null; question = null; selectedBelt = progress.belt; renderLobby(); });
+  $('result-rest').addEventListener('click', () => { $('result-dialog').close(); fight = null; question = null; challengeSet = null; writingDraft = null; selectedBelt = progress.belt; renderLobby(); });
   $('result-dialog').addEventListener('cancel', event => { event.preventDefault(); $('result-rest').click(); });
   $('reward-button').addEventListener('click', () => openReward());
   $('flavour-options').querySelectorAll('button').forEach(button => { button.addEventListener('click', () => { flavor = button.dataset.flavour.toLowerCase(); renderFlavors(); }); });
@@ -546,10 +620,11 @@
   $('motion-toggle').addEventListener('click', () => { reducedMotion = !reducedMotion; applyPreferences(); save(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHandsFree('Microphone stopped while the dojo is hidden. Start hands-free to continue.'); });
   window.addEventListener('pagehide', () => { stopHandsFree(); save(); });
-  if (saved && saved.question && fight) {
-    const candidate = saved.question;
+  function canonicalQuestion(candidate, allowLegacy = false) {
+    if (!fight || !candidate || typeof candidate !== 'object' || Array.isArray(candidate) || typeof candidate.id !== 'string' || typeof candidate.answer !== 'string' || typeof candidate.prompt !== 'string') return null;
     const available = G.availableMoves(progress.belt);
-    const technique = available.find(move => move.id === candidate.techniqueId) || available.find(move => move.id === 'front-kick');
+    const technique = available.find(move => move.id === candidate.techniqueId) || (allowLegacy && !candidate.techniqueId ? available.find(move => move.id === 'front-kick') : null);
+    if (!technique) return null;
     const candidates = [], seen = new Set();
     // Rebuild current challenge metadata from canonical material, including
     // special word sequences and verified compound kanji.
@@ -559,11 +634,11 @@
       seen.add(entry.id); candidates.push(entry);
       if (entry.id === candidate.id) break;
     }
-    let canonical = candidates.find(item => item.id === candidate.id && item.answer === candidate.answer);
+    let canonical = candidates.find(item => item.id === candidate.id && item.answer === candidate.answer && item.prompt === candidate.prompt && item.mode === candidate.mode && (!candidate.challengeKind || item.challengeKind === candidate.challengeKind));
     // Keep one already-started activity from the earlier course, even where a
     // new katakana stage now shares its belt. Future prompts use the new course.
     const legacyCourse = Number.isInteger(fight.legacyBeltIndex);
-    if (!canonical && (legacyCourse || (!candidate.techniqueId && candidate.mode === G.BELTS[selectedBelt].mode))) {
+    if (!canonical && allowLegacy && (legacyCourse || (!candidate.techniqueId && candidate.mode === G.BELTS[selectedBelt].mode))) {
       if (candidate.mode === 'word-read') {
         const earlyWords = legacyCourse ? fight.legacyBeltIndex === 6 : selectedBelt === G.BELTS.findIndex(belt => belt.mode === 'word-read');
         const word = words.find(item => item.jp === candidate.prompt && item.en === candidate.answer && (!earlyWords || item.week <= 6));
@@ -588,10 +663,53 @@
         Object.assign(canonical, { techniqueId: technique.id, challengeKind: special ? 'special' : 'basic', difficulty: special ? 'special' : 'basic', difficultyLevel: special ? technique.unlock : 0, challengeLabel: special ? 'Saved special activity' : 'Saved standard activity' });
       }
     }
-    if (canonical) {
-      question = canonical;
-      if (!(fight.pendingDamage > 0 && !answerResolved && available.some(move => move.id === selectedMove))) selectedMove = canonical.techniqueId;
-      assisted = saved.assisted === true; writingIndex = 0;
+    if (canonical && canonical.mode === 'word-read' && Array.isArray(candidate.choices) && candidate.choices.length === 4 && candidate.choices.includes(canonical.answer) && new Set(candidate.choices.map(value => G.normalizeAnswer(value))).size === 4 && candidate.choices.every(value => typeof value === 'string' && words.some(word => word.en === value))) {
+      canonical.choices = [...candidate.choices];
+    }
+    return canonical || null;
+  }
+  function canonicalDraft(candidate) {
+    if (!candidate || !question || !writingMode() || candidate.questionId !== question.id || candidate.writingIndex !== writingIndex || !Array.isArray(candidate.strokes) || candidate.strokes.length > 64 || !Array.isArray(candidate.overflow) || candidate.overflow.length !== candidate.strokes.length) return null;
+    let pointCount = 0;
+    const valid = candidate.strokes.every(stroke => Array.isArray(stroke) && stroke.length > 0 && stroke.length <= 2000 && stroke.every(point => {
+      pointCount++;
+      return point && Number.isFinite(point.x) && Number.isFinite(point.y) && point.x >= -.1 && point.x <= 1.1 && point.y >= -.1 && point.y <= 1.1;
+    }));
+    if (!valid || pointCount > 40000) return null;
+    return { questionId: question.id, writingIndex, strokes: candidate.strokes.map(stroke => stroke.map(point => ({ x: point.x, y: point.y }))), overflow: candidate.overflow.map(value => value === true) };
+  }
+  if (saved && fight) {
+    const available = G.availableMoves(progress.belt);
+    const current = canonicalQuestion(saved.question, true);
+    const cache = saved.challengeSet;
+    if (!answerResolved && cache && cache.version === 1 && sameExchange(cache.exchange) && cache.entries && typeof cache.entries === 'object' && !Array.isArray(cache.entries)) {
+      newChallengeSet();
+      assisted = saved.assisted === true;
+      challengeSet.locked = cache.locked === true || assisted;
+      challengeSet.switched = cache.switched === true;
+      const cacheKeys = new Set(['basic', ...available.filter(move => move.kind === 'special').map(move => move.id)]);
+      Object.keys(cache.entries).filter(key => cacheKeys.has(key)).forEach(key => {
+        const entry = canonicalQuestion(cache.entries[key]);
+        if (entry && questionKey(entry) === key) challengeSet.entries[key] = entry;
+      });
+    }
+    question = current;
+    if (!question && challengeSet) {
+      const move = available.find(item => item.id === selectedMove);
+      const entry = move && challengeSet.entries[move.kind === 'special' ? move.id : 'basic'];
+      if (entry) question = { ...entry, ...(move.kind === 'basic' ? { techniqueId: move.id } : {}) };
+    }
+    if (question) {
+      if (!answerResolved) {
+        if (!challengeSet) newChallengeSet();
+        const key = questionKey(question), entry = challengeSet.entries[key];
+        if (!entry || entry.id !== question.id || entry.answer !== question.answer) challengeSet.entries[key] = question;
+      }
+      if (!(fight.pendingDamage > 0 && !answerResolved && available.some(move => move.id === selectedMove))) selectedMove = question.techniqueId;
+      assisted = saved.assisted === true;
+      writingIndex = writingMode() && Number.isInteger(saved.writingIndex) && saved.writingIndex >= 0 && saved.writingIndex < question.chars.length ? saved.writingIndex : 0;
+      writingDraft = canonicalDraft(saved.writingDraft);
+      if (challengeSet && (assisted || writingIndex > 0 || (writingDraft && writingDraft.strokes.length > 0))) challengeSet.locked = true;
     }
   }
   applyPreferences(); renderLobby();
