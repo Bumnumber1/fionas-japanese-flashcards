@@ -271,10 +271,17 @@
         'no-match': 'The browser could not confidently recognize that speech. Tap Speak and try once more. No health was lost.',
         'language-not-supported': 'This browser speech service does not support Japanese. Try another browser or install its Japanese speech support. No health was lost.',
         'recognition-timeout': 'The speech service did not finish. Tap Speak to retry; no health was lost.',
+        'microphone-busy': 'The previous microphone session has not finished. Tap Speak to retry, or reload the tab if it stays busy. No health was lost.',
         aborted: 'Listening was interrupted. Tap Speak when you are ready. No health was lost.',
         'invalid-question': 'This activity is not a Japanese reading question. Choose a reading fight to use the microphone.',
         'recognition-error': 'Speech recognition could not start. Check the browser microphone permission and speech settings, then retry. No health was lost.'
     };
+
+    function needsSafariCompatibility() {
+        const nav = global.navigator || {}, ua = nav.userAgent || '';
+        const ios = /iPad|iPhone|iPod/.test(ua) || (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
+        return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
+    }
 
     class DojoVoice {
         constructor(options) {
@@ -283,7 +290,11 @@
             this.onResult = typeof options.onResult === 'function' ? options.onResult : null;
             this.onError = typeof options.onError === 'function' ? options.onError : null;
             this.supported = Boolean(global.SpeechRecognition || global.webkitSpeechRecognition) && global.isSecureContext !== false;
+            this.safariMode = needsSafariCompatibility();
             this.session = null;
+            this.draining = null;
+            this.launchTimer = null;
+            this.readyAfter = 0;
             this.generation = 0;
             this.destroyed = false;
             this.pageHide = () => this.cancel();
@@ -302,7 +313,12 @@
         }
 
         emitError(code, details) {
-            if (!this.destroyed && this.onError) this.onError(Object.assign({ code, message: ERROR_MESSAGES[code] || ERROR_MESSAGES['recognition-error'] }, details));
+            let message = ERROR_MESSAGES[code] || ERROR_MESSAGES['recognition-error'];
+            if (this.safariMode && ['not-allowed', 'service-not-allowed', 'language-not-supported', 'recognition-timeout'].includes(code)) {
+                message += ' In Safari, allow this site’s microphone and enable Siri in Settings. If using a Home Screen shortcut, try the game in a normal Safari tab.';
+            }
+            if (!this.destroyed && this.onError) this.onError(Object.assign({ code, message,
+                retryable: this.safariMode && code === 'aborted', requiresGesture: code === 'microphone-busy' }, details));
         }
 
         current(session) { return !this.destroyed && this.session === session && !session.settled; }
@@ -316,6 +332,9 @@
         }
 
         prepareEndpoint(session, transcript) {
+            // WebKit finalizes a one-shot utterance itself. Cutting a short kana
+            // hypothesis off after 200ms can interrupt its native final result.
+            if (this.safariMode) return;
             const candidate = normalizeTranscript(transcript);
             if (session.stopping || session.startedAt === null || !matches(session.target, transcript)) {
                 this.clearEndpoint(session);
@@ -336,7 +355,63 @@
             for (const timer of [session.startTimer, session.recordTimer, session.processTimer, session.endpointTimer]) if (timer != null) global.clearTimeout(timer);
             for (const event of ['onstart', 'onresult', 'onerror', 'onend', 'onnomatch', 'onspeechend', 'onaudioend']) session.rec[event] = null;
             if (this.session === session) this.session = null;
-            if (abort) { try { session.rec.abort(); } catch (_) { try { session.rec.stop(); } catch (_) {} } }
+            if (this.safariMode && session.nativeRequested && !session.nativeEnded && !this.destroyed) {
+                // A final result precedes native end in WebKit. Keep the release
+                // callback even though answer callbacks are already invalidated.
+                this.draining = session;
+                session.rec.onend = () => this.releaseDrain(session);
+                this.watchDrain(session);
+                try {
+                    if (abort) session.rec.abort();
+                    else if (!session.stopping) session.rec.stop();
+                } catch (_) { /* The bounded release watchdog handles missing end. */ }
+            } else if (abort && (!this.safariMode || session.nativeRequested && !session.nativeEnded)) {
+                try { session.rec.abort(); } catch (_) { try { session.rec.stop(); } catch (_) {} }
+            }
+        }
+
+        watchDrain(session) {
+            global.clearTimeout(session.drainAbortTimer); global.clearTimeout(session.drainTimer);
+            session.drainTimedOut = false;
+            session.drainAbortTimer = global.setTimeout(() => {
+                if (this.draining === session) { try { session.rec.abort(); } catch (_) {} }
+            }, 1500);
+            session.drainTimer = global.setTimeout(() => {
+                if (this.draining !== session) return;
+                session.drainTimedOut = true;
+                // Never overlap a still-owned native mic just to hide a timeout.
+                if (this.session && !this.session.nativeRequested) this.fail(this.session, 'microphone-busy');
+            }, 4000);
+        }
+
+        releaseDrain(session) {
+            if (this.draining !== session) return;
+            session.nativeEnded = true; session.rec.onend = null;
+            global.clearTimeout(session.drainAbortTimer); global.clearTimeout(session.drainTimer);
+            this.draining = null;
+            this.readyAfter = this.now() + 120;
+            if (this.session) this.queueLaunch(this.session);
+        }
+
+        queueLaunch(session) {
+            if (!this.current(session)) return false;
+            if (this.draining) {
+                if (this.draining.drainTimedOut) this.watchDrain(this.draining);
+                return true;
+            }
+            const delay = this.safariMode ? Math.max(0, this.readyAfter - this.now()) : 0;
+            if (delay) {
+                this.launchTimer = global.setTimeout(() => { this.launchTimer = null; this.queueLaunch(session); }, delay);
+                return true;
+            }
+            session.startTimer = global.setTimeout(() => this.fail(session, 'recognition-timeout'), 15000);
+            session.nativeRequested = true;
+            try { session.rec.start(); return true; }
+            catch (error) {
+                session.nativeRequested = false;
+                this.fail(session, error && error.name === 'NotAllowedError' ? 'not-allowed' : 'recognition-error');
+                return false;
+            }
         }
 
         fail(session, code, details) {
@@ -357,7 +432,7 @@
             // Snapshot the target: mutating/navigating the controller cannot turn
             // speech from the previous activity into a new activity's answer.
             const target = Object.assign({}, question, { voiceAliases: Array.isArray(question.voiceAliases) ? question.voiceAliases.slice() : [] });
-            const session = { rec, target, generation: this.generation, settled: false, stopping: false, interim: '', startedAt: null, endedAt: null, endpointCandidate: '', endpointTimer: null };
+            const session = { rec, target, generation: this.generation, settled: false, stopping: false, nativeRequested: false, nativeEnded: false, interim: '', startedAt: null, endedAt: null, endpointCandidate: '', endpointTimer: null };
             this.session = session;
             rec.lang = 'ja-JP';
             rec.interimResults = true;
@@ -412,28 +487,28 @@
                 const finishedAt = this.now();
                 const readingMs = session.startedAt === null ? null : Math.max(1, (session.endedAt === null ? finishedAt : session.endedAt) - session.startedAt);
                 const result = { correct: matched !== undefined, transcript, alternatives, normalized: normalizeTranscript(transcript), readingMs };
-                this.dispose(session, true);
+                this.dispose(session, !this.safariMode);
                 this.emitState('idle', transcript);
                 if (!this.destroyed && this.generation === session.generation && this.onResult) this.onResult(result);
             };
             rec.onerror = event => this.fail(session, event && event.error ? event.error : 'recognition-error');
             rec.onnomatch = () => this.fail(session, 'no-match');
-            rec.onend = () => this.fail(session, session.interim ? 'no-match' : 'no-speech');
-            rec.onspeechend = () => { if (this.current(session)) this.stop(); };
-            rec.onaudioend = () => { if (this.current(session) && !session.stopping) this.stop(); };
+            rec.onend = () => {
+                session.nativeEnded = true;
+                if (this.current(session)) this.fail(session, session.interim ? 'no-match' : 'no-speech');
+            };
+            rec.onspeechend = () => { if (this.current(session)) this.finishCapture(session, !this.safariMode); };
+            rec.onaudioend = () => { if (this.current(session) && !session.stopping) this.finishCapture(session, !this.safariMode); };
             // Cancel target audio first, as in activities.js. The app must never
             // earn a hit by recognizing its own speech synthesis.
             try { if (global.speechSynthesis) global.speechSynthesis.cancel(); } catch (_) {}
             this.emitState('starting');
             if (!this.current(session)) return false;
-            session.startTimer = global.setTimeout(() => this.fail(session, 'recognition-timeout'), 15000);
-            try { rec.start(); return true; }
-            catch (error) { this.fail(session, error && error.name === 'NotAllowedError' ? 'not-allowed' : 'recognition-error'); return false; }
+            return this.queueLaunch(session);
         }
 
-        stop() {
-            const session = this.session;
-            if (!session || !this.current(session)) return false;
+        finishCapture(session, stopNative) {
+            if (!this.current(session)) return false;
             if (session.stopping) return true;
             session.stopping = true;
             session.endedAt = this.now();
@@ -442,13 +517,21 @@
             global.clearTimeout(session.recordTimer);
             this.emitState('processing', session.interim);
             if (!this.current(session)) return false;
-            session.processTimer = global.setTimeout(() => this.fail(session, session.interim ? 'no-match' : 'no-speech'), 3000);
-            try { session.rec.stop(); } catch (_) { this.fail(session, 'recognition-error'); }
+            session.processTimer = global.setTimeout(() => this.fail(session, session.interim ? 'no-match' : 'no-speech'), this.safariMode ? 8000 : 3000);
+            if (stopNative) { try { session.rec.stop(); } catch (_) { this.fail(session, 'recognition-error'); } }
             return true;
+        }
+
+        stop() {
+            const session = this.session;
+            if (!session || !this.current(session)) return false;
+            if (!session.nativeRequested) { this.cancel(); return true; }
+            return this.finishCapture(session, true);
         }
 
         cancel() {
             this.generation++;
+            global.clearTimeout(this.launchTimer); this.launchTimer = null;
             const session = this.session;
             if (session) this.dispose(session, true);
             this.emitState('idle');
@@ -458,7 +541,15 @@
             if (this.destroyed) return;
             this.destroyed = true;
             this.generation++;
+            global.clearTimeout(this.launchTimer); this.launchTimer = null;
             if (this.session) this.dispose(this.session, true);
+            if (this.draining) {
+                const session = this.draining;
+                global.clearTimeout(session.drainAbortTimer); global.clearTimeout(session.drainTimer);
+                session.rec.onend = null;
+                try { session.rec.abort(); } catch (_) {}
+                this.draining = null;
+            }
             if (global.removeEventListener) global.removeEventListener('pagehide', this.pageHide);
             if (global.document && global.document.removeEventListener) global.document.removeEventListener('visibilitychange', this.visibilityChange);
             this.onState = this.onResult = this.onError = null;

@@ -23,12 +23,19 @@ function environment(options = {}) {
     const instances = [];
     class Recognition {
         constructor() { instances.push(this); this.starts = this.stops = this.aborts = 0; }
-        start() { this.starts++; if (options.startError) throw options.startError; }
+        start() {
+            this.starts++;
+            if (options.startError) throw options.startError;
+            if (options.exclusiveNative && instances.some(rec => rec !== this && rec.nativeActive)) throw Error('Native recognition overlap');
+            this.nativeActive = true;
+        }
         stop() { this.stops++; }
         abort() { this.aborts++; }
+        end() { this.nativeActive = false; if (this.onend) this.onend(); }
     }
     const sandbox = {
         console,
+        navigator: { ...(options.navigator || {}) },
         performance: { now: () => now },
         isSecureContext: options.secure !== false,
         setTimeout(callback, delay) { const id = nextTimer++; timers.set(id, { at: now + delay, callback }); return id; },
@@ -565,6 +572,170 @@ test('A stable provisional answer without a final remains ungraded and retryable
     rec.onresult(event(['し'], false)); env.tick(3200);
     assert.equal(rec.stops, 1); assert.equal(env.results.length, 0);
     assert.equal(env.errors[0].code, 'no-match'); assert.equal(env.timers.size, 0); env.voice.destroy();
+});
+
+const safariNavigator = {
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+    vendor: 'Apple Computer, Inc.', platform: 'MacIntel', maxTouchPoints: 0
+};
+const safariEnvironment = options => environment({ navigator: safariNavigator, exclusiveNative: true, ...(options || {}) });
+
+test('Safari lifecycle policy detects desktop iPad and iOS WebKit without changing desktop Chrome', () => {
+    for (const navigator of [
+        safariNavigator,
+        { ...safariNavigator, maxTouchPoints: 5 },
+        { ...safariNavigator, platform: 'iPad', maxTouchPoints: 5, userAgent: 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' },
+        { ...safariNavigator, platform: 'iPhone', maxTouchPoints: 5, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1' },
+        { ...safariNavigator, platform: 'iPhone', maxTouchPoints: 5, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/130.0 Mobile/15E148 Safari/605.1.15' }
+    ]) {
+        const env = environment({ navigator });
+        assert.equal(env.voice.safariMode, true, navigator.userAgent);
+        assert.equal(env.voice.start(kanaQuestion), true);
+        assert.equal(env.instances[0].lang, 'ja-JP');
+        assert.equal(env.instances[0].continuous, false);
+        assert.equal(env.instances[0].interimResults, true);
+        assert.equal(env.instances[0].maxAlternatives, 10);
+        env.voice.destroy();
+    }
+    for (const userAgent of [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:130.0) Gecko/20100101 Firefox/130.0'
+    ]) {
+        const env = environment({ navigator: { ...safariNavigator, userAgent } });
+        assert.equal(env.voice.safariMode, false, userAgent);
+        env.voice.destroy();
+    }
+});
+
+test('Safari keeps native endpointing and waits beyond three seconds for its final', () => {
+    const env = safariEnvironment(); env.voice.start(wordQuestion);
+    const rec = env.instances[0]; rec.onstart(); env.tick(100);
+    rec.onresult(event(['猫'], false)); env.tick(500);
+    assert.equal(rec.stops, 0, 'Safari must not receive the Chromium 200ms forced stop');
+    rec.onspeechend(); rec.onaudioend(); env.tick(3500);
+    assert.equal(rec.stops, 0, 'Native speech/audio ending must not redundantly stop Safari');
+    assert.equal(env.errors.length, 0); assert.equal(env.results.length, 0);
+    rec.onresult(event(['猫']));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
+    assert.equal(rec.aborts, 0, 'A final must not abort the native Safari recognizer');
+    rec.end(); env.voice.destroy();
+});
+
+test('Safari manual finish allows a late final while preserving actual capture time', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const rec = env.instances[0]; rec.onstart(); env.tick(180);
+    assert.equal(env.voice.stop(), true); assert.equal(rec.stops, 1);
+    env.tick(5000); assert.equal(env.errors.length, 0);
+    rec.onresult(event(['し']));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
+    assert.equal(env.results[0].readingMs, 180);
+    rec.end(); env.voice.destroy();
+});
+
+test('Safari serializes a reentrant next answer until native end and its release delay', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const first = env.instances[0], staleFinal = first.onresult;
+    first.onstart();
+    const resultCallback = env.voice.onResult;
+    env.voice.onResult = result => { resultCallback(result); env.voice.start(wordQuestion); };
+    first.onresult(event(['し']));
+    assert.equal(env.results.length, 1); assert.equal(env.instances.length, 2);
+    const next = env.instances[1]; assert.equal(next.starts, 0);
+    assert.equal(first.aborts, 0); env.tick(500); assert.equal(next.starts, 0);
+    first.end(); env.tick(119); assert.equal(next.starts, 0);
+    env.tick(1); assert.equal(next.starts, 1);
+    assert.equal(env.errors.length, 0, 'Native exclusive mock would reject overlapping start');
+    staleFinal(event(['し'])); assert.equal(env.results.length, 1);
+    env.voice.onResult = resultCallback;
+    next.onstart(); next.onresult(event(['猫']));
+    assert.equal(env.results.length, 2); assert.equal(env.results[1].correct, true);
+    next.end(); env.voice.destroy();
+});
+
+test('Safari cancellation discards a queued restart and all stale finals', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const first = env.instances[0], staleFinal = first.onresult;
+    first.onstart(); first.onresult(event(['し']));
+    env.voice.start(wordQuestion); env.voice.cancel();
+    first.end(); env.tick(10000); staleFinal(event(['猫']));
+    assert.equal(env.instances.length, 2); assert.equal(env.instances[1].starts, 0); assert.equal(env.results.length, 1);
+    assert.equal(env.errors.length, 0); assert.equal(env.timers.size, 0);
+    env.voice.destroy();
+});
+
+test('Safari pending targets are snapshotted before native release', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const first = env.instances[0]; first.onresult(event(['し']));
+    const question = { ...wordQuestion, voiceAliases: ['猫'] };
+    env.voice.start(question); question.expectedKana = 'いぬ'; question.voiceAliases[0] = '犬';
+    first.end(); env.tick(120);
+    const next = env.instances[1]; assert.ok(next);
+    next.onstart(); next.onresult(event(['猫']));
+    assert.equal(env.results.length, 2); assert.equal(env.results[1].correct, true);
+    next.end(); env.voice.destroy();
+});
+
+test('Safari aborted errors are recoverable but permission or service failures are not', () => {
+    for (const code of ['aborted', 'not-allowed', 'network', 'audio-capture', 'language-not-supported']) {
+        const env = safariEnvironment(); env.voice.start(kanaQuestion);
+        const rec = env.instances[0]; rec.onstart(); rec.onerror({ error: code });
+        assert.equal(env.results.length, 0); assert.equal(env.errors.length, 1);
+        assert.equal(Boolean(env.errors[0].retryable), code === 'aborted', code);
+        rec.end(); env.voice.destroy();
+    }
+});
+
+test('Safari missing native end fails safely rather than overlapping microphones', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const rec = env.instances[0]; rec.onstart(); rec.onresult(event(['し']));
+    env.voice.start(wordQuestion);
+    env.tick(1499); assert.equal(rec.aborts, 0); assert.equal(env.instances[1].starts, 0);
+    env.tick(1); assert.equal(rec.aborts, 1, 'Escalate a missing native end once');
+    env.tick(2500); assert.equal(env.instances[1].starts, 0);
+    assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'microphone-busy');
+    assert.equal(env.errors[0].requiresGesture, true);
+    assert.equal(env.results.length, 1); env.tick(15000);
+    assert.equal(env.instances[1].starts, 0); assert.equal(env.errors.length, 1);
+    rec.end(); env.voice.destroy();
+});
+
+test('Safari final waiting is bounded at eight seconds without grading provisional speech', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const rec = env.instances[0]; rec.onstart(); rec.onresult(event(['し'], false)); rec.onspeechend();
+    env.tick(7999); assert.equal(env.errors.length, 0); assert.equal(env.results.length, 0);
+    env.tick(1); assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'no-match');
+    assert.equal(env.results.length, 0); assert.equal(rec.aborts, 1);
+    rec.end(); env.voice.destroy(); assert.equal(env.timers.size, 0);
+});
+
+test('Safari navigation and destroy invalidate a pending native restart and clear timers', () => {
+    for (const kind of ['pagehide', 'hidden', 'destroy']) {
+        const env = safariEnvironment(); env.voice.start(kanaQuestion);
+        const rec = env.instances[0], staleFinal = rec.onresult; rec.onstart(); rec.onresult(event(['し']));
+        env.voice.start(wordQuestion); const pending = env.instances[1];
+        assert.equal(pending.starts, 0);
+        if (kind === 'pagehide') env.events.get('pagehide')();
+        if (kind === 'hidden') { env.sandbox.document.hidden = true; env.documentEvents.get('visibilitychange')(); }
+        if (kind === 'destroy') env.voice.destroy();
+        rec.end(); env.tick(20000); staleFinal(event(['猫']));
+        assert.equal(pending.starts, 0, kind); assert.equal(env.results.length, 1, kind);
+        assert.equal(env.errors.length, 0, kind); assert.equal(env.timers.size, 0, kind);
+        env.voice.destroy(); assert.equal(env.timers.size, 0, kind);
+    }
+});
+
+test('Replacing a Safari queued prompt launches only the latest target after native release', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion);
+    const first = env.instances[0]; first.onresult(event(['し']));
+    env.voice.start(wordQuestion); const discarded = env.instances[1];
+    env.voice.start({ mode: 'kana-read', prompt: 'カ', reading: 'ka' }); const latest = env.instances[2];
+    assert.equal(discarded.starts, 0); assert.equal(discarded.aborts, 0); assert.equal(latest.starts, 0);
+    first.end(); env.tick(120); assert.equal(discarded.starts, 0); assert.equal(latest.starts, 1);
+    latest.onstart(); latest.onresult(event(['蚊']));
+    assert.equal(env.results.length, 2); assert.equal(env.results[1].correct, true);
+    assert.equal(env.errors.length, 0); latest.end(); env.voice.destroy(); assert.equal(env.timers.size, 0);
 });
 
 console.log('\n' + passed + ' voice tests passed. Live Japanese microphone recognition still requires a supported browser, permission, and its speech service.');

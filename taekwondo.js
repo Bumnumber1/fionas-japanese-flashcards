@@ -46,7 +46,7 @@
   let handsFree = false;
   let autoListenTimer, autoAdvanceTimer, speedNoticeTimer;
   let flurryTimes = [], flurryNoticeTimer;
-  let readingStartedAt = 0, readingSpeedEligible = false, quietRetries = 0;
+  let readingStartedAt = 0, readingSpeedEligible = false, quietRetries = 0, transientRetries = 0;
   let calloutTimer;
   let soundEnabled = saved && saved.soundEnabled === true;
   const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -387,12 +387,12 @@
     $('handsfree-toggle').setAttribute('aria-pressed', String(handsFree));
     $('handsfree-toggle').textContent = handsFree ? '■ Stop hands-free' : '● Start hands-free';
     $('handsfree-toggle').disabled = !handsFree && (!voice || !voice.supported || !fight || fight.status !== 'fighting');
-    $('handsfree-status').textContent = note || (handsFree ? voiceStatus === 'starting' ? 'Opening Japanese microphone · wait for Listening before speaking.' : voiceStatus === 'processing' ? 'Checking your Japanese · the next prompt is coming.' : listening ? 'Japanese mic ready · say the current answer. Stop to change technique.' : 'Hands-free ready · the next reading starts automatically.' : 'Start once, then speak each new prompt. Fast clean answers earn +3 or +6 damage.');
+    $('handsfree-status').textContent = note || (handsFree ? voiceStatus === 'starting' ? voice && voice.safariMode ? 'Opening Safari’s Japanese microphone · wait for Listening before speaking.' : 'Opening Japanese microphone · wait for Listening before speaking.' : voiceStatus === 'processing' ? 'Checking your Japanese · the next prompt is coming.' : listening ? 'Japanese mic ready · say the current answer. Stop to change technique.' : 'Hands-free ready · the next reading starts automatically.' : 'Start once, then speak each new prompt. Fast clean answers earn +3 or +6 damage.');
     document.querySelector('.arena').classList.toggle('handsfree-active', handsFree);
   }
   function stopHandsFree(note) {
     resetFlurry();
-    handsFree = false; quietRetries = 0;
+    handsFree = false; quietRetries = 0; transientRetries = 0;
     cancelVoice();
     if (phase === 'question') { lockInputs(false); renderMoves(); }
     updateHandsFree(note);
@@ -401,7 +401,7 @@
     if (!readingReady() || !voice || !voice.supported) return;
     $('voice-transcript').hidden = true;
     readingStartedAt = 0;
-    readingSpeedEligible = automatic && quietRetries === 0 && !(challengeSet && challengeSet.switched);
+    readingSpeedEligible = automatic && quietRetries === 0 && transientRetries === 0 && !(challengeSet && challengeSet.switched);
     const voiceAliases = question.mode === 'word-read' ? material.kanji.filter(form => form.read === question.prompt).map(form => form.char) : [];
     if (voice.start({ ...question, expectedKana: question.prompt, voiceAliases })) updateHandsFree();
   }
@@ -473,7 +473,7 @@
     $('listen-button').textContent = defense ? '● Speak to block' : '● Speak to strike';
     $('check-writing').textContent = defense ? 'Check & block' : 'Check & strike';
     $('voice-transcript').hidden = true;
-    $('voice-status').textContent = voice && voice.supported ? 'Tap the microphone, then read aloud in Japanese.' : 'Speech recognition is unavailable here. Open the game in a browser with Japanese speech recognition and microphone access.';
+    $('voice-status').textContent = voice && voice.supported ? voice.safariMode ? 'Safari · tap the microphone and wait for Listening · Japanese (日本語).' : 'Tap the microphone, then read aloud in Japanese.' : 'Speech recognition is unavailable here. Open the game in a browser with Japanese speech recognition and microphone access.';
     const glyph = $('question-glyph'); glyph.className = 'question-glyph'; glyph.textContent = question.prompt;
     $('word-progress').hidden = !writingMode() || question.chars.length <= 1;
     if (question.mode === 'kana-read') {
@@ -553,7 +553,7 @@
     sound(knockdown ? 'knockdown' : correct ? outcome.combo ? 'combo' : 'hit' : 'wrong');
     save();
     if (!handsFree) $('next-button').focus({ preventScroll: true });
-    quietRetries = 0;
+    quietRetries = 0; transientRetries = 0;
     if (handsFree && fight.status === 'fighting') advanceHandsFree(correct ? outcome.speedBonus ? 220 : 300 : 1600);
     else if (handsFree) stopHandsFree('Match complete · microphone off. Your progress is saved.');
   }
@@ -665,7 +665,7 @@
         $('stop-listening').hidden = !listening;
         $('stop-listening').textContent = state.status === 'starting' ? 'Cancel microphone' : 'Finish speaking';
         if (phase === 'question') {
-          $('voice-status').textContent = state.status === 'starting' ? 'Starting Japanese microphone… wait for Listening.' : state.status === 'listening' ? 'Listening · Japanese (日本語). Say it now.' : state.status === 'processing' ? 'Checking what you said…' : 'Tap the microphone to try again.';
+          $('voice-status').textContent = state.status === 'starting' ? voice && voice.safariMode ? 'Starting Safari’s Japanese microphone… wait for Listening.' : 'Starting Japanese microphone… wait for Listening.' : state.status === 'listening' ? 'Listening · Japanese (日本語). Say it now.' : state.status === 'processing' ? 'Checking what you said…' : 'Tap the microphone to try again.';
           if (state.transcript) { $('voice-transcript').textContent = 'Hearing: ' + state.transcript; $('voice-transcript').hidden = false; }
           lockInputs(false);
           renderMoves();
@@ -686,12 +686,16 @@
         if (error.transcript) { $('voice-transcript').textContent = 'Heard: ' + error.transcript + ' · unclear; try again'; $('voice-transcript').hidden = false; }
         readingSpeedEligible = false;
         let recoveryNote = '';
-        if (handsFree && ['no-speech', 'no-match'].includes(error.code) && quietRetries < 2 && readingReady()) {
+        if (handsFree && error.retryable === true && !error.requiresGesture && transientRetries < 1 && readingReady()) {
+          transientRetries++;
+          recoveryNote = 'Microphone interrupted · reconnecting once. Your question and energy are unchanged.';
+          queueHandsFree(850);
+        } else if (handsFree && ['no-speech', 'no-match'].includes(error.code) && !error.requiresGesture && quietRetries < 2 && readingReady()) {
           quietRetries++;
           recoveryNote = `No clear speech · listening again (${quietRetries}/2). Your energy is unchanged.`;
           queueHandsFree(850);
         } else if (handsFree) {
-          recoveryNote = error.code === 'no-speech' || error.code === 'no-match' ? 'Mic paused after silence · Start hands-free when you are ready. No energy lost.' : 'Hands-free stopped · check the speech service or microphone, then start again. No energy lost.';
+          recoveryNote = error.requiresGesture ? 'Microphone needs a tap · press Start hands-free to reconnect. No energy lost.' : error.code === 'no-speech' || error.code === 'no-match' ? 'Mic paused after silence · Start hands-free when you are ready. No energy lost.' : 'Hands-free stopped · check the speech service or microphone, then start again. No energy lost.';
           stopHandsFree();
         }
         if (phase === 'question') { lockInputs(false); renderMoves(); }
@@ -751,12 +755,21 @@
   $('handsfree-toggle').addEventListener('click', () => {
     if (handsFree) { stopHandsFree('Hands-free off · microphone stopped. Choose a technique or speak one answer at a time.'); return; }
     if (!voice || !voice.supported || !fight || fight.status !== 'fighting' || writingMode()) return;
-    handsFree = true; quietRetries = 0;
+    handsFree = true; quietRetries = 0; transientRetries = 0;
     updateHandsFree();
-    if (phase === 'answered') advanceHandsFree(100);
-    else startReading(true);
+    // Keep the explicit microphone start inside this tap, including a restart
+    // from feedback. Timed activation can be rejected by Safari's service.
+    if (phase === 'answered') nextQuestion();
+    clearTimeout(autoListenTimer); clearTimeout(autoAdvanceTimer);
+    startReading(true);
   });
-  $('stop-listening').addEventListener('click', () => { if (voice) { if (voiceStatus === 'starting') voice.cancel(); else voice.stop(); } });
+  $('stop-listening').addEventListener('click', () => {
+    if (!voice) return;
+    if (voiceStatus === 'starting') {
+      if (handsFree) stopHandsFree('Microphone cancelled · tap Start hands-free when you are ready.');
+      else voice.cancel();
+    } else voice.stop();
+  });
   $('start-button').addEventListener('click', beginFight);
   $('next-button').addEventListener('click', () => { if (phase !== 'answered') return; if (fight.status === 'fighting') nextQuestion(); else finishFight(); });
   $('check-writing').addEventListener('click', checkWriting);
