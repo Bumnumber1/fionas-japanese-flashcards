@@ -39,6 +39,9 @@
     // fifteen nature forms agree with garden-material.js; animal/body/place
     // forms also occur in kanjiride.html, and 本/猫/学校 in voicepractice.html.
     // An alias applies ONLY to its complete expected word, never to substrings.
+    // Speech has no spelling: a recognizer may write the correct sound with a
+    // different meaning (e.g. 海苔 for のり or 講演 for こうえん). Those explicit
+    // homophones are valid reading evidence; unrelated words remain incorrect.
     const WORD_FORMS = {
         'たなばた': ['七夕'], 'ほし': ['星'], 'ねがいごと': ['願い事', '願いごと'],
         'たんざく': ['短冊'], 'ささ': ['笹'], 'おりひめ': ['織姫'], 'ひこぼし': ['彦星'],
@@ -74,18 +77,91 @@
         'がっこう': ['学校'], 'いぬ': ['犬']
     };
 
+    // Recognition spelling alternatives are speech-only. These must never be
+    // used to create a writing target with a different meaning.
+    const SPEECH_WORD_FORMS = {
+        "ほし": ["干し"],
+        "ぞう": ["像","増"],
+        "さる": ["去る"],
+        "とら": ["寅"],
+        "くま": ["隈"],
+        "ひつじ": ["未"],
+        "はさみ": ["挟み"],
+        "のり": ["海苔","乗り"],
+        "じょうぎ": ["定木"],
+        "もも": ["腿"],
+        "ぶどう": ["武道"],
+        "なし": ["無し"],
+        "みかん": ["未完"],
+        "かき": ["牡蠣","下記","夏季","書き","火器","花器","垣"],
+        "にんじん": ["人蔘"],
+        "なす": ["成す","為す"],
+        "ほうれんそう": ["法蓮草","菠薐草","報連相"],
+        "こうえん": ["公演","講演","後援"],
+        "なわとび": ["縄とび"],
+        "にじ": ["二時","2時","二次","2次"],
+        "くらい": ["位"],
+        "でんき": ["電機"],
+        "ふとん": ["蒲団"],
+        "ぬいぐるみ": ["縫い包み"],
+        "おつきみ": ["御月見"],
+        "つき": ["付き","突き"],
+        "よる": ["寄る","依る"],
+        "すすき": ["薄"],
+        "ほしぞら": ["星ぞら"],
+        "かわ": ["河","皮","革"],
+        "もり": ["盛り","銛"],
+        "いけ": ["行け"],
+        "いし": ["医師","意思","意志","遺志"],
+        "き": ["気","機","期","記","基","季","器"],
+        "うみ": ["産み","生み","膿"],
+        "さかな": ["肴"],
+        "いか": ["以下","医科"],
+        "かめ": ["甕"],
+        "さめ": ["冷め","醒め"],
+        "これ": ["此れ"],
+        "きょう": ["京","教"],
+        "わたし": ["渡し"],
+        "それ": ["其れ"],
+        "この": ["此の"],
+        "その": ["其の"],
+        "のみます": ["呑みます"],
+        "みます": ["診ます"],
+        "よみます": ["詠みます"],
+        "かいます": ["飼います"],
+        "すき": ["隙","鋤"],
+        "けーき": ["景気","契機","けいき"],
+        "いちご": ["一期","一語"],
+        "きます": ["着ます"],
+        "はい": ["肺","灰","杯"],
+        "あかい": ["紅い"],
+        "きれい": ["奇麗"],
+        "はな": ["鼻"],
+        "みどり": ["翠"],
+        "せんせい": ["宣誓","先制","専制"],
+        "おもい": ["思い","想い"],
+        "どこ": ["何処"],
+        "ここ": ["此処","個々"],
+        "そこ": ["其処","底"],
+        "あそこ": ["彼処"]
+    };
+
     // A recognizer can choose a short kanji homophone for an isolated syllable.
     // These explicit whole-result aliases never rewrite arbitrary Japanese text.
     const KANA_FORMS = {
-        'い': ['胃'], 'う': ['鵜'], 'え': ['絵'], 'お': ['尾'], 'か': ['蚊', '課', '科', '火'],
-        'き': ['木', '気'], 'く': ['区', '句'], 'け': ['毛'], 'こ': ['子', '個'],
-        'さ': ['差'], 'し': ['詩', '市', '氏', '四'], 'す': ['酢', '巣'], 'せ': ['背'],
-        'た': ['田', '多', '他'], 'ち': ['地', '血'], 'つ': ['津'], 'て': ['手'], 'と': ['戸', '都'],
-        'な': ['名', '菜'], 'に': ['二', '荷'], 'ね': ['根'], 'の': ['野'], 'は': ['葉', '歯'],
-        'ひ': ['日', '火'], 'ふ': ['府', '負'], 'ほ': ['穂'], 'ま': ['間', '真'], 'み': ['実', '身'],
-        'む': ['無'], 'め': ['目', '芽'], 'や': ['矢'], 'ゆ': ['湯'], 'よ': ['世', '夜'],
-        'り': ['理', '利'], 'ろ': ['炉'], 'わ': ['輪', '和'], 'を': ['お', '尾']
+        'あ': ['亜', '阿'], 'い': ['胃', '井', '位', '意', '医', '衣'], 'う': ['鵜', '卯', '宇'],
+        'え': ['絵', '柄', '江'], 'お': ['尾', '緒'], 'か': ['蚊', '課', '科', '火', '可', '化', '加', '下', '歌'],
+        'き': ['木', '気', '機', '期', '記', '基', '季', '器'], 'く': ['区', '句', '苦', '九', '9'], 'け': ['毛'], 'こ': ['子', '個', '古', '庫', '湖'],
+        'さ': ['差', '左', '佐', '査'], 'し': ['詩', '市', '氏', '四', '4', '死', '師', '士', '史', '紙', '志', '私'],
+        'す': ['酢', '巣', '素', '須'], 'せ': ['背', '瀬'], 'そ': ['祖', '粗', '蘇'],
+        'た': ['田', '多', '他', '太'], 'ち': ['地', '血', '知', '智', '値'], 'つ': ['津'], 'て': ['手'], 'と': ['戸', '都', '斗', '途'],
+        'な': ['名', '菜', '那'], 'に': ['二', '2', '荷', '煮', '似'], 'ね': ['根', '音', '値'], 'の': ['野', '乃'], 'は': ['葉', '歯', '刃', '派', '波'],
+        'ひ': ['日', '火', '非', '比', '費', '碑', '陽'], 'ふ': ['府', '負', '不', '譜', '符', '布'], 'へ': ['屁'],
+        'ほ': ['穂', '歩', '帆', '保', '補'], 'ま': ['間', '真', '魔', '麻'], 'み': ['実', '身', '美', '味'],
+        'む': ['無'], 'め': ['目', '芽'], 'も': ['喪', '藻'], 'や': ['矢', '夜', '屋'], 'ゆ': ['湯'], 'よ': ['世', '夜', '余', '与', '予'],
+        'ら': ['羅'], 'り': ['理', '利', '里', '李'], 'ろ': ['炉', '路', '呂'], 'わ': ['輪', '和', '話'], 'を': ['お', '尾', '緒']
     };
+    const SMALL_SPOKEN_KANA = { 'あ': 'ぁ', 'い': 'ぃ', 'う': 'ぅ', 'え': 'ぇ', 'お': 'ぉ', 'や': 'ゃ', 'ゆ': 'ゅ', 'よ': 'ょ', 'わ': 'ゎ' };
 
     function normalizeTranscript(value) {
         return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
@@ -125,6 +201,16 @@
         return roman.replace(/ou|oo/g, 'ō').replace(/uu/g, 'ū').replace(/aa/g, 'ā').replace(/ii/g, 'ī').replace(/ee/g, 'ē');
     }
 
+    function spellingsFor(question) {
+        if (!question || !['kana-read', 'word-read'].includes(question.mode)) return [];
+        const expected = question.mode === 'kana-read' ? question.prompt : (question.expectedKana || question.promptJapanese || question.prompt);
+        const normalized = normalizeTranscript(expected);
+        if (!normalized) return [];
+        // Curriculum writing targets must retain their actual meaning. A speech
+        // homophone or a syllable pronunciation is never a writing spelling.
+        return [...new Set([normalized, ...(WORD_FORMS[normalized] || [])].map(normalizeTranscript))];
+    }
+
     function aliasesFor(question) {
         if (!question || !['kana-read', 'word-read'].includes(question.mode)) return [];
         const expected = question.mode === 'kana-read' ? question.prompt : (question.expectedKana || question.promptJapanese || question.prompt);
@@ -147,6 +233,21 @@
         const isolatedKana = question.mode === 'kana-read' && [...normalized].length === 1;
         const forms = isolatedKana ? KANA_FORMS[normalized] : WORD_FORMS[normalized];
         if (forms) forms.forEach(add);
+        if (!isolatedKana && SPEECH_WORD_FORMS[normalized]) SPEECH_WORD_FORMS[normalized].forEach(add);
+        if (isolatedKana && question.difficulty !== 'special') {
+            // An isolated sound is often held naturally: "カー" / "かあ".
+            // Permit just one extra matching vowel or long mark. Never apply
+            // this tolerance to words, where vowel length changes the answer.
+            const syllable = normalized === 'を' ? 'お' : normalized;
+            const kanaReading = (KANA.find(([kana]) => kana === syllable) || [])[1];
+            const vowel = kanaReading && /[aeiou]$/.test(kanaReading) ? kanaReading.slice(-1) : '';
+            const vowelKana = vowel ? ROMAJI[vowel] : '';
+            if (kanaReading) {
+                add(syllable + 'ー');
+                if (vowelKana) add(syllable + vowelKana);
+            }
+            if (SMALL_SPOKEN_KANA[syllable]) add(SMALL_SPOKEN_KANA[syllable]);
+        }
         if (question.mode === 'kana-read' && normalized === 'を') add('o');
         if (question.mode === 'kana-read' && normalized === 'ん') { add('nn'); add("n'"); }
         if (Array.isArray(question.voiceAliases)) question.voiceAliases.filter(value => typeof value === 'string').forEach(add);
@@ -192,6 +293,7 @@
         }
 
         static normalizeTranscript(value) { return normalizeTranscript(value); }
+        static spellingsFor(question) { return spellingsFor(question); }
         static aliasesFor(question) { return aliasesFor(question); }
         static matches(question, transcript) { return matches(question, transcript); }
 
@@ -199,25 +301,49 @@
             if (!this.destroyed && this.onState) this.onState(transcript === undefined ? { status } : { status, transcript });
         }
 
-        emitError(code) {
-            if (!this.destroyed && this.onError) this.onError({ code, message: ERROR_MESSAGES[code] || ERROR_MESSAGES['recognition-error'] });
+        emitError(code, details) {
+            if (!this.destroyed && this.onError) this.onError(Object.assign({ code, message: ERROR_MESSAGES[code] || ERROR_MESSAGES['recognition-error'] }, details));
         }
 
         current(session) { return !this.destroyed && this.session === session && !session.settled; }
 
+        now() { return global.performance && typeof global.performance.now === 'function' ? global.performance.now() : Date.now(); }
+
+        clearEndpoint(session) {
+            global.clearTimeout(session.endpointTimer);
+            session.endpointTimer = null;
+            session.endpointCandidate = '';
+        }
+
+        prepareEndpoint(session, transcript) {
+            const candidate = normalizeTranscript(transcript);
+            if (session.stopping || session.startedAt === null || !matches(session.target, transcript)) {
+                this.clearEndpoint(session);
+                return;
+            }
+            if (session.endpointCandidate === candidate) return;
+            this.clearEndpoint(session);
+            session.endpointCandidate = candidate;
+            // A stable complete hypothesis can ask the service to finish sooner.
+            // It cannot score: only the service's final result below can do that.
+            session.endpointTimer = global.setTimeout(() => {
+                if (this.current(session) && session.endpointCandidate === candidate && normalizeTranscript(session.interim) === candidate) this.stop();
+            }, 200);
+        }
+
         dispose(session, abort) {
             session.settled = true;
-            for (const timer of [session.startTimer, session.recordTimer, session.processTimer]) if (timer != null) global.clearTimeout(timer);
+            for (const timer of [session.startTimer, session.recordTimer, session.processTimer, session.endpointTimer]) if (timer != null) global.clearTimeout(timer);
             for (const event of ['onstart', 'onresult', 'onerror', 'onend', 'onnomatch', 'onspeechend', 'onaudioend']) session.rec[event] = null;
             if (this.session === session) this.session = null;
             if (abort) { try { session.rec.abort(); } catch (_) { try { session.rec.stop(); } catch (_) {} } }
         }
 
-        fail(session, code) {
+        fail(session, code, details) {
             if (!this.current(session)) return;
             this.dispose(session, true);
             this.emitState('idle');
-            if (this.generation === session.generation) this.emitError(code);
+            if (this.generation === session.generation) this.emitError(code, details);
         }
 
         start(question) {
@@ -231,14 +357,15 @@
             // Snapshot the target: mutating/navigating the controller cannot turn
             // speech from the previous activity into a new activity's answer.
             const target = Object.assign({}, question, { voiceAliases: Array.isArray(question.voiceAliases) ? question.voiceAliases.slice() : [] });
-            const session = { rec, target, generation: this.generation, settled: false, stopping: false, interim: '' };
+            const session = { rec, target, generation: this.generation, settled: false, stopping: false, interim: '', startedAt: null, endedAt: null, endpointCandidate: '', endpointTimer: null };
             this.session = session;
             rec.lang = 'ja-JP';
             rec.interimResults = true;
             rec.continuous = false;
-            rec.maxAlternatives = 5;
+            rec.maxAlternatives = 10;
             rec.onstart = () => {
-                if (!this.current(session)) return;
+                if (!this.current(session) || session.stopping) return;
+                if (session.startedAt === null) session.startedAt = this.now();
                 global.clearTimeout(session.startTimer);
                 global.clearTimeout(session.recordTimer);
                 session.recordTimer = global.setTimeout(() => { if (this.current(session)) this.stop(); }, 10000);
@@ -247,44 +374,57 @@
             rec.onresult = event => {
                 if (!this.current(session)) return;
                 const groups = [];
-                const interim = [];
+                const completeHypothesis = [];
+                let unfinished = false;
                 for (let index = 0; index < event.results.length; index++) {
                     const result = event.results[index];
                     if (!result || !result.length) continue;
-                    if (!result.isFinal) { if (result[0] && result[0].transcript) interim.push(result[0].transcript); continue; }
+                    if (result[0] && typeof result[0].transcript === 'string') completeHypothesis.push(result[0].transcript);
+                    if (!result.isFinal) { unfinished = true; continue; }
                     const alternatives = [];
-                    for (let alternative = 0; alternative < Math.min(5, result.length); alternative++) {
+                    for (let alternative = 0; alternative < Math.min(10, result.length); alternative++) {
                         if (result[alternative] && typeof result[alternative].transcript === 'string') alternatives.push(result[alternative].transcript.trim());
                     }
                     if (alternatives.length) groups.push(alternatives);
                 }
-                if (!groups.length) {
-                    session.interim = interim.join(' ').trim();
-                    this.emitState(session.stopping ? 'processing' : 'listening', session.interim);
+                if (unfinished || !groups.length) {
+                    session.interim = completeHypothesis.join(' ').trim();
+                    this.prepareEndpoint(session, session.interim);
+                    this.emitState(session.stopping ? 'processing' : session.startedAt === null ? 'starting' : 'listening', session.interim);
                     return;
                 }
+                this.clearEndpoint(session);
                 // Non-continuous recognition normally has one final group. If a
                 // vendor emits several, grade complete joined hypotheses only.
                 let alternatives = [''];
-                for (const group of groups) alternatives = alternatives.flatMap(prefix => group.map(text => (prefix + ' ' + text).trim())).slice(0, 25);
+                for (const group of groups) alternatives = alternatives.flatMap(prefix => group.map(text => (prefix + ' ' + text).trim())).slice(0, 100);
                 alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
                 if (!alternatives.length) { this.fail(session, 'no-speech'); return; }
                 const matched = alternatives.find(transcript => matches(target, transcript));
+                // Isolated sounds are often converted into a number by dictation
+                // (for example, spoken sa becoming "3"). That is inconclusive,
+                // never evidence for a hit or a mistake. Keep the same challenge.
+                const isolatedKana = target.mode === 'kana-read' && /^[ぁ-ゖ]$/u.test(normalizeTranscript(target.prompt));
+                if (matched === undefined && isolatedKana && alternatives.some(text => /^[0-9〇零一二三四五六七八九十百千万億兆点]+$/u.test(normalizeTranscript(text)))) {
+                    this.fail(session, 'no-match', { transcript: alternatives[0], message: `The recognizer returned a number instead of a clear kana sound: “${alternatives[0]}”. Say just the sound again. No energy was lost.` }); return;
+                }
                 const transcript = matched === undefined ? alternatives[0] : matched;
-                const result = { correct: matched !== undefined, transcript, alternatives, normalized: normalizeTranscript(transcript) };
+                const finishedAt = this.now();
+                const readingMs = session.startedAt === null ? null : Math.max(1, (session.endedAt === null ? finishedAt : session.endedAt) - session.startedAt);
+                const result = { correct: matched !== undefined, transcript, alternatives, normalized: normalizeTranscript(transcript), readingMs };
                 this.dispose(session, true);
                 this.emitState('idle', transcript);
                 if (!this.destroyed && this.generation === session.generation && this.onResult) this.onResult(result);
             };
             rec.onerror = event => this.fail(session, event && event.error ? event.error : 'recognition-error');
             rec.onnomatch = () => this.fail(session, 'no-match');
-            rec.onend = () => this.fail(session, session.interim ? 'recognition-timeout' : 'no-speech');
+            rec.onend = () => this.fail(session, session.interim ? 'no-match' : 'no-speech');
             rec.onspeechend = () => { if (this.current(session)) this.stop(); };
             rec.onaudioend = () => { if (this.current(session) && !session.stopping) this.stop(); };
             // Cancel target audio first, as in activities.js. The app must never
             // earn a hit by recognizing its own speech synthesis.
             try { if (global.speechSynthesis) global.speechSynthesis.cancel(); } catch (_) {}
-            this.emitState('listening');
+            this.emitState('starting');
             if (!this.current(session)) return false;
             session.startTimer = global.setTimeout(() => this.fail(session, 'recognition-timeout'), 15000);
             try { rec.start(); return true; }
@@ -296,11 +436,13 @@
             if (!session || !this.current(session)) return false;
             if (session.stopping) return true;
             session.stopping = true;
+            session.endedAt = this.now();
+            this.clearEndpoint(session);
             global.clearTimeout(session.startTimer);
             global.clearTimeout(session.recordTimer);
             this.emitState('processing', session.interim);
             if (!this.current(session)) return false;
-            session.processTimer = global.setTimeout(() => this.fail(session, session.interim ? 'recognition-timeout' : 'no-speech'), 3000);
+            session.processTimer = global.setTimeout(() => this.fail(session, session.interim ? 'no-match' : 'no-speech'), 3000);
             try { session.rec.stop(); } catch (_) { this.fail(session, 'recognition-error'); }
             return true;
         }

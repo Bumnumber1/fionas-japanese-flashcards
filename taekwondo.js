@@ -12,7 +12,7 @@
   const words = Year1Review.catalog.words;
   const compoundForms = new Map();
   if (window.DojoVoice && window.DojoWriting) words.forEach(word => {
-    DojoVoice.aliasesFor({ mode: 'word-read', prompt: word.jp, reading: word.romaji }).forEach(form => {
+    DojoVoice.spellingsFor({ mode: 'word-read', prompt: word.jp, reading: word.romaji }).forEach(form => {
       if (/^[一-龯]{2,}$/u.test(form) && [...form].every(char => DojoWriting.hasCharacter(char))) {
         compoundForms.set(form, { char: form, read: word.jp, mean: word.en });
       }
@@ -42,6 +42,7 @@
   let writing = null;
   let voice = null;
   let listening = false;
+  let voiceStatus = 'idle';
   let handsFree = false;
   let autoListenTimer, autoAdvanceTimer, speedNoticeTimer;
   let readingStartedAt = 0, readingSpeedEligible = false, quietRetries = 0;
@@ -288,7 +289,7 @@
     $('handsfree-toggle').setAttribute('aria-pressed', String(handsFree));
     $('handsfree-toggle').textContent = handsFree ? '■ Stop hands-free' : '● Start hands-free';
     $('handsfree-toggle').disabled = !handsFree && (!voice || !voice.supported || !fight || fight.status !== 'fighting');
-    $('handsfree-status').textContent = note || (handsFree ? listening ? 'Hands-free mic on · say the current answer. Stop to change technique.' : 'Hands-free ready · the next reading starts automatically.' : 'Start once, then speak each new prompt. Fast clean answers earn +3 or +6 damage.');
+    $('handsfree-status').textContent = note || (handsFree ? voiceStatus === 'starting' ? 'Opening Japanese microphone · wait for Listening before speaking.' : voiceStatus === 'processing' ? 'Checking your Japanese · the next prompt is coming.' : listening ? 'Japanese mic ready · say the current answer. Stop to change technique.' : 'Hands-free ready · the next reading starts automatically.' : 'Start once, then speak each new prompt. Fast clean answers earn +3 or +6 damage.');
     document.querySelector('.arena').classList.toggle('handsfree-active', handsFree);
   }
   function stopHandsFree(note) {
@@ -300,12 +301,12 @@
   function startReading(automatic = false) {
     if (!readingReady() || !voice || !voice.supported) return;
     $('voice-transcript').hidden = true;
-    if (!readingStartedAt) readingStartedAt = performance.now();
+    readingStartedAt = 0;
     readingSpeedEligible = automatic && quietRetries === 0 && !(challengeSet && challengeSet.switched);
     const voiceAliases = question.mode === 'word-read' ? material.kanji.filter(form => form.read === question.prompt).map(form => form.char) : [];
     if (voice.start({ ...question, expectedKana: question.prompt, voiceAliases })) updateHandsFree();
   }
-  function queueHandsFree(delay = 100) {
+  function queueHandsFree(delay = 40) {
     clearTimeout(autoListenTimer);
     if (!handsFree || !readingReady()) return;
     const target = question, bout = fight;
@@ -432,7 +433,7 @@
     save();
     if (!handsFree) $('next-button').focus({ preventScroll: true });
     quietRetries = 0;
-    if (handsFree && fight.status === 'fighting') advanceHandsFree(correct ? outcome.speedBonus ? 450 : 700 : 1600);
+    if (handsFree && fight.status === 'fighting') advanceHandsFree(correct ? outcome.speedBonus ? 220 : 300 : 1600);
     else if (handsFree) stopHandsFree('Match complete · microphone off. Your progress is saved.');
   }
   function callout(text) {
@@ -533,11 +534,14 @@
   try {
     voice = new DojoVoice({
       onState: state => {
-        listening = state.status === 'listening' || state.status === 'processing';
-        $('listen-button').classList.toggle('listening', listening);
+        voiceStatus = state.status;
+        listening = ['starting', 'listening', 'processing'].includes(state.status);
+        if (state.status === 'listening' && !readingStartedAt) readingStartedAt = performance.now();
+        $('listen-button').classList.toggle('listening', state.status === 'listening');
         $('stop-listening').hidden = !listening;
+        $('stop-listening').textContent = state.status === 'starting' ? 'Cancel microphone' : 'Finish speaking';
         if (phase === 'question') {
-          $('voice-status').textContent = state.status === 'listening' ? 'Listening… say it in Japanese.' : state.status === 'processing' ? 'Checking what you said…' : 'Tap the microphone to try again.';
+          $('voice-status').textContent = state.status === 'starting' ? 'Starting Japanese microphone… wait for Listening.' : state.status === 'listening' ? 'Listening · Japanese (日本語). Say it now.' : state.status === 'processing' ? 'Checking what you said…' : 'Tap the microphone to try again.';
           if (state.transcript) { $('voice-transcript').textContent = 'Hearing: ' + state.transcript; $('voice-transcript').hidden = false; }
           lockInputs(false);
           renderMoves();
@@ -547,11 +551,12 @@
       onResult: result => {
         if (!readingReady()) return;
         $('voice-transcript').textContent = 'Heard: ' + result.transcript; $('voice-transcript').hidden = false;
-        const readingMs = handsFree && readingSpeedEligible && readingStartedAt ? Math.max(1, performance.now() - readingStartedAt) : null;
+        const readingMs = handsFree && readingSpeedEligible && readingStartedAt && Number.isFinite(result.readingMs) && result.readingMs > 0 ? result.readingMs : null;
         submit(result.correct, `Heard “${result.transcript}”.`, readingMs);
       },
       onError: error => {
         listening = false; $('stop-listening').hidden = true;
+        if (error.transcript) { $('voice-transcript').textContent = 'Heard: ' + error.transcript + ' · unclear; try again'; $('voice-transcript').hidden = false; }
         readingSpeedEligible = false;
         let recoveryNote = '';
         if (handsFree && ['no-speech', 'no-match'].includes(error.code) && quietRetries < 2 && readingReady()) {
@@ -580,7 +585,7 @@
     if (phase === 'answered') advanceHandsFree(100);
     else startReading(true);
   });
-  $('stop-listening').addEventListener('click', () => { if (voice) voice.stop(); });
+  $('stop-listening').addEventListener('click', () => { if (voice) { if (voiceStatus === 'starting') voice.cancel(); else voice.stop(); } });
   $('start-button').addEventListener('click', beginFight);
   $('next-button').addEventListener('click', () => { if (phase !== 'answered') return; if (fight.status === 'fighting') nextQuestion(); else finishFight(); });
   $('check-writing').addEventListener('click', checkWriting);

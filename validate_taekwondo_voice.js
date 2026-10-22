@@ -29,6 +29,7 @@ function environment(options = {}) {
     }
     const sandbox = {
         console,
+        performance: { now: () => now },
         isSecureContext: options.secure !== false,
         setTimeout(callback, delay) { const id = nextTimer++; timers.set(id, { at: now + delay, callback }); return id; },
         clearTimeout(id) { timers.delete(id); },
@@ -236,13 +237,108 @@ test('No substring, fuzzy, English, absent target, or writing-mode bypass', () =
     assert.equal(DojoVoice.matches({ mode: 'word-read', expectedKana: 'いぬ', voiceAliases: ['犬'] }, '犬です'), false);
 });
 
+test('Japanese numeric and kanji spellings accept only their exact isolated kana sounds', () => {
+    for (const [prompt, alternatives] of [
+        ['に', ['2', '２', '二', '煮', '似']], ['し', ['4', '４', '四', '死', '師', '紙']],
+        ['く', ['9', '９', '九', '苦']], ['あ', ['亜', '阿']], ['か', ['化', '加', '可']],
+        ['き', ['機', '期', '器']], ['せ', ['瀬']], ['そ', ['祖']], ['へ', ['屁']],
+        ['ね', ['音']], ['も', ['藻']], ['ら', ['羅']], ['わ', ['話']]
+    ]) {
+        for (const transcript of alternatives) {
+            assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt }, transcript), true, prompt + ': ' + transcript);
+            assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt }, transcript + 'です'), false, 'No suffix: ' + transcript);
+            assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt }, transcript + 'じゃない'), false, 'No negation: ' + transcript);
+        }
+    }
+    for (const [prompt, wrong] of [['さ', '3'], ['さ', '三'], ['に', '3'], ['し', '2'], ['く', '6'], ['き', 'キーです'], ['か', '課題']]) {
+        assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt }, wrong), false, prompt + ': reject ' + wrong);
+    }
+});
+
+test('One naturally held isolated kana is accepted without collapsing different syllables', () => {
+    const vowels = { a: 'あ', i: 'い', u: 'う', e: 'え', o: 'お' };
+    for (const kana of dojo.KANA) {
+        const question = { mode: 'kana-read', prompt: kana.char, reading: kana.romaji };
+        const spoken = kana.char === 'を' ? 'お' : kana.char;
+        assert.equal(DojoVoice.matches(question, spoken + 'ー'), true, kana.char + ': held long mark');
+        assert.equal(DojoVoice.matches(question, spoken + 'ーー'), false, kana.char + ': bounded long mark');
+        const vowel = vowels[kana.romaji.slice(-1)];
+        if (!vowel) continue;
+        const held = spoken + vowel;
+        const katakana = [...held].map(char => String.fromCharCode(char.charCodeAt(0) + 0x60)).join('');
+        assert.equal(DojoVoice.matches(question, held), true, kana.char + ': held matching vowel');
+        assert.equal(DojoVoice.matches(question, katakana), true, kana.char + ': held Katakana');
+        assert.equal(DojoVoice.matches(question, held + vowel), false, kana.char + ': bounded vowel');
+        const wrongVowel = vowel === 'あ' ? 'い' : 'あ';
+        assert.equal(DojoVoice.matches(question, spoken + wrongVowel), false, kana.char + ': wrong vowel');
+        assert.equal(DojoVoice.matches(question, held + 'です'), false, kana.char + ': held sound with suffix');
+    }
+});
+
+test('Small isolated vowel and glide spellings retain sound while small tsu never passes tsu', () => {
+    for (const [prompt, transcript] of [['あ', 'ぁ'], ['い', 'ィ'], ['う', 'ぅ'], ['え', 'ェ'], ['お', 'ぉ'], ['や', 'ゃ'], ['ゆ', 'ュ'], ['よ', 'ょ'], ['わ', 'ゎ']]) {
+        assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt }, transcript), true, prompt + ': ' + transcript);
+    }
+    for (const [prompt, transcript] of [['つ', 'っ'], ['つ', 'ッ'], ['き', 'きゃ'], ['し', 'しゃ'], ['や', 'ゅ'], ['ゆ', 'ゃ']]) {
+        assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt }, transcript), false, prompt + ': ' + transcript);
+    }
+});
+
+test('Complete vocabulary homophones survive the recognizer choosing another spelling', () => {
+    for (const [expectedKana, transcript] of [
+        ['のり', '海苔'], ['さる', '去る'], ['もも', '腿'], ['ぶどう', '武道'], ['なし', '無し'],
+        ['みかん', '未完'], ['かき', '牡蠣'], ['こうえん', '講演'], ['ほうれんそう', '報連相'],
+        ['にじ', '2時'], ['にじ', '二次'], ['つき', '突き'], ['かわ', '皮'], ['いし', '医師'],
+        ['うみ', '膿'], ['いか', '以下'], ['はな', '鼻'], ['おもい', '思い'], ['きます', '着ます'],
+        ['かいます', '飼います'], ['よみます', '詠みます'], ['せんせい', '宣誓'], ['ケーキ', '景気'], ['ケーキ', 'けいき']
+    ]) {
+        const question = { mode: 'word-read', expectedKana };
+        assert.equal(DojoVoice.matches(question, transcript), true, expectedKana + ': ' + transcript);
+        for (const suffix of ['です', 'じゃない', 'ではありません', 'とねこ']) {
+            assert.equal(DojoVoice.matches(question, transcript + suffix), false, expectedKana + ': no extra words');
+        }
+        assert.equal(DojoVoice.matches(question, 'いいえ' + transcript), false, expectedKana + ': no negative prefix');
+    }
+});
+
+test('Held-syllable tolerance never changes complete word or special vowel length', () => {
+    for (const question of [
+        { mode: 'word-read', expectedKana: 'き', reading: 'ki' },
+        { mode: 'kana-read', prompt: 'き', reading: 'ki', difficulty: 'special' }
+    ]) {
+        assert.equal(DojoVoice.matches(question, 'き'), true);
+        assert.equal(DojoVoice.matches(question, 'きい'), false);
+        assert.equal(DojoVoice.matches(question, 'キー'), false);
+    }
+    for (const [expectedKana, wrong] of [['おばさん', 'おばあさん'], ['おばあさん', 'おばさん'], ['ジュース', 'ジュス'], ['ケーキ', 'ケキ'], ['ここ', 'こーこ'], ['きょう', 'きょ']]) {
+        assert.equal(DojoVoice.matches({ mode: 'word-read', expectedKana }, wrong), false, expectedKana + ': reject ' + wrong);
+        assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt: expectedKana, difficulty: 'special' }, wrong), false, expectedKana + ': special reject ' + wrong);
+    }
+});
+
+test('Speech homophones never become meaning-specific kanji writing targets', () => {
+    for (const [expectedKana, canonical, speechOnly] of [
+        ['こうえん', '公園', '講演'], ['のり', '糊', '海苔'], ['ぶどう', '葡萄', '武道'],
+        ['かき', '柿', '牡蠣'], ['はな', '花', '鼻'], ['いし', '石', '医師'], ['きます', '来ます', '着ます']
+    ]) {
+        const question = { mode: 'word-read', expectedKana, voiceAliases: [speechOnly] };
+        assert.equal(DojoVoice.matches(question, speechOnly), true, 'Valid speech sound: ' + speechOnly);
+        assert.equal(DojoVoice.spellingsFor(question).includes(canonical), true, 'Canonical writing: ' + canonical);
+        assert.equal(DojoVoice.spellingsFor(question).includes(speechOnly), false, 'No changed writing meaning: ' + speechOnly);
+        assert.equal(DojoVoice.spellingsFor(question).includes(expectedKana), true, 'Canonical kana retained');
+    }
+    assert.deepEqual(DojoVoice.spellingsFor({ mode: 'kana-read', prompt: 'シ', reading: 'shi' }), ['し']);
+    assert.deepEqual(DojoVoice.spellingsFor({ mode: 'kana-write', prompt: 'し' }), []);
+    assert.deepEqual(DojoVoice.spellingsFor(null), []);
+});
+
 test('Start configures Japanese recognition and cancels target speech synthesis', () => {
     const env = environment();
     assert.equal(env.voice.supported, true);
     assert.equal(env.instances.length, 0, 'No auto microphone on construction');
     assert.equal(env.voice.start(kanaQuestion), true);
     const rec = env.instances[0];
-    assert.equal(rec.lang, 'ja-JP'); assert.equal(rec.continuous, false); assert.equal(rec.interimResults, true); assert.equal(rec.maxAlternatives, 5);
+    assert.equal(rec.lang, 'ja-JP'); assert.equal(rec.continuous, false); assert.equal(rec.interimResults, true); assert.equal(rec.maxAlternatives, 10);
     assert.equal(rec.starts, 1); assert.equal(env.sandbox.speechSynthesis.cancellations, 1);
     env.voice.destroy();
 });
@@ -281,7 +377,7 @@ test('Restart aborts the old microphone and ignores all old result/error/end eve
     const oldResult = old.onresult, oldEnd = old.onend, oldError = old.onerror;
     env.voice.start(kanaQuestion); const rec = env.instances[1];
     assert.equal(old.aborts, 1); oldResult(event(['ねこ'])); oldError({ error: 'network' }); oldEnd();
-    assert.equal(env.results.length, 0); assert.equal(env.errors.length, 0); assert.equal(env.states.at(-1).status, 'listening');
+    assert.equal(env.results.length, 0); assert.equal(env.errors.length, 0); assert.equal(env.states.at(-1).status, 'starting');
     rec.onresult(event(['し'])); assert.equal(env.results.length, 1);
 });
 
@@ -392,6 +488,83 @@ test('Katakana hands-free sessions grade once, ignore stale speech, and retain e
     assert.equal(env.results.length, 3); assert.equal(env.results[2].correct, false, 'A wrong final remains one mistake');
     assert.equal(env.errors.length, 0); assert.equal(env.timers.size, 0);
     env.voice.destroy();
+});
+
+test('Native readiness separates startup delay from actual answer timing', () => {
+    const env = environment(); env.voice.start(kanaQuestion); const rec = env.instances[0];
+    assert.equal(env.states.at(-1).status, 'starting');
+    env.tick(2400); rec.onstart();
+    assert.equal(env.states.at(-1).status, 'listening');
+    env.tick(125); rec.onspeechend();
+    env.tick(2200); rec.onresult(event(['し']));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].readingMs, 125);
+    assert.equal(env.errors.length, 0); env.voice.destroy();
+});
+
+test('Stable whole-answer interim requests a final after 200ms, never awards it', () => {
+    const env = environment(); env.voice.start(wordQuestion); const rec = env.instances[0]; rec.onstart();
+    env.tick(100); rec.onresult(event(['猫'], false));
+    env.tick(150); rec.onresult(event(['猫'], false));
+    env.tick(49); assert.equal(rec.stops, 0);
+    env.tick(1); assert.equal(rec.stops, 1); assert.equal(env.results.length, 0);
+    env.tick(1800); rec.onresult(event(['猫']));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
+    assert.equal(env.results[0].readingMs, 300); assert.equal(env.timers.size, 0);
+    env.voice.destroy();
+});
+
+test('Changed or wrong interim cancels early endpoint; a revised final stays authoritative', () => {
+    const env = environment(); env.voice.start(wordQuestion); const rec = env.instances[0]; rec.onstart();
+    rec.onresult(event(['猫'], false)); env.tick(100);
+    rec.onresult(event(['猫じゃない'], false)); env.tick(300);
+    assert.equal(rec.stops, 0); assert.equal(env.results.length, 0);
+    rec.onresult(event(['猫'], false)); env.tick(200);
+    assert.equal(rec.stops, 1); rec.onresult(event(['犬']));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, false);
+    assert.equal(env.timers.size, 0); env.voice.destroy();
+});
+
+test('Mixed final and interim groups cannot award a matching prefix', () => {
+    const env = environment(); env.voice.start(wordQuestion); const rec = env.instances[0]; rec.onstart();
+    const prefix = event(['猫']).results[0], tail = event(['じゃない'], false).results[0];
+    rec.onresult({ resultIndex: 1, results: [prefix, tail] }); env.tick(250);
+    assert.equal(env.results.length, 0); assert.equal(rec.stops, 0);
+    rec.onresult({ resultIndex: 1, results: [prefix, event(['じゃない']).results[0]] });
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, false);
+    env.voice.destroy();
+});
+
+test('An isolated sa transcribed as 3 is unclear, with no wrong or correct grade', () => {
+    const sa = { mode: 'kana-read', prompt: 'さ', reading: 'sa' };
+    for (const transcript of ['3', '３', '三', '30', '3.0']) {
+        const env = environment(); env.voice.start(sa); const rec = env.instances[0]; rec.onstart();
+        rec.onresult(event([transcript]));
+        assert.equal(env.results.length, 0, transcript); assert.equal(env.errors[0].code, 'no-match', transcript);
+        assert.equal(env.errors[0].transcript, transcript); assert.equal(env.timers.size, 0);
+        env.voice.start(sa); env.instances[1].onresult(event(['さ']));
+        assert.equal(env.results[0].correct, true); env.voice.destroy();
+    }
+    const env = environment(); env.voice.start(sa); env.instances[0].onresult(event(['し']));
+    assert.equal(env.results[0].correct, false, 'A clear different kana still counts as a real mistake');
+    env.voice.destroy();
+});
+
+test('All ten final alternatives can rescue a correct result; cancellation clears early endpoint', () => {
+    const env = environment(); env.voice.start(kanaQuestion); const rec = env.instances[0]; rec.onstart();
+    rec.onresult(event(['ち', 'つ', 'す', 'さ', 'と', 'く', 'き', 'そ', 'せ', 'し']));
+    assert.equal(env.results[0].correct, true); assert.equal(env.results[0].alternatives.length, 10);
+    env.voice.start(kanaQuestion); const next = env.instances[1]; next.onstart();
+    next.onresult(event(['し'], false)); const stale = next.onresult;
+    env.voice.cancel(); env.tick(500); stale(event(['し']));
+    assert.equal(next.stops, 0); assert.equal(env.results.length, 1); assert.equal(env.timers.size, 0);
+    env.voice.destroy();
+});
+
+test('A stable provisional answer without a final remains ungraded and retryable', () => {
+    const env = environment(); env.voice.start(kanaQuestion); const rec = env.instances[0]; rec.onstart();
+    rec.onresult(event(['し'], false)); env.tick(3200);
+    assert.equal(rec.stops, 1); assert.equal(env.results.length, 0);
+    assert.equal(env.errors[0].code, 'no-match'); assert.equal(env.timers.size, 0); env.voice.destroy();
 });
 
 console.log('\n' + passed + ' voice tests passed. Live Japanese microphone recognition still requires a supported browser, permission, and its speech service.');

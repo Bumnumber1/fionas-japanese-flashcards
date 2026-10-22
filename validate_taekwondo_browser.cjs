@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
   });
 });
 let browser, ws, send, evaluate;
-const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [], impactEvidence = [];
+const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [], impactEvidence = [], voiceLatencyEvidence = [];
 let comboRecording;
 const moveCount = 17, beltCount = 11;
 const beltNames = ['white','yellow','orange','gold','green','blue','purple','brown','red','red-black','black'];
@@ -202,7 +202,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   const deliverTranscript = (transcript, final = true) => evaluate(`(() => {
     const recognition=window.__dojoSpeech.instances.at(-1);if(!recognition)throw Error('No recognizer was started by the voice UI');
     const result=Object.assign([{transcript:${JSON.stringify(transcript)},confidence:0.98}],{isFinal:${final}});
-    window.__dojoSpeech.transcripts.push({transcript:${JSON.stringify(transcript)},final:${final},lang:recognition.lang});
+    window.__dojoSpeech.transcripts.push({transcript:${JSON.stringify(transcript)},final:${final},lang:recognition.lang,at:performance.now()});
     recognition.onresult?.({resultIndex:0,results:[result]});
   })()`);
   const speak = async transcript => {
@@ -268,14 +268,18 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   // Synthetic recognition tests the real listen/recognition/grading boundary.
   // It deliberately does not claim real microphone or browser speech-service validation.
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
-    window.__dojoSpeech={instances:[],transcripts:[],starts:0,stops:0,aborts:0};
+    window.__dojoSpeech={instances:[],transcripts:[],starts:0,stops:0,aborts:0,startDelay:0,stopEndDelay:0,trackTimers:false,scheduled:[]};
+    const schedule=window.setTimeout.bind(window);
+    window.setTimeout=(callback,delay,...args)=>{if(window.__dojoSpeech.trackTimers)window.__dojoSpeech.scheduled.push({delay,at:performance.now()});return schedule(callback,delay,...args);};
     class AuditSpeechRecognition {
-      constructor(){this.started=false;this.listeners={};window.__dojoSpeech.instances.push(this);}
+      constructor(){this.started=false;this.ready=false;this.listeners={};window.__dojoSpeech.instances.push(this);}
       addEventListener(type,listener){(this.listeners[type]??=[]).push(listener);}
-      emit(type,event={}){this['on'+type]?.(event);for(const listener of this.listeners[type]||[])listener(event);}
-      start(){this.started=true;window.__dojoSpeech.starts++;queueMicrotask(()=>this.emit('start'));}
-      stop(){this.started=false;window.__dojoSpeech.stops++;queueMicrotask(()=>this.emit('end'));}
-      abort(){this.started=false;window.__dojoSpeech.aborts++;queueMicrotask(()=>this.emit('end'));}
+      emit(type,event={}){if(type==='start'){this.ready=true;this.readyAt=performance.now();}this['on'+type]?.(event);for(const listener of this.listeners[type]||[])listener(event);}
+      start(){this.started=true;window.__dojoSpeech.starts++;const ready=()=>{if(this.started)this.emit('start');};
+        if(window.__dojoSpeech.startDelay>0)setTimeout(ready,window.__dojoSpeech.startDelay);else queueMicrotask(ready);}
+      stop(){this.started=false;this.ready=false;window.__dojoSpeech.stops++;
+        if(window.__dojoSpeech.stopEndDelay>0)setTimeout(()=>this.emit('end'),window.__dojoSpeech.stopEndDelay);else queueMicrotask(()=>this.emit('end'));}
+      abort(){this.started=false;this.ready=false;window.__dojoSpeech.aborts++;queueMicrotask(()=>this.emit('end'));}
     }
     window.SpeechRecognition=AuditSpeechRecognition;window.webkitSpeechRecognition=AuditSpeechRecognition;
   })();` });
@@ -767,7 +771,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   const autoReady = (previous, label = 'Hands-free recognizes the next prompt automatically') => waitFor(`
     document.querySelector('#handsfree-toggle').getAttribute('aria-pressed')==='true' &&
     !document.querySelector('#challenge-panel').hidden && document.querySelector('#feedback').hidden &&
-    window.__dojoSpeech.instances.length>${previous} && window.__dojoSpeech.instances.at(-1).started &&
+    window.__dojoSpeech.instances.length>${previous} && window.__dojoSpeech.instances.at(-1).started && window.__dojoSpeech.instances.at(-1).ready &&
     typeof window.__dojoSpeech.instances.at(-1).onresult==='function'`, label);
   const emitSpeechError = code => evaluate(`window.__dojoSpeech.instances.at(-1).emit('error',{error:${JSON.stringify(code)}})`);
   async function freshReadingFight() {
@@ -777,12 +781,117 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     assert.equal((await snapshot()).save.fight.turns,0);
   }
   await freshReadingFight();
+  await evaluate('window.__dojoSpeech.startDelay=2250');
+  await click('#handsfree-toggle'); await pause(300);
+  assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),/starting Japanese microphone/i,
+    'Provider startup must not tell the student to speak before the actual listening event');
+  assert.equal(await evaluate('window.__dojoSpeech.instances.at(-1).ready'),false);
+  assert.ok((await moveButtons()).every(button=>button.disabled),'Starting the microphone locks move selection');
+  assert.equal((await snapshot()).save.fight.turns,0);
+  await autoReady(0,'The native listening event, rather than start(), marks the microphone ready');
+  state=await snapshot(); await deliverTranscript(state.save.question.prompt); state=await snapshot();
+  assert.equal(state.opponent,80,'A prompt answered immediately after a slow microphone startup still earns Lightning');
+  assert.ok(state.save.fight.journal.at(-1).readingMs>0&&state.save.fight.journal.at(-1).readingMs<1000,
+    'Permission and provider startup time must not count against reading speed');
+  voiceLatencyEvidence.push({kind:'delayed-start',providerStartupMs:2250,readingMs:state.save.fight.journal.at(-1).readingMs});
+  await click('#handsfree-toggle');
+  pass('Japanese microphone startup is clearly distinguished from listening, locks move choice, and does not reduce speed credit');
+
+  await freshReadingFight(); await evaluate('window.__dojoSpeech.stopEndDelay=5000');
+  await click('#handsfree-toggle'); await autoReady(0);
+  state=await snapshot(); await deliverTranscript(state.save.question.prompt,false); await pause(270);
+  assert.equal(await evaluate('window.__dojoSpeech.stops'),1,'A stable complete Japanese interim requests one early endpoint');
+  assert.equal((await snapshot()).save.fight.turns,0,'A stable matching interim is still not a graded answer');
+  assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),/checking/i);
+  await evaluate('window.__dojoStableFinal=window.__dojoSpeech.instances.at(-1).onresult');
+  await pause(2200); await deliverTranscript(state.save.question.prompt); state=await snapshot();
+  assert.equal(state.opponent,80,'Provider final-result delivery lag must not remove a clean Lightning bonus');
+  assert.equal(state.save.fight.turns,1);
+  assert.ok(state.save.fight.journal.at(-1).readingMs>0&&state.save.fight.journal.at(-1).readingMs<1500,
+    'Speed ends at the utterance endpoint, before delayed network finalization');
+  voiceLatencyEvidence.push({kind:'delayed-final',providerDeliveryLagMs:2200,readingMs:state.save.fight.journal.at(-1).readingMs});
+  await click('#handsfree-toggle');
+  const stableJournal=JSON.stringify(state.save.fight.journal);
+  await evaluate(`(() => {const transcript=JSON.parse(localStorage.getItem(DojoGame.SAVE_VERSION)).question.prompt;
+    const result=Object.assign([{transcript,confidence:0.99}],{isFinal:true});window.__dojoStableFinal?.({resultIndex:0,results:[result]});})()`);
+  assert.equal(JSON.stringify((await snapshot()).save.fight.journal),stableJournal,'A delayed duplicate final cannot grade twice');
+  pass('Stable whole-answer interim recognition requests a faster final without awarding a hit; network delivery time and duplicate finals cannot affect scoring');
+
+  await freshReadingFight(); await evaluate('window.__dojoSpeech.stopEndDelay=5000');
+  await click('#handsfree-toggle'); await autoReady(0);
+  state=await snapshot(); await deliverTranscript('definitely-wrong',false); await pause(270);
+  assert.equal(await evaluate('window.__dojoSpeech.stops'),0,'Wrong interim recognition must not force a partial answer endpoint');
+  await deliverTranscript(state.save.question.prompt,false); await pause(80);
+  await deliverTranscript('definitely-wrong',false); await pause(250);
+  assert.equal(await evaluate('window.__dojoSpeech.stops'),0,'A revised hypothesis cancels an earlier matching interim timer');
+  assert.equal((await snapshot()).save.fight.turns,0);
+  await deliverTranscript(state.save.question.prompt); state=await snapshot();
+  assert.equal(state.save.fight.turns,1); assert.equal(state.player,100); assert.equal(state.opponent,80);
+  await click('#handsfree-toggle');
+  pass('Wrong interim hypotheses never force a stop, and revised matching hypotheses cancel their debounce without grading or damage');
+
+  await freshReadingFight(); await evaluate('window.__dojoSpeech.stopEndDelay=5000');
+  await click('#handsfree-toggle'); await autoReady(0);
+  state=await snapshot(); await deliverTranscript(state.save.question.prompt,false); await pause(270);
+  assert.equal(await evaluate('window.__dojoSpeech.stops'),1);
+  await deliverTranscript('definitely-wrong'); state=await snapshot();
+  assert.equal(state.save.fight.turns,1); assert.equal(state.player,100); assert.equal(state.opponent,100);
+  assert.equal(state.save.fight.pendingDamage,10,'Only the actual revised final determines whether the attack or counter happens');
+  assert.equal(state.save.fight.streak,0);
+  await click('#handsfree-toggle');
+  pass('A stable matching interim followed by a wrong final never awards a false attack or combo');
+
+  const numericMisrecognitionSave=await evaluate(`(() => {
+    const saved=JSON.parse(${JSON.stringify(readingSave)}),progress=DojoGame.createProgress(),fight=DojoGame.startFight(progress,0);
+    for(let mistake=0;mistake<6;mistake++){
+      DojoGame.resolveAnswer(fight,{correct:false,assisted:false,move:'front-kick'});
+      if(mistake<5)DojoGame.resolveAnswer(fight,{correct:true,assisted:false,move:'front-kick'});
+    }
+    const kanaIndex=DojoGame.KANA.findIndex(kana=>kana.char==='さ');
+    const question=DojoGame.createQuestion(0,{},[],()=>(kanaIndex+0.1)/DojoGame.BELTS[0].kanaCount);
+    return JSON.stringify({...saved,progress,fight,question,challengeSet:null,phase:'question',answerResolved:false,
+      answerWasBlock:false,assisted:false,writingIndex:0,selectedMove:'front-kick',recent:[question.id]});
+  })()`);
+  await loadIsolatedSave(numericMisrecognitionSave); await click('#start-button'); state=await snapshot();
+  assert.equal(state.save.question.prompt,'さ'); assert.equal(state.save.fight.pendingDamage,20); assert.equal(state.player,100);
+  const numericJournal=JSON.stringify(state.save.fight.journal);
+  await click('#handsfree-toggle'); await autoReady(0); await deliverTranscript('3');
+  state=await snapshot();
+  assert.equal(JSON.stringify(state.save.fight.journal),numericJournal,'A recognizer number substituted for isolated kana is an unclear transcript, not a learner mistake');
+  assert.equal(state.save.fight.pendingDamage,20,'An unclear number cannot resolve or land the pending counter');
+  assert.equal(state.player,100); assert.equal(state.opponent,100); assert.equal(state.save.question.prompt,'さ');
+  await autoReady(1,'A numeric kana misrecognition retries the same block challenge automatically');
+  await deliverTranscript('さ'); state=await snapshot();
+  assert.equal(state.player,100); assert.equal(state.opponent,100); assert.equal(state.save.fight.pendingDamage,0);
+  assert.equal(state.save.fight.blocks,6); assert.equal(state.save.fight.mistakes,6);
+  await click('#handsfree-toggle');
+  pass('Chrome recognizing spoken さ as 3 cannot land a queued 20-damage counter; retrying the same さ correctly blocks it');
+
+  await freshReadingFight(); await click('#handsfree-toggle'); await autoReady(0);
+  await evaluate('window.__dojoSpeech.trackTimers=true;window.__dojoSpeech.scheduled=[]');
+  state=await snapshot(); await deliverTranscript(state.save.question.prompt); await autoReady(1);
+  const nativeRearm=await evaluate(`({readyGapMs:window.__dojoSpeech.instances.at(-1).readyAt-window.__dojoSpeech.transcripts.filter(item=>item.final).at(-1).at,
+    timers:window.__dojoSpeech.scheduled.map(item=>item.delay),providerStartupMs:window.__dojoSpeech.startDelay})`);
+  assert.equal(nativeRearm.providerStartupMs,0,'The latency measurement does not inherit the earlier deliberately delayed provider');
+  assert.ok(nativeRearm.timers.includes(220)&&nativeRearm.timers.includes(40),'A fast correct answer schedules a 220ms advance and 40ms microphone rearm');
+  assert.ok(nativeRearm.readyGapMs>0&&nativeRearm.readyGapMs<1200,
+    'The next native microphone is ready promptly outside video capture: '+nativeRearm.readyGapMs+'ms');
+  voiceLatencyEvidence.push({kind:'next-prompt-ready-without-capture',...nativeRearm});
+  console.log('VOICE TIMING next Japanese mic ready without capture: '+nativeRearm.readyGapMs+'ms (requested 220ms + 40ms)');
+  await evaluate('window.__dojoSpeech.trackTimers=false'); await click('#handsfree-toggle');
+  pass('Fast hands-free answers request a 220ms advance and 40ms microphone rearm, with native readiness measured outside video capture');
+
+  await freshReadingFight();
   await click('#handsfree-toggle'); await autoReady(0);
   await startComboRecording();await pause(350);
   const rapidDamage = [20,23,35];
   for(let strike=0;strike<3;strike++){
     if(strike){
       await autoReady(strike);
+      const readyGap=await evaluate(`window.__dojoSpeech.instances.at(-1).readyAt-window.__dojoSpeech.transcripts.filter(item=>item.final).at(-1).at`);
+      assert.ok(Number.isFinite(readyGap)&&readyGap>0,'Recorded combo native-ready timing is finite and belongs to its preceding answer: '+readyGap);
+      voiceLatencyEvidence.push({kind:'next-prompt-ready-during-capture',strike:strike+1,readyGapMs:readyGap});
+      console.log('VOICE TIMING next Japanese mic ready during native video capture: '+readyGap+'ms');
       if(strike===1){
         const beforeStale=JSON.stringify((await snapshot()).save.fight.journal);
         await evaluate(`(() => {const transcript=JSON.parse(localStorage.getItem(DojoGame.SAVE_VERSION)).question.prompt;
@@ -1102,7 +1211,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   assert.equal(requests.filter(request => request.status === 404 && request.name !== '/favicon.ico').length, 0,
     'No missing local assets: ' + JSON.stringify(requests.filter(request => request.status === 404)));
   pass('No external asset dependencies, missing dojo assets, or runtime exceptions');
-  const report = { passed: true, checks, campaign, rapidEvidence, impactEvidence, comboRecording, webgl: pixels, recognition: 'Synthetic SpeechRecognition final/interim/error events; real hands-free timers, native tab visibility, combat, saves, and WebGL exercised. Live microphone and speech service not tested', elapsedSeconds: Math.round((Date.now() - started) / 1000), screenshots: artifacts, errors, external };
+  const report = { passed: true, checks, campaign, rapidEvidence, impactEvidence, voiceLatencyEvidence, comboRecording, webgl: pixels, recognition: 'Synthetic SpeechRecognition final/interim/error events, delayed native startup, interim revisions, endpoint requests, and delayed final delivery; real hands-free timers, native tab visibility, combat, saves, and WebGL exercised. Live microphone and speech service not tested', elapsedSeconds: Math.round((Date.now() - started) / 1000), screenshots: artifacts, errors, external };
   fs.writeFileSync(path.join(artifacts, 'report.json'), JSON.stringify(report, null, 2));
   console.log('PASS: ' + checks.length + ' dojo browser checks in ' + report.elapsedSeconds + ' seconds. Evidence: ' + artifacts);
   await send('Browser.close').catch(() => {});
@@ -1110,8 +1219,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   console.error(error.stack || error);
   if (send) {
     try { const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(artifacts,'FAILURE.png'),Buffer.from(shot.data,'base64')); } catch (_) {}
-    try { fs.writeFileSync(path.join(artifacts,'failure-state.json'),JSON.stringify(await evaluate(`(async()=>({save:localStorage.getItem(typeof DojoGame!=='undefined'?DojoGame.SAVE_VERSION:'fiona-taekwondo-v1'),body:document.body.innerText,serviceWorkers:await navigator.serviceWorker?.getRegistrations().then(items=>items.map(item=>({scope:item.scope,active:item.active?.state,installing:item.installing?.state,waiting:item.waiting?.state}))),caches:await caches.keys()}))()`),null,2)); } catch (_) {}
+    try { fs.writeFileSync(path.join(artifacts,'failure-state.json'),JSON.stringify(await evaluate(`(async()=>({save:localStorage.getItem(typeof DojoGame!=='undefined'?DojoGame.SAVE_VERSION:'fiona-taekwondo-v1'),body:document.body.innerText,voice:window.__dojoSpeech&&{transcripts:window.__dojoSpeech.transcripts,instances:window.__dojoSpeech.instances.map(rec=>({started:rec.started,ready:rec.ready,readyAt:rec.readyAt})),startDelay:window.__dojoSpeech.startDelay,stopEndDelay:window.__dojoSpeech.stopEndDelay,scheduled:window.__dojoSpeech.scheduled},serviceWorkers:await navigator.serviceWorker?.getRegistrations().then(items=>items.map(item=>({scope:item.scope,active:item.active?.state,installing:item.installing?.state,waiting:item.waiting?.state}))),caches:await caches.keys()}))()`),null,2)); } catch (_) {}
   }
-  fs.writeFileSync(path.join(artifacts, 'failure.json'), JSON.stringify({ message: String(error.stack || error), checks, campaign, errors, workerErrors, external, requests, elapsedSeconds: Math.round((Date.now() - started) / 1000) }, null, 2));
+  fs.writeFileSync(path.join(artifacts, 'failure.json'), JSON.stringify({ message: String(error.stack || error), checks, campaign, voiceLatencyEvidence, errors, workerErrors, external, requests, elapsedSeconds: Math.round((Date.now() - started) / 1000) }, null, 2));
   console.error('Evidence: ' + artifacts); process.exitCode = 1;
 }).finally(() => { ws?.close(); browser?.kill(); server.close(); });
