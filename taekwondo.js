@@ -686,9 +686,14 @@
       },
       onResult: result => {
         if (!readingReady()) return;
-        $('voice-transcript').textContent = 'Heard: ' + result.transcript; $('voice-transcript').hidden = false;
+        const recognizedKana = typeof result.recognizedKana === 'string' ? result.recognizedKana : '';
+        const recognizedRomaji = typeof result.recognizedRomaji === 'string' ? result.recognizedRomaji : '';
+        const recognizedSound = recognizedKana + (recognizedRomaji ? ` (${recognizedRomaji})` : '');
+        const converted = recognizedKana && DojoVoice.normalizeTranscript(result.transcript) !== DojoVoice.normalizeTranscript(recognizedKana);
+        $('voice-transcript').textContent = converted ? `Heard: ${recognizedSound} · recognizer wrote ${result.transcript}` : 'Heard: ' + result.transcript;
+        $('voice-transcript').hidden = false;
         const readingMs = handsFree && readingSpeedEligible && readingStartedAt && Number.isFinite(result.readingMs) && result.readingMs > 0 ? result.readingMs : null;
-        submit(result.correct, `Heard “${result.transcript}”.`, readingMs);
+        submit(result.correct, converted ? `Recognized ${recognizedSound}; browser wrote “${result.transcript}”.` : `Heard “${result.transcript}”.`, readingMs);
       },
       onError: error => {
         // Unclear speech is not an answer. Its retry uses the same real-time
@@ -801,9 +806,9 @@
   });
   $('reload-fight').addEventListener('click', () => { stopHandsFree(); save(); location.reload(); });
   $('mic-details-button').addEventListener('click', () => {
-    const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 safari-live-1', supported: Boolean(voice && voice.supported) };
+    const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 safari-live-2', supported: Boolean(voice && voice.supported) };
     resetFlurry(); cancelVoice();
-    $('mic-build').textContent = 'Microphone build · ' + (details.build || '2026-10-29 safari-live-1');
+    $('mic-build').textContent = 'Microphone build · ' + (details.build || '2026-10-29 safari-live-2');
     $('mic-diagnostics').value = JSON.stringify(details, null, 2);
     $('mic-copy-status').textContent = 'These details stay on this device unless you choose to copy and share them.';
     open($('mic-details-dialog'));

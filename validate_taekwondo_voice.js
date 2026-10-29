@@ -935,21 +935,35 @@ test('Microphone diagnostics retain bounded lifecycle metadata without answers o
     const diagnostics = env.voice.getDiagnostics(), encoded = JSON.stringify(diagnostics);
     assert.ok(diagnostics && typeof diagnostics === 'object');
     assert.equal(encoded.includes('猫'), false); assert.equal(encoded.includes('ねこ'), false);
-    assert.match(encoded, /2026-10-29\s+safari-live-1/);
+    assert.match(encoded, /2026-10-29\s+safari-live-2/);
     assert.ok(encoded.length < 30000, 'A bounded event history cannot grow into an audio log');
     env.voice.destroy();
 });
 
-test('An unseen final arriving after a later question arm is inconclusive without fresh utterance evidence', () => {
-    const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
-    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
-    env.voice.disarm(); env.voice.start(wordQuestion, { keepAlive: true });
-    rec.onresult(cumulative([['し', true], ['猫', true]], 1));
-    assert.equal(env.results.length, 1); assert.equal(env.errors.at(-1).code, 'no-match');
-    env.voice.start(wordQuestion, { keepAlive: true });
-    rec.onresult(cumulative([['し', true], ['猫', true], ['猫', false]], 2));
-    rec.onresult(cumulative([['し', true], ['猫', true], ['猫', true]], 2));
-    assert.equal(env.results.length, 2); assert.equal(env.results.at(-1).correct, true);
+test('Safari final-only kanji readings answer three successive kana without requiring interim events', () => {
+    const env = safariEnvironment();
+    const questions = [{ mode: 'kana-read', prompt: 'こ', reading: 'ko' }, { mode: 'kana-read', prompt: 'さ', reading: 'sa' }, { mode: 'kana-read', prompt: 'し', reading: 'shi' }];
+    const kanji = ['子', '差', '市'];
+    questions.forEach((question, index) => {
+        env.voice.start(question, { keepAlive: true }); const rec = env.instances[0];
+        if (index === 0) { rec.onstart(); rec.onaudiostart(); }
+        rec.onresult(cumulative(kanji.slice(0, index + 1).map(text => [text, true]), index));
+        assert.equal(env.results.length, index + 1, 'Native finals may arrive without any interim');
+        assert.equal(env.results[index].correct, true); assert.equal(env.results[index].transcript, kanji[index]);
+        assert.equal(env.results[index].recognizedKana, question.prompt); assert.equal(env.results[index].recognizedRomaji, question.reading);
+        env.voice.disarm();
+    });
+    assert.equal(env.instances.length, 1); assert.equal(env.instances[0].starts, 1); assert.equal(env.instances[0].stops, 0); assert.equal(env.errors.length, 0);
+    env.voice.destroy();
+});
+
+test('A kanji sound can match either kana script, while another sound stays a real mistake', () => {
+    for (const prompt of ['こ', 'コ']) {
+        const env = environment(); env.voice.start({ mode: 'kana-read', prompt, reading: 'ko' }); env.instances[0].onresult(event(['子']));
+        assert.equal(env.results[0].correct, true); assert.equal(env.results[0].recognizedKana, 'こ'); assert.equal(env.results[0].recognizedRomaji, 'ko'); env.voice.destroy();
+    }
+    const env = environment(); env.voice.start({ mode: 'kana-read', prompt: 'こ', reading: 'ko' }); env.instances[0].onresult(event(['差']));
+    assert.equal(env.results[0].correct, false); assert.equal(env.results[0].recognizedKana, 'さ'); assert.equal(env.results[0].recognizedRomaji, 'sa');
     env.voice.destroy();
 });
 

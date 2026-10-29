@@ -283,7 +283,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-10-29 safari-live-1';
+    const VOICE_BUILD = '2026-10-29 safari-live-2';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
@@ -292,13 +292,23 @@
         const isolated = target.mode === 'kana-read' && /^[ぁ-ゖ]$/u.test(normalizeTranscript(target.prompt));
         // Dictation can invent a word for one syllable. An unrelated transcript
         // is inconclusive; a clearly recognized different kana remains wrong.
-        const knownSound = transcript => KANA.some(([prompt, reading]) => matches({ mode: 'kana-read', prompt, reading }, transcript));
+        const soundReadings = transcript => KANA.filter(([prompt, reading]) => matches({ mode: 'kana-read', prompt, reading }, transcript));
+        const knownSound = transcript => soundReadings(transcript).length > 0;
         if (matched === undefined && isolated && !alternatives.some(knownSound)) {
             return { error: { code: 'no-match', transcript: alternatives[0],
                 message: `The recognizer did not return a clear kana sound: “${alternatives[0]}”. Try the same sound again. No energy was lost.` } };
         }
         const transcript = matched === undefined ? alternatives[0] : matched;
-        return { result: { correct: matched !== undefined, transcript, alternatives, normalized: normalizeTranscript(transcript), readingMs } };
+        const correct = matched !== undefined;
+        const actualReadings = isolated && !correct ? soundReadings(transcript) : [];
+        const kana = correct ? normalizeTranscript(target.expectedKana || target.promptJapanese || target.prompt) :
+            actualReadings.length === 1 ? actualReadings[0][0] : null;
+        const roman = correct ? target.reading || (KANA.find(([prompt]) => prompt === kana) || [])[1] :
+            actualReadings.length === 1 ? actualReadings[0][1] : null;
+        // Keep the vendor's spelling unchanged for grading and debugging. The
+        // phonetic label explains valid kanji dictation, such as 子 -> こ (ko).
+        return { result: { correct, transcript, alternatives, normalized: normalizeTranscript(transcript), readingMs,
+            recognizedKana: kana || null, recognizedRomaji: roman || null } };
     }
 
     class DojoVoice {

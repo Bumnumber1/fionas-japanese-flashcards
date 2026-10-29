@@ -85,7 +85,14 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     await send('Page.addScriptToEvaluateOnNewDocument', { source: `
         if(location.pathname.endsWith('/taekwondo.html'))localStorage.clear();
         Object.defineProperty(navigator,'maxTouchPoints',{get:()=>5});
-        window.__native={instances:[],starts:0,stops:0,aborts:0,overlaps:0,audioDelay:180,dropEnd:false,holdAudioAfterAbort:false,finalizeOnStop:false};
+        window.__native={instances:[],starts:0,stops:0,aborts:0,overlaps:0,audioDelay:180,dropEnd:false,holdAudioAfterAbort:false,finalizeOnStop:false,scriptedPrompts:[]};
+        // Only this fixture's lesson selection is deterministic. The real
+        // canonical generator, move metadata, fight rules, and saves still run.
+        let Game;Object.defineProperty(window,'DojoGame',{configurable:true,get:()=>Game,set:G=>{Game=Object.freeze({...G,createQuestion(...args){
+            const prompt=__native.scriptedPrompts.shift();if(!prompt)return G.createQuestion(...args);
+            for(let seed=0;seed<1000;seed++){const fixture=G.createQuestion(args[0],args[1],args[2],()=>seed/1000,args[4],args[5]);if(fixture.prompt===prompt)return fixture;}
+            throw Error('Canonical fixture unavailable: '+prompt);
+        }});}});
         window.__audio={resumes:0,constructs:0,suspends:0};
         const Audio=window.AudioContext||window.webkitAudioContext;
         if(Audio){window.AudioContext=class extends Audio{constructor(...args){super(...args);__audio.constructs++;}resume(){__audio.resumes++;return super.resume();}suspend(){__audio.suspends++;return super.suspend();}};}
@@ -102,38 +109,39 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.__copiedMicDetails=text;}}});
     ` });
     const address = 'http://127.0.0.1:' + server.address().port + '/taekwondo.html';
-    async function fresh(safari = true) {
+    async function fresh(safari = true, scriptedPrompts = []) {
         await send('Page.navigate', { url: address });
         await waitFor(`document.documentElement.dataset.dojoReady==='true'`);
+        await evaluate(`__native.scriptedPrompts=${JSON.stringify(scriptedPrompts)}`);
         await tap('#start-button'); await waitFor(`!document.querySelector('#challenge-panel').hidden`);
         assert.equal(await evaluate('__voice.safariMode'), safari);
     }
 
-    await fresh(); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
+    await fresh(true, ['こ','さ','し']); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
     await pause(100); let state = await snapshot();
     assert.equal(state.starts, 1); assert.doesNotMatch(state.status, /^Listening/);
     assert.equal(await evaluate('__native.instances[0].activated'), true, 'First capture opens inside a real CDP touch activation');
     await ready(1); assert.equal(await evaluate('__native.instances[0].continuous'), true); assert.equal(await evaluate('__native.instances[0].lang'), 'ja-JP');
     pass('A real touch starts one Japanese continuous session; task start is not presented as audio readiness');
 
-    let before = await snapshot(), groups = [[before.save.question.prompt, false]];
-    await result(groups); await pause(120); state = await snapshot();
-    assert.equal(state.opponent, before.opponent); assert.equal(state.player, before.player);
-    groups[0][1] = true; await result(groups);
+    let before = await snapshot(), groups = [['子', true]];
+    assert.equal(before.save.question.prompt, 'こ');
+    await result(groups);
     let after = await snapshot(); assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
+    assert.match(await evaluate(`document.querySelector('#voice-transcript').textContent`), /こ.*ko.*子/);
     groups.push(['ねこ', false]); await result(groups, 1);
     await nextQuestion(before.save.question.id); before = await snapshot();
     groups[1][1] = true; await result(groups, 1); after = await snapshot();
     assert.equal(after.opponent, before.opponent); assert.deepEqual(after.save.question, before.save.question);
-    groups.push([before.save.question.prompt, false]); await result(groups, 2); groups[2][1] = true; await result(groups, 2);
+    assert.equal(before.save.question.prompt, 'さ'); groups.push(['差', true]); await result(groups, 2);
     after = await snapshot(); assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
     await nextQuestion(before.save.question.id); before = await snapshot();
     await result(groups, 0); after = await snapshot(); assert.equal(after.opponent, before.opponent);
-    groups.push([before.save.question.prompt, false]); await result(groups, 3); groups[3][1] = true; await result(groups, 3); after = await snapshot();
+    assert.equal(before.save.question.prompt, 'し'); groups.push(['市', true]); await result(groups, 3); after = await snapshot();
     assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
     assert.equal(after.starts, 1); assert.equal(after.constructed, 1); assert.equal(after.stops, 0); assert.equal(after.aborts, 0); assert.equal(after.overlaps, 0);
     assert.equal(after.handsfree, true);
-    pass('Three answers share one microphone; cumulative replays, resultIndex zero, and feedback speech cannot answer a later question');
+    pass('Three final-only kanji spellings answer successive kana on one microphone; replays and previously seen feedback speech stay quarantined');
 
     await nextQuestion(before.save.question.id); before = await snapshot();
     const wrong = before.save.question.prompt === 'あ' ? 'か' : 'あ';
@@ -169,7 +177,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
 
     await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
     const details = await evaluate(`document.querySelector('#mic-diagnostics').value`);
-    assert.match(details, /2026-10-29\s+safari-live-1/); assert.equal(details.includes(before.save.question.prompt), false);
+    assert.match(details, /2026-10-29\s+safari-live-2/); assert.equal(details.includes(before.save.question.prompt), false);
     await tap('#copy-mic-details'); assert.equal(await evaluate('__copiedMicDetails'), details);
     await screenshot('safari-microphone-diagnostics');
     await tap('#mic-details-dialog .primary[data-close]');
@@ -179,13 +187,10 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     const priorPrompt = before.save.question.prompt;
     await result([[priorPrompt, false]]); await result([[priorPrompt, true]]); await nextQuestion(before.save.question.id);
     before = await snapshot();
+    await result([[priorPrompt, true]], 0); after = await snapshot(); assert.equal(after.opponent, before.opponent); assert.equal(after.player, before.player);
     await result([[priorPrompt, true], [before.save.question.prompt, true]], 1);
-    after = await snapshot(); assert.equal(after.opponent, before.opponent); assert.equal(after.player, before.player); assert.deepEqual(after.save.question, before.save.question);
-    await waitFor(`__voice.getDiagnostics().stream?.armed===true`, 'The same ambiguous question re-arms for a fresh utterance');
-    await result([[priorPrompt, true], [before.save.question.prompt, true], [before.save.question.prompt, false]], 2);
-    await result([[priorPrompt, true], [before.save.question.prompt, true], [before.save.question.prompt, true]], 2);
     after = await snapshot(); assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player); assert.equal(after.starts, 1);
-    pass('A newly seen late final after rearm stays inconclusive; a fresh interim and final retry the same question without a penalty');
+    pass('A genuinely new final-only result can answer the next question while the old cumulative prefix cannot score again');
 
     await fresh(); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
     await result([[before.save.question.prompt, false]]); await result([[before.save.question.prompt, true]]);

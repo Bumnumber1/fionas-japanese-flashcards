@@ -68,8 +68,7 @@
             const context = { target: Object.assign({}, target, {
                 voiceAliases: Array.isArray(target.voiceAliases) ? target.voiceAliases.slice() : []
             }), epoch, floor: this.highestSeen + 1, startedAt: null, endedAt: null,
-                interim: '', endpointKey: '', waitingFinal: false, speechDetected: false,
-                requireFreshEvidence: Boolean(this.capture), freshWindow: false };
+                interim: '', endpointKey: '', waitingFinal: false, speechDetected: false };
             this.armed = context;
             this.counts.arms++;
             this.event('arm', { floor: context.floor });
@@ -137,7 +136,6 @@
             this.captureReady = false;
             this.highestSeen = -1;
             context.floor = 0;
-            context.requireFreshEvidence = false;
             rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 10;
             rec.onstart = () => {
                 if (!this.current(capture)) return;
@@ -219,20 +217,10 @@
             const windowGroups = groups.slice(context.floor);
             if (!windowGroups.length) { this.event('old-result', { groups: length }); return; }
             const allFinal = windowGroups.every(group => group.final);
-            if (!allFinal) context.freshWindow = true;
-            if (allFinal && context.requireFreshEvidence && !context.freshWindow) {
-                // An unseen late final could belong to speech during feedback.
-                // Keep the stream and retry this target rather than guessing
-                // which question it answers or manufacturing damage.
-                this.disarm(); const deliveryVersion = this.targetVersion;
-                this.counts.errors++; this.lastErrorCode = 'no-match';
-                this.event('ambiguous-final', { groups: windowGroups.length });
-                this.state('idle', context);
-                if (!this.destroyed && this.targetVersion === deliveryVersion && typeof this.onError === 'function') {
-                    this.onError({ code: 'no-match', epoch: context.epoch, target: context.target, nativeMessage: '' });
-                }
-                return;
-            }
+            // A new native index is eligible even when Safari supplies its final
+            // directly. Interim delivery is optional and cannot be a scoring
+            // prerequisite. The floor excludes every group already observed
+            // before arming; immutable final history prevents old-index replay.
             this.ready(capture, allFinal ? 'final' : 'interim');
             if (this.armed !== context || !this.current(capture)) return;
             const top = windowGroups.map(group => group.alternatives[0]).join(' ').trim();
@@ -258,7 +246,9 @@
             const answer = { epoch: context.epoch, target: context.target, alternatives, readingMs };
             capture.acceptedFinal = true;
             if (capture.nativeStopRequested) capture.finalAfterStop = true;
-            this.counts.finals++; this.event('final', { groups: windowGroups.length, alternatives: alternatives.length });
+            this.counts.finals++; this.event('final', { groups: windowGroups.length, alternatives: alternatives.length,
+                firstIndex: context.floor, lastIndex: length - 1,
+                changedIndex: event.resultIndex === undefined ? null : event.resultIndex });
             this.disarm();
             const deliveryVersion = this.targetVersion;
             if (capture.nativeStopRequested || capture.audioEnded) this.watchRelease(capture);
