@@ -234,7 +234,7 @@
         const forms = isolatedKana ? KANA_FORMS[normalized] : WORD_FORMS[normalized];
         if (forms) forms.forEach(add);
         if (!isolatedKana && SPEECH_WORD_FORMS[normalized]) SPEECH_WORD_FORMS[normalized].forEach(add);
-        if (isolatedKana && question.difficulty !== 'special') {
+        if (isolatedKana && question.difficulty !== 'special' && question.challengeKind !== 'special') {
             // An isolated sound is often held naturally: "カー" / "かあ".
             // Permit just one extra matching vowel or long mark. Never apply
             // this tolerance to words, where vowel length changes the answer.
@@ -245,6 +245,13 @@
             if (kanaReading) {
                 add(syllable + 'ー');
                 if (vowelKana) add(syllable + vowelKana);
+                // Japanese dictation commonly writes a held o as おう, so an
+                // isolated そ can become そう / sou / sō. This is the same
+                // bounded hold as そお, and never applies to whole words.
+                if (vowel === 'o') {
+                    add(syllable + 'う');
+                    add(romanSignature(kanaReading + 'u'));
+                }
             }
             if (SMALL_SPOKEN_KANA[syllable]) add(SMALL_SPOKEN_KANA[syllable]);
         }
@@ -283,7 +290,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-10-29 safari-live-2';
+    const VOICE_BUILD = '2026-10-29 dojo-reset-1';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];

@@ -1371,6 +1371,11 @@ dialog p{
 .mic-dialog-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .mic-dialog-actions button{min-height:44px;flex:1;border:1px solid var(--line);border-radius:7px;padding:10px;font-weight:700;touch-action:manipulation}
 .mic-dialog-actions .primary{border-color:transparent}
+.reset-game-button{min-height:44px;touch-action:manipulation}
+.reset-dialog-actions{display:grid;gap:10px;margin-top:20px}
+.reset-dialog-actions button{min-height:48px;border:1px solid var(--line);border-radius:7px;padding:10px 14px;font-weight:800;touch-action:manipulation}
+.reset-dialog-actions #cancel-reset-game{background:#edf4ee;color:var(--ink)}
+.reset-dialog-actions .danger-button{background:#a83f2e;border-color:transparent;color:#fff}
 .reward-list{width:100%;display:grid;gap:7px;margin:5px 0}
 .reward-item{display:flex;gap:10px;align-items:center;width:100%;border:1px solid #ccd3bb;background:#f6f5e9;text-align:left;border-radius:6px;padding:9px 10px;font-size:10px;font-weight:900;min-height:50px}
 .reward-item>span:first-child{font-size:22px}

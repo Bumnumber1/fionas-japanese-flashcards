@@ -45,6 +45,7 @@
   let voiceStatus = 'idle';
   let handsFree = false;
   let recoveryHandsFree = false;
+  let resetResumeHandsFree = false, resetConfirmed = false, resetReturnFocus = null;
   let autoListenTimer, autoAdvanceTimer, speedNoticeTimer;
   let flurryTimes = [], flurryNoticeTimer;
   let readingStartedAt = 0, readingSpeedEligible = false, quietRetries = 0, transientRetries = 0;
@@ -157,6 +158,47 @@
       storageAvailable = true;
     } catch (_) { storageAvailable = false; }
     $('save-status').textContent = storageAvailable ? '● Progress saved on this device' : 'Progress is temporary · browser storage unavailable';
+  }
+  function askResetGame(button) {
+    if ($('reset-game-dialog').open) return;
+    resetResumeHandsFree = handsFree;
+    resetReturnFocus = button;
+    resetConfirmed = false;
+    handsFree = false;
+    cancelVoice();
+    updateHandsFree('Microphone paused while you choose whether to start over.');
+    save();
+    open($('reset-game-dialog'));
+    $('cancel-reset-game').focus({ preventScroll: true });
+  }
+  function resetGame() {
+    if (!$('reset-game-dialog').open) return;
+    resetConfirmed = true; resetResumeHandsFree = false;
+    // Replace live state before closing dialogs or saving. Late speech,
+    // dialog-close handlers and pagehide can never restore the old match.
+    phase = 'lobby'; handsFree = false; saved = null;
+    cancelVoice();
+    if (voice && typeof voice.reset === 'function') voice.reset();
+    clearTimeout(speedNoticeTimer); clearTimeout(calloutTimer);
+    resetFlurry(true);
+    cancelAnimationFrame(tabletInkFrame); tabletInkFrame = 0; revealTabletFeedback = false;
+    progress = G.createProgress(); fight = null; question = null; recent = [];
+    challengeSet = null; writingDraft = null; resultSummary = null;
+    selectedBelt = 0; selectedMove = 'front-kick'; writingIndex = 0;
+    assisted = false; answerResolved = false; answerWasBlock = false;
+    readingStartedAt = 0; readingSpeedEligible = false; quietRetries = 0; transientRetries = 0;
+    recoveryHandsFree = false; voiceStatus = 'idle'; listening = false;
+    rewardId = 'reading'; flavor = 'strawberry';
+    if (writing) writing.setCharacter('', { showGuide: false });
+    ['speed-notice', 'flurry-notice', 'voice-transcript'].forEach(id => { $(id).hidden = true; $(id).textContent = ''; });
+    $('action-callout').textContent = ''; $('action-callout').classList.remove('pop', 'combo-callout'); $('action-callout').style.opacity = '';
+    $('voice-recovery').hidden = true; $('feedback').hidden = true; $('hint-text').hidden = true;
+    $('feedback-title').textContent = ''; $('feedback-detail').textContent = ''; $('hint-text').textContent = '';
+    $('mic-diagnostics').value = '';
+    closeTabletPanel({ resume: false, focus: false });
+    document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
+    renderLobby();
+    $('start-button').focus({ preventScroll: true });
   }
   function sound(kind) {
     // Keep optional output audio from competing with Safari's open microphone.
@@ -387,7 +429,7 @@
   }
   function readingReady() {
     return phase === 'question' && fight && fight.status === 'fighting' && !writingMode() && !document.hidden && !tabletPanel &&
-      !$('pause-dialog').open && !$('help-dialog').open && !$('result-dialog').open && !$('reward-dialog').open && !$('mic-details-dialog').open;
+      !$('pause-dialog').open && !$('help-dialog').open && !$('result-dialog').open && !$('reward-dialog').open && !$('mic-details-dialog').open && !$('reset-game-dialog').open;
   }
   function updateHandsFree(note) {
     $('handsfree-toggle').setAttribute('aria-pressed', String(handsFree));
@@ -426,11 +468,11 @@
   }
   function advanceHandsFree(delay = 650) {
     clearTimeout(autoAdvanceTimer);
-    if (!handsFree || phase !== 'answered' || !fight || fight.status !== 'fighting' || document.hidden || tabletPanel || $('pause-dialog').open || $('help-dialog').open || $('reward-dialog').open || $('result-dialog').open || $('mic-details-dialog').open) return;
+    if (!handsFree || phase !== 'answered' || !fight || fight.status !== 'fighting' || document.hidden || tabletPanel || $('pause-dialog').open || $('help-dialog').open || $('reward-dialog').open || $('result-dialog').open || $('mic-details-dialog').open || $('reset-game-dialog').open) return;
     const target = question, bout = fight;
     updateHandsFree('Hands-free flow · the next prompt is coming. Say it when the mic is ready.');
     autoAdvanceTimer = setTimeout(() => {
-      if (handsFree && phase === 'answered' && question === target && fight === bout && !document.hidden && !tabletPanel && !$('pause-dialog').open && !$('help-dialog').open && !$('reward-dialog').open && !$('result-dialog').open && !$('mic-details-dialog').open) nextQuestion();
+      if (handsFree && phase === 'answered' && question === target && fight === bout && !document.hidden && !tabletPanel && !$('pause-dialog').open && !$('help-dialog').open && !$('reward-dialog').open && !$('result-dialog').open && !$('mic-details-dialog').open && !$('reset-game-dialog').open) nextQuestion();
     }, delay);
   }
   function showSpeedBonus(outcome, milliseconds) {
@@ -609,6 +651,7 @@
       const item = document.createElement('span'); item.append(Object.assign(document.createElement('strong'), { textContent: value }), document.createTextNode(label)); $('result-stats').append(item);
     });
     $('result-continue').textContent = resultSummary.rewardUnlocked ? 'To the ice cream parlour →' : won ? selectedBelt === FINAL_BELT ? 'Back to the dojo →' : 'Meet your next rival →' : 'Rematch · full energy →';
+    $('result-reset-game').hidden = won;
     if (won && scene) scene.celebrate();
     sound(won ? 'win' : 'wrong'); phase = 'result'; updatePlayView(); renderProgress(); save(); open($('result-dialog'));
   }
@@ -806,9 +849,9 @@
   });
   $('reload-fight').addEventListener('click', () => { stopHandsFree(); save(); location.reload(); });
   $('mic-details-button').addEventListener('click', () => {
-    const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 safari-live-2', supported: Boolean(voice && voice.supported) };
+    const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 dojo-reset-1', supported: Boolean(voice && voice.supported) };
     resetFlurry(); cancelVoice();
-    $('mic-build').textContent = 'Microphone build · ' + (details.build || '2026-10-29 safari-live-2');
+    $('mic-build').textContent = 'Microphone build · ' + (details.build || '2026-10-29 dojo-reset-1');
     $('mic-diagnostics').value = JSON.stringify(details, null, 2);
     $('mic-copy-status').textContent = 'These details stay on this device unless you choose to copy and share them.';
     open($('mic-details-dialog'));
@@ -823,6 +866,18 @@
       report.focus(); report.select();
       $('mic-copy-status').textContent = 'Details selected. Use Copy from the selection menu.';
     }
+  });
+  document.querySelectorAll('[data-reset-game]').forEach(button => button.addEventListener('click', () => askResetGame(button)));
+  $('cancel-reset-game').addEventListener('click', () => $('reset-game-dialog').close());
+  $('confirm-reset-game').addEventListener('click', resetGame);
+  $('reset-game-dialog').addEventListener('close', () => {
+    if (!resetConfirmed) {
+      handsFree = Boolean(resetResumeHandsFree && !document.hidden && voice && voice.supported && fight && fight.status === 'fighting');
+      updateHandsFree();
+      if (handsFree) { if (phase === 'answered') advanceHandsFree(); else queueHandsFree(); }
+      if (resetReturnFocus && resetReturnFocus.isConnected && resetReturnFocus.getClientRects().length) resetReturnFocus.focus({ preventScroll: true });
+    }
+    resetResumeHandsFree = false; resetReturnFocus = null;
   });
   $('start-button').addEventListener('click', beginFight);
   $('next-button').addEventListener('click', () => { if (phase !== 'answered') return; if (fight.status === 'fighting') nextQuestion(); else finishFight(); });
@@ -861,8 +916,8 @@
   });
   $('sound-toggle').addEventListener('click', () => { soundEnabled = !soundEnabled; applyPreferences(); save(); if (soundEnabled) sound('hit'); });
   $('motion-toggle').addEventListener('click', () => { reducedMotion = !reducedMotion; applyPreferences(); save(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stopHandsFree('Microphone stopped while the dojo is hidden. Start hands-free to continue.'); });
-  window.addEventListener('pagehide', () => { stopHandsFree(); save(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { resetResumeHandsFree = false; stopHandsFree('Microphone stopped while the dojo is hidden. Start hands-free to continue.'); } });
+  window.addEventListener('pagehide', () => { resetResumeHandsFree = false; stopHandsFree(); save(); });
   function canonicalQuestion(candidate, allowLegacy = false) {
     if (!fight || !candidate || typeof candidate !== 'object' || Array.isArray(candidate) || typeof candidate.id !== 'string' || typeof candidate.answer !== 'string' || typeof candidate.prompt !== 'string') return null;
     const available = G.availableMoves(progress.belt);

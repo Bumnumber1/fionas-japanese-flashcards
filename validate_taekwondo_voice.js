@@ -297,6 +297,40 @@ test('Small isolated vowel and glide spellings retain sound while small tsu neve
     }
 });
 
+test('A bounded held O sound accepts Japanese ou spelling only for isolated basic kana', () => {
+    for (const kana of dojo.KANA.filter(item => item.romaji.endsWith('o'))) {
+        const question = { mode: 'kana-read', prompt: kana.char, reading: kana.romaji, challengeKind: 'basic' };
+        const spoken = kana.char === 'を' ? 'お' : kana.char;
+        for (const transcript of [spoken + 'う', (kana.char === 'を' ? 'o' : kana.romaji) + 'u']) {
+            assert.equal(DojoVoice.matches(question, transcript), true, kana.char + ': ' + transcript);
+            const katakana = [...(spoken + 'う')].map(char => String.fromCharCode(char.charCodeAt(0) + 0x60)).join('');
+            assert.equal(DojoVoice.matches({ ...question, prompt: String.fromCharCode(kana.char.charCodeAt(0) + 0x60) }, katakana), true);
+        }
+    }
+    for (const prompt of ['そ', 'ソ']) {
+        const question = { mode: 'kana-read', prompt, reading: 'so', challengeKind: 'basic' };
+        for (const transcript of ['so', 'sou', 'sō', 'そう', 'ソウ', 'そお', 'soo', 'そー']) assert.equal(DojoVoice.matches(question, transcript), true, transcript);
+        for (const transcript of ['sa', 'さ', 'sooo', 'souu', 'そうう', 'そうです', 'そおお', 'そうそう']) assert.equal(DojoVoice.matches(question, transcript), false, transcript);
+        const env = environment(); env.voice.start(question); env.instances[0].onresult(event(['sou']));
+        assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true); assert.equal(env.results[0].recognizedKana, 'そ'); assert.equal(env.results[0].recognizedRomaji, 'so');
+        env.voice.destroy();
+    }
+    assert.equal(DojoVoice.matches({ mode: 'kana-read', prompt: 'せ', reading: 'se' }, 'せい'), false, 'No expansion to other vowel rows');
+});
+
+test('Ou tolerance never changes word or special vowel length, including canonical challengeKind metadata', () => {
+    for (const question of [
+        { mode: 'word-read', expectedKana: 'そ', reading: 'so' },
+        { mode: 'kana-read', prompt: 'そ', reading: 'so', difficulty: 'special' },
+        { mode: 'kana-read', prompt: 'そ', reading: 'so', challengeKind: 'special' }
+    ]) {
+        assert.equal(DojoVoice.matches(question, 'そ'), true);
+        for (const transcript of ['sou', 'sō', 'そう', 'そお', 'そー']) assert.equal(DojoVoice.matches(question, transcript), false, JSON.stringify(question) + ': ' + transcript);
+    }
+    assert.equal(DojoVoice.matches({ mode: 'word-read', expectedKana: 'そう', reading: 'sou' }, 'そ'), false);
+    assert.equal(DojoVoice.matches({ mode: 'word-read', expectedKana: 'そう', reading: 'sou' }, 'そう'), true);
+});
+
 test('Complete vocabulary homophones survive the recognizer choosing another spelling', () => {
     for (const [expectedKana, transcript] of [
         ['のり', '海苔'], ['さる', '去る'], ['もも', '腿'], ['ぶどう', '武道'], ['なし', '無し'],
@@ -935,7 +969,7 @@ test('Microphone diagnostics retain bounded lifecycle metadata without answers o
     const diagnostics = env.voice.getDiagnostics(), encoded = JSON.stringify(diagnostics);
     assert.ok(diagnostics && typeof diagnostics === 'object');
     assert.equal(encoded.includes('猫'), false); assert.equal(encoded.includes('ねこ'), false);
-    assert.match(encoded, /2026-10-29\s+safari-live-2/);
+    assert.match(encoded, /2026-10-29\s+dojo-reset-1/);
     assert.ok(encoded.length < 30000, 'A bounded event history cannot grow into an audio log');
     env.voice.destroy();
 });

@@ -83,7 +83,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15', platform: 'MacIntel' });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: `
-        if(location.pathname.endsWith('/taekwondo.html'))localStorage.clear();
+        const query=new URL(location.href).searchParams;
+        if(location.pathname.endsWith('/taekwondo.html')&&query.get('preserve')!=='1')localStorage.clear();
         Object.defineProperty(navigator,'maxTouchPoints',{get:()=>5});
         window.__native={instances:[],starts:0,stops:0,aborts:0,overlaps:0,audioDelay:180,dropEnd:false,holdAudioAfterAbort:false,finalizeOnStop:false,scriptedPrompts:[]};
         // Only this fixture's lesson selection is deterministic. The real
@@ -92,7 +93,23 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
             const prompt=__native.scriptedPrompts.shift();if(!prompt)return G.createQuestion(...args);
             for(let seed=0;seed<1000;seed++){const fixture=G.createQuestion(args[0],args[1],args[2],()=>seed/1000,args[4],args[5]);if(fixture.prompt===prompt)return fixture;}
             throw Error('Canonical fixture unavailable: '+prompt);
-        }});}});
+        }});
+        const fixture=query.get('fixture');
+        if(fixture&&fixture.startsWith('reset-')){
+            const progress=G.createProgress();
+            for(let belt=0;belt<(fixture==='reset-writing'?4:2);belt++){const win=G.startFight(progress,belt);for(let turn=0;turn<32&&win.status==='fighting';turn++)G.resolveAnswer(win,{correct:true,assisted:false,move:'front-kick',challengeKind:'basic'});if(win.status!=='won')throw Error('Earned fixture failed');G.completeFight(progress,win);}
+            progress.rewards.reading.claimed=true;progress.rewards.reading.flavor='matcha';
+            let fight=null,question=null,phase='lobby',answerResolved=false;
+            if(fixture!=='reset-lobby'){
+                const belt=fixture==='reset-writing'?4:0;fight=G.startFight(progress,belt);question=G.createQuestion(belt,{},[],()=>.4,'front-kick',progress.belt);
+                if(fixture==='reset-loss'){for(let turn=0;turn<40&&fight.status==='fighting';turn++)G.resolveAnswer(fight,{correct:false,assisted:false,move:'front-kick',challengeKind:'basic'});if(fight.status!=='lost')throw Error('Loss fixture failed');phase='answered';answerResolved=true;}
+                else{G.resolveAnswer(fight,{correct:false,move:'front-kick'});G.resolveAnswer(fight,{correct:false,move:'front-kick'});G.resolveAnswer(fight,{correct:true,move:'front-kick'});phase='question';}
+            }
+            localStorage.setItem(G.SAVE_VERSION,JSON.stringify({progress,fight,question,phase,answerResolved,answerWasBlock:false,assisted:false,writingIndex:0,selectedMove:'front-kick',recent:question?[question.id]:[],challengeSet:null,writingDraft:null,soundEnabled:true,reducedMotion:true}));
+            localStorage.setItem('lesson-other-sentinel','keep this lesson');
+            localStorage.setItem('fiona-year1-review-weeks1-13-v1',JSON.stringify({sentinel:'keep selected words'}));
+        }
+        }});
         window.__audio={resumes:0,constructs:0,suspends:0};
         const Audio=window.AudioContext||window.webkitAudioContext;
         if(Audio){window.AudioContext=class extends Audio{constructor(...args){super(...args);__audio.constructs++;}resume(){__audio.resumes++;return super.resume();}suspend(){__audio.suspends++;return super.suspend();}};}
@@ -106,18 +123,19 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         }
         window.SpeechRecognition=window.webkitSpeechRecognition=NativeRecognition;
         let Voice;Object.defineProperty(window,'DojoVoice',{configurable:true,get:()=>Voice,set:Ctor=>{Voice=class extends Ctor{constructor(options){super(options);window.__voice=this;}};}});
+        let Writing;Object.defineProperty(window,'DojoWriting',{configurable:true,get:()=>Writing,set:Ctor=>{Writing=class extends Ctor{constructor(...args){super(...args);window.__writing=this;}};}});
         Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.__copiedMicDetails=text;}}});
     ` });
     const address = 'http://127.0.0.1:' + server.address().port + '/taekwondo.html';
-    async function fresh(safari = true, scriptedPrompts = []) {
-        await send('Page.navigate', { url: address });
+    async function fresh(safari = true, scriptedPrompts = [], fixture = '', enter = true) {
+        await send('Page.navigate', { url: address + (fixture ? '?fixture=' + encodeURIComponent(fixture) : '') });
         await waitFor(`document.documentElement.dataset.dojoReady==='true'`);
         await evaluate(`__native.scriptedPrompts=${JSON.stringify(scriptedPrompts)}`);
-        await tap('#start-button'); await waitFor(`!document.querySelector('#challenge-panel').hidden`);
+        if (enter) { await tap('#start-button'); await waitFor(`!document.querySelector('#challenge-panel').hidden`); }
         assert.equal(await evaluate('__voice.safariMode'), safari);
     }
 
-    await fresh(true, ['こ','さ','し']); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
+    await fresh(true, ['こ','さ','し','そ']); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
     await pause(100); let state = await snapshot();
     assert.equal(state.starts, 1); assert.doesNotMatch(state.status, /^Listening/);
     assert.equal(await evaluate('__native.instances[0].activated'), true, 'First capture opens inside a real CDP touch activation');
@@ -142,6 +160,13 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     assert.equal(after.starts, 1); assert.equal(after.constructed, 1); assert.equal(after.stops, 0); assert.equal(after.aborts, 0); assert.equal(after.overlaps, 0);
     assert.equal(after.handsfree, true);
     pass('Three final-only kanji spellings answer successive kana on one microphone; replays and previously seen feedback speech stay quarantined');
+
+    await nextQuestion(before.save.question.id); before = await snapshot(); assert.equal(before.save.question.prompt, 'そ');
+    groups.push(['sou', true]); await result(groups, groups.length - 1); after = await snapshot();
+    assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
+    assert.match(await evaluate(`document.querySelector('#voice-transcript').textContent`), /そ.*so.*sou/);
+    assert.equal(after.starts, 1);
+    pass('A native sou result reads isolated そ as a held O sound and the UI shows the accepted phonetic reading');
 
     await nextQuestion(before.save.question.id); before = await snapshot();
     const wrong = before.save.question.prompt === 'あ' ? 'か' : 'あ';
@@ -177,7 +202,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
 
     await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
     const details = await evaluate(`document.querySelector('#mic-diagnostics').value`);
-    assert.match(details, /2026-10-29\s+safari-live-2/); assert.equal(details.includes(before.save.question.prompt), false);
+    assert.match(details, /2026-10-29\s+dojo-reset-1/); assert.equal(details.includes(before.save.question.prompt), false);
     await tap('#copy-mic-details'); assert.equal(await evaluate('__copiedMicDetails'), details);
     await screenshot('safari-microphone-diagnostics');
     await tap('#mic-details-dialog .primary[data-close]');
@@ -229,6 +254,80 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     for (const target of controls.filter(control => ['#reconnect-mic','#reload-fight','#mic-details-button'].includes(control.selector))) assert.ok(target.height >= 43.5 && target.width >= 43.5);
     await screenshot('safari-ipad-recovery-1024x768');
     pass('Safari recovery remains reachable inside the 1024 by 768 lesson panel with 44px actions and no page scroll');
+
+    async function resetDialog(label) {
+        await waitFor(`document.querySelector('#reset-game-dialog').open`, label + ' confirmation opens');
+        const geometry = await evaluate(`(() => {const dialog=document.querySelector('#reset-game-dialog'),box=element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};return {width:innerWidth,height:innerHeight,dialog:box(dialog),focus:document.activeElement.id,buttons:['#cancel-reset-game','#confirm-reset-game'].map(selector=>({selector,...box(document.querySelector(selector))}))};})()`);
+        assert.equal(geometry.focus, 'cancel-reset-game', label + ' defaults to Cancel');
+        assert.ok(geometry.dialog.x >= 0 && geometry.dialog.y >= 0 && geometry.dialog.right <= geometry.width + .5 && geometry.dialog.bottom <= geometry.height + .5, label + ' fits the screen');
+        for (const button of geometry.buttons) assert.ok(button.width >= 43.5 && button.height >= 43.5 && button.bottom <= geometry.height + .5, label + ' has reachable 44px actions');
+    }
+    async function assertFreshDojo(label) {
+        const state = await snapshot();
+        assert.equal(state.save.phase, 'lobby', label); assert.equal(state.save.fight, null, label); assert.equal(state.save.question, null, label);
+        assert.equal(state.save.progress.belt, 0, label); assert.equal(state.save.progress.mastered, false, label);
+        for (const key of ['wins','losses','totalCorrect','totalMistakes','bestStreak']) assert.equal(state.save.progress[key], 0, label + ' resets ' + key);
+        for (const reward of Object.values(state.save.progress.rewards)) assert.deepEqual(reward, { unlocked: false, claimed: false, flavor: '' }, label + ' resets rewards');
+        assert.equal(state.save.selectedMove, 'front-kick'); assert.equal(await evaluate(`DojoGame.availableMoves(0).filter(move=>move.kind==='special').length`), 0);
+        assert.equal(state.handsfree, false); assert.equal(state.capture, false);
+        assert.equal(state.save.soundEnabled, true); assert.equal(state.save.reducedMotion, true);
+        assert.equal(await evaluate(`localStorage.getItem('lesson-other-sentinel')`), 'keep this lesson');
+        assert.equal(await evaluate(`JSON.parse(localStorage.getItem('fiona-year1-review-weeks1-13-v1')).sentinel`), 'keep selected words');
+        return state;
+    }
+
+    await fresh(true, [], 'reset-active'); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
+    assert.equal(before.save.progress.wins, 2); assert.equal(before.save.progress.belt, 2); assert.equal(before.save.progress.rewards.reading.claimed, true); assert.ok(before.player < 100);
+    await tap('#reset-game-button'); await resetDialog('Active-fight reset'); await pause(100);
+    assert.equal((await snapshot()).capture, false);
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
+    await waitFor(`!document.querySelector('#reset-game-dialog').open`); await ready(2); after = await snapshot();
+    assert.deepEqual(after.save, before.save, 'Escape keeps the exact saved question, damaged HP, earned progress, preferences and reward');
+    await tap('#pause-button'); await waitFor(`document.querySelector('#pause-dialog').open`); const pausedStarts = (await snapshot()).starts;
+    await tap('#pause-reset-game'); await resetDialog('Paused-fight reset'); await tap('#cancel-reset-game'); await pause(250);
+    assert.equal(await evaluate(`document.querySelector('#pause-dialog').open`), true); assert.equal((await snapshot()).starts, pausedStarts);
+    await tap('#resume-button'); await ready(3); after = await snapshot(); assert.deepEqual(after.save, before.save);
+    pass('Reset cancellation and Escape preserve an active earned fight exactly; cancel inside Pause keeps the microphone paused');
+
+    await evaluate('window.__beforeGameResetResult=__native.instances.at(-1).onresult;window.__beforeGameResetError=__native.instances.at(-1).onerror');
+    await tap('#reset-game-button'); await resetDialog('Confirmed active reset'); await screenshot('dojo-reset-confirmation-1024x768');
+    await tap('#confirm-reset-game'); await waitFor(`!document.querySelector('#reset-game-dialog').open&&!document.querySelector('#welcome-panel').hidden`); await pause(100);
+    const resetState = await assertFreshDojo('Confirmed active reset');
+    await evaluate(`__beforeGameResetResult?.({resultIndex:0,results:[Object.assign([{transcript:${JSON.stringify(before.save.question.prompt)},confidence:.9}],{isFinal:true})]});__beforeGameResetError?.({error:'network'})`);
+    await pause(500); assert.deepEqual((await snapshot()).save, resetState.save, 'Old microphone callbacks cannot restore or damage the reset game');
+    await send('Page.navigate', { url: address + '?preserve=1' }); await waitFor(`document.documentElement.dataset.dojoReady==='true'`); await pause(250);
+    await assertFreshDojo('Reset survives pagehide and reload'); assert.equal((await snapshot()).starts, 0);
+    pass('Confirmed reset clears only dojo progress and live state, keeps other lessons/preferences, rejects stale speech, and survives pagehide/reload with microphone off');
+
+    await send('Emulation.setDeviceMetricsOverride', { width: 820, height: 1180, deviceScaleFactor: 2, mobile: true });
+    await fresh(true, [], 'reset-lobby', false); before = await snapshot(); assert.equal(before.save.progress.wins, 2);
+    await tap('#reset-game-button'); await resetDialog('Portrait lobby reset'); await screenshot('dojo-reset-confirmation-820x1180');
+    await tap('#cancel-reset-game'); await waitFor(`!document.querySelector('#reset-game-dialog').open`); assert.deepEqual((await snapshot()).save, before.save);
+    await tap('#reset-game-button'); await resetDialog('Confirmed portrait lobby reset'); await tap('#confirm-reset-game'); await pause(100); await assertFreshDojo('Lobby reset');
+    pass('The lobby offers a reversible reset confirmation in portrait and clears earned rank/rewards only after confirmation');
+
+    await fresh(true, [], 'reset-loss', false); await tap('#start-button'); await waitFor(`document.querySelector('#result-dialog').open`); before = await snapshot();
+    assert.equal(before.save.progress.losses, 1); assert.equal(await evaluate(`document.querySelector('#result-reset-game').hidden`), false);
+    await tap('#result-reset-game'); await resetDialog('Loss-result reset'); await tap('#cancel-reset-game'); await pause(100);
+    assert.equal(await evaluate(`document.querySelector('#result-dialog').open`), true); assert.deepEqual((await snapshot()).save, before.save);
+    await tap('#result-reset-game'); await resetDialog('Confirmed loss-result reset'); await tap('#confirm-reset-game'); await pause(100);
+    await assertFreshDojo('Loss-result reset'); assert.equal(await evaluate(`document.querySelector('#result-dialog').open`), false);
+    pass('A lost match also offers Reset game; Cancel retains its result and confirmation returns to a fresh white-belt lobby');
+
+    await fresh(true, [], 'reset-writing');
+    assert.equal((await snapshot()).save.question.mode, 'kana-write');
+    const pad = await evaluate(`(() => {const r=document.querySelector('#writing-canvas').getBoundingClientRect();return {x:r.left+r.width*.3,y:r.top+r.height*.4,step:r.width*.2};})()`);
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: pad.x, y: pad.y, id: 82, radiusX: 3, radiusY: 3, force: .7 }] });
+    await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: pad.x + pad.step, y: pad.y + pad.step, id: 82, radiusX: 3, radiusY: 3, force: .7 }] });
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    before = await snapshot(); assert.equal(before.save.writingDraft.strokes.length, 1); assert.equal(before.save.challengeSet.locked, true);
+    await tap('#reset-game-button'); await resetDialog('Writing reset'); await tap('#cancel-reset-game'); await pause(100);
+    assert.deepEqual((await snapshot()).save, before.save); assert.equal(await evaluate('__writing.strokes.length'), 1);
+    await tap('#reset-game-button'); await resetDialog('Confirmed writing reset'); await tap('#confirm-reset-game'); await pause(100);
+    await assertFreshDojo('Writing reset'); assert.equal(await evaluate('__writing.strokes.length'), 0); assert.equal(await evaluate('Boolean(__writing.reference)'), false);
+    assert.equal((await snapshot()).save.writingDraft, null); assert.equal((await snapshot()).save.challengeSet, null);
+    pass('Reset cancellation preserves native touch ink; confirmation clears the actual writing pad and draft without saving an old challenge');
 
     await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', platform: 'Win32' });
     await fresh(false); await evaluate('__native.finalizeOnStop=true'); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
