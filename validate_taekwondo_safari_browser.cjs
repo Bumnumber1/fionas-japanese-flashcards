@@ -2,6 +2,7 @@
 // Native audio and cumulative recognizer events are synthetic. This does not
 // establish physical Safari, iPad microphone, speech-service, or audio quality.
 // DOJO_CACHE_ONLY=1 runs only the generated-worker offline runtime check.
+// DOJO_DIAGNOSTICS_ONLY=1 runs only report persistence and user-driven export.
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -16,7 +17,10 @@ fs.mkdirSync(output, { recursive: true });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const checks = [], exceptions = [], requests = [];
 const cacheOnly = process.env.DOJO_CACHE_ONLY === '1';
-let controls = [], cacheEvidence = null;
+const diagnosticsReviewOnly = process.env.DOJO_DIAGNOSTICS_REVIEW_ONLY === '1';
+const diagnosticsOnly = process.env.DOJO_DIAGNOSTICS_ONLY === '1' || diagnosticsReviewOnly;
+const runtimeFiles = ['taekwondo.css','taekwondo-engine.js','taekwondo-writing.js','taekwondo-safari-stream.js','taekwondo-diagnostics.js','taekwondo-voice.js','taekwondo-scene.js','taekwondo.js'];
+let controls = [], cacheEvidence = null, diagnosticsEvidence = null;
 const server = http.createServer((request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
     const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
@@ -72,7 +76,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         throw Error('Timed out: ' + label);
     };
     const tap = async selector => {
-        const point = await evaluate(`(() => {const button=document.querySelector(${JSON.stringify(selector)});if(!button||button.disabled||!button.getClientRects().length)throw Error('Unavailable '+${JSON.stringify(selector)});button.scrollIntoView({block:'nearest',inline:'nearest'});const r=button.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+        await evaluate(`new Promise(resolve=>{const button=document.querySelector(${JSON.stringify(selector)});if(!button||button.disabled||!button.getClientRects().length)throw Error('Unavailable '+${JSON.stringify(selector)});button.scrollIntoView({behavior:'instant',block:'nearest',inline:'nearest'});requestAnimationFrame(()=>requestAnimationFrame(resolve));})`);
+        const point = await evaluate(`(() => {const button=document.querySelector(${JSON.stringify(selector)}),r=button.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);if(!button.contains(hit))throw Error('Touch target obscured '+${JSON.stringify(selector)}+' by '+(hit?.id||hit?.tagName));return {x,y};})()`);
         await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...point, id: 81, radiusX: 3, radiusY: 3, force: .7 }] });
         await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     };
@@ -92,6 +97,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         const query=new URL(location.href).searchParams;
         if(location.pathname.endsWith('/taekwondo.html')&&query.get('preserve')!=='1')localStorage.clear();
         Object.defineProperty(navigator,'maxTouchPoints',{get:()=>5});
+        window.DOJO_MIC_REPORT_URL='https://fionas-dojo-mic-reports.bumnumber1.chatgpt.site/import';
         window.__native={instances:[],starts:0,stops:0,aborts:0,overlaps:0,audioDelay:180,dropEnd:false,holdAudioAfterAbort:false,finalizeOnStop:false,deafRestarts:false,scriptedPrompts:[]};
         // Only this fixture's lesson selection is deterministic. The real
         // canonical generator, move metadata, fight rules, and saves still run.
@@ -142,7 +148,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         assert.equal(await evaluate('__voice.safariMode'), safari);
     }
 
-    if (!cacheOnly) {
+    if (!cacheOnly && !diagnosticsOnly) {
     await fresh(true, ['こ','さ','し','そ']); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
     await pause(100); let state = await snapshot();
     assert.equal(state.starts, 1); assert.doesNotMatch(state.status, /^Listening/);
@@ -210,7 +216,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
 
     await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
     const details = await evaluate(`document.querySelector('#mic-diagnostics').value`);
-    assert.match(details, /2026-10-29\s+safari-capture-2/); assert.equal(details.includes(before.save.question.prompt), false);
+    assert.match(details, /2026-10-29\s+mic-report-1/); assert.equal(details.includes(before.save.question.prompt), false);
     await tap('#copy-mic-details'); assert.equal(await evaluate('__copiedMicDetails'), details);
     await screenshot('safari-microphone-diagnostics');
     await tap('#mic-details-dialog .primary[data-close]');
@@ -392,12 +398,162 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     pass('Desktop Chrome retains its fast one-shot endpoint and automatic next microphone after the final');
     }
 
+    if (diagnosticsOnly && !diagnosticsReviewOnly) {
+        // The native speech service and Share sheet remain synthetic; every
+        // export action is initiated by a real CDP touch, not element.click().
+        const privateBase = 'https://fionas-dojo-mic-reports.bumnumber1.chatgpt.site/import';
+        const navigations = [], statuses=[], previousHandler = socket.onmessage;
+        socket.onmessage = event => { const message=JSON.parse(event.data);if(message.method==='Fetch.requestPaused')navigations.push(message.params);if(message.method==='Runtime.bindingCalled'&&message.params.name==='__auditReportStatus')statuses.push(message.params.payload);previousHandler(event); };
+        await send('Fetch.enable', { patterns: [{ urlPattern: privateBase + '*', requestStage: 'Request' }] });
+        const downloads = path.join(output, 'downloads'); fs.mkdirSync(downloads, { recursive: true });
+        await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
+        await fresh(true, ['こ','さ','し']);
+        await evaluate(`localStorage.setItem('other-lesson-diagnostic-sentinel','keep this unrelated lesson');
+            window.__clipboardCalls=0;window.__shares=[];window.__abortShare=false;
+            Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{__clipboardCalls++;throw new DOMException('Synthetic denied clipboard','NotAllowedError');}}});
+            Object.defineProperty(navigator,'canShare',{configurable:true,value:data=>Boolean(data.files?.length===1&&data.files[0] instanceof File)});
+            Object.defineProperty(navigator,'share',{configurable:true,value:data=>{const call={active:navigator.userActivation.isActive,keys:Object.keys(data),name:data.files?.[0]?.name,type:data.files?.[0]?.type};__shares.push(call);return data.files[0].text().then(text=>{call.text=text;if(__abortShare)throw new DOMException('User cancelled the share sheet','AbortError');});}});`);
+        await tap('#handsfree-toggle'); await ready(1);
+        let previous = await snapshot();
+        await result([['子', true]]); await nextQuestion(previous.save.question.id); previous = await snapshot();
+        await result([['子', true], ['差', true]], 1); await nextQuestion(previous.save.question.id);
+        const healthy = await snapshot();
+        await evaluate(`__native.instances[0].onerror({error:'network',message:'PRIVATE_VENDOR_MESSAGE_MUST_NOT_SURVIVE'})`);
+        await waitFor(`!document.querySelector('#voice-recovery').hidden&&DojoMicDiagnostics.getSavedReport()?.snapshot.errorCode==='network'`, 'The native fault is saved before cleanup');
+        const failed = await snapshot(), fault = await evaluate('DojoMicDiagnostics.getSavedReport()');
+        assert.equal(failed.player, healthy.player); assert.equal(failed.opponent, healthy.opponent);
+        assert.deepEqual(failed.save, healthy.save, 'Service failure does not consume the assigned question or health');
+        assert.equal(fault.reason, 'error'); assert.equal(fault.snapshot.errorCode, 'network'); assert.match(fault.build, /mic-report-1/);
+        await send('Emulation.setDeviceMetricsOverride', {width:1024,height:768,deviceScaleFactor:2,mobile:true});
+        await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
+        const initialLayout=await evaluate(`(()=>{const button=document.querySelector('#send-mic-report'),r=button.getBoundingClientRect(),dialog=document.querySelector('#mic-details-dialog');return {x:r.x,y:r.y,bottom:r.bottom,height:r.height,viewportHeight:innerHeight,visible:r.top>=0&&r.bottom<=innerHeight,dialogScrollTop:dialog.scrollTop,dialogHeight:dialog.clientHeight,dialogScrollHeight:dialog.scrollHeight};})()`);
+        await screenshot('safari-mic-report-initial-landscape');
+        assert.deepEqual((await snapshot()).save, failed.save);
+        const shown = JSON.parse(await evaluate(`document.querySelector('#mic-diagnostics').value`));
+        assert.equal(shown.reportId, fault.reportId);
+        assert.equal(JSON.stringify(shown).includes('PRIVATE_VENDOR_MESSAGE_MUST_NOT_SURVIVE'), false);
+        for (const field of ['transcript','answer','target','audio','nativeMessage']) assert.equal(Object.hasOwn(shown, field), false);
+        assert.match(await evaluate(`document.querySelector('#mic-report-retained').textContent`), /retained.*reload/);
+        await tap('#copy-mic-details');
+        await waitFor(`document.querySelector('#mic-copy-status').textContent.includes('Details selected')`);
+        assert.equal(await evaluate('__clipboardCalls'), 1);
+        pass('A genuine native-error callback freezes a private metadata report before cleanup; denied clipboard access preserves the fight and leaves independent exports available');
+
+        await tap('#share-mic-report'); await waitFor(`__shares.length===1&&Boolean(__shares[0].text)`);
+        await waitFor(`document.querySelector('#mic-copy-status').textContent.includes('Share sheet completed')`);
+        const shared = await evaluate('__shares[0]');
+        assert.equal(shared.active, true, 'Share is called during the touch gesture, before asynchronous preparation consumes activation');
+        assert.equal(shared.type, 'text/plain'); assert.match(shared.name, /^fionas-dojo-mic-[a-f0-9-]+\.txt$/);
+        const sharedReport = JSON.parse(shared.text); assert.equal(sharedReport.reportId, fault.reportId); assert.equal(sharedReport.snapshot.errorCode, 'network');
+        assert.equal(await evaluate('__clipboardCalls'), 1); assert.equal(fs.readdirSync(downloads).length, 0);
+        pass('A real touch calls native Share with a prebuilt plain-text File while user activation is live and never requires the clipboard');
+
+        await evaluate('__abortShare=true'); await tap('#share-mic-report');
+        await waitFor(`document.querySelector('#mic-copy-status').textContent.includes('Sharing cancelled')`);
+        assert.equal(await evaluate('DojoMicDiagnostics.getSavedReport().reportId'), fault.reportId);
+        assert.equal(fs.readdirSync(downloads).length, 0, 'Share cancellation must not trigger a surprise download');
+        assert.doesNotMatch(await evaluate(`document.querySelector('#mic-copy-status').textContent`), /completed|uploaded|sent successfully/i);
+        pass('Cancelling Share reports cancellation, retains the saved fault, and neither claims delivery nor downloads a file');
+
+        await tap('#download-mic-report');
+        let downloaded;
+        for (let index = 0; index < 100; index++) { downloaded = fs.readdirSync(downloads).find(file => file.endsWith('.txt')); if (downloaded) break; await pause(50); }
+        assert.ok(downloaded, 'A separate real touch downloads the report');
+        const downloadPath = path.join(downloads, downloaded), downloadedText = fs.readFileSync(downloadPath, 'utf8');
+        assert.ok(downloadedText.length > 100); assert.equal(JSON.parse(downloadedText).reportId, fault.reportId);
+        assert.deepEqual(JSON.parse(downloadedText), sharedReport);
+        assert.match(await evaluate(`document.querySelector('#mic-copy-status').textContent`), /file prepared/i);
+        pass('Download file writes a nonempty valid report independently of rejected clipboard and cancelled Share');
+
+        const exportControls = [];
+        for (const viewport of [{width:1024,height:768},{width:744,height:1133}]) {
+            await send('Emulation.setDeviceMetricsOverride', { ...viewport, deviceScaleFactor: 2, mobile: true });
+            for (const selector of ['#send-mic-report','#download-mic-report','#share-mic-report','#copy-mic-details']) {
+                await evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'nearest'})`);
+                const rect = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight};})()`);
+                assert.ok(rect.width >= 43.5 && rect.height >= 43.5, selector + ' has a usable touch target');
+                assert.ok(rect.x >= -1 && rect.y >= -1 && rect.right <= rect.viewportWidth + 1 && rect.bottom <= rect.viewportHeight + 1, selector + ' is reachable within the dialog');
+                exportControls.push({ viewport, selector, ...rect });
+            }
+        }
+        await screenshot('safari-mic-report-portrait');
+        pass('All independent report controls remain reachable with 44-pixel touch targets in landscape and portrait tablet layouts');
+
+        // Navigation reload is deliberate; the native stream is already off.
+        const beforeReload = (await snapshot()).save;
+        await send('Page.navigate', { url: address + '?preserve=1' });
+        await waitFor(`document.documentElement.dataset.dojoReady==='true'`);
+        await tap('#mic-report-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
+        const retained = JSON.parse(await evaluate(`document.querySelector('#mic-diagnostics').value`));
+        assert.equal(retained.reportId, fault.reportId); assert.equal(retained.snapshot.errorCode, 'network');
+        const learnerState = value => {const copy=structuredClone(value);if(copy.fight)delete copy.fight.id;delete copy.phase;copy.soundEnabled=Boolean(copy.soundEnabled);return copy;};
+        assert.deepEqual(learnerState((await snapshot()).save), learnerState(beforeReload));
+        assert.equal(await evaluate(`localStorage.getItem('other-lesson-diagnostic-sentinel')`), 'keep this unrelated lesson');
+        assert.equal((await snapshot()).starts, 0); assert.equal((await snapshot()).capture, false);
+        pass('Reload and opening the lobby Mic report retain the original native fault, saved fight, and unrelated lessons without silently reopening the microphone');
+
+        assert.equal(navigations.length, 0, 'Viewing or exporting a report must not contact the inbox');
+        const frame = (await send('Page.getFrameTree')).frameTree.frame.id;
+        await send('Runtime.addBinding',{name:'__auditReportStatus'});
+        await evaluate(`new MutationObserver(()=>__auditReportStatus(document.querySelector('#mic-copy-status').textContent)).observe(document.querySelector('#mic-copy-status'),{childList:true,subtree:true,characterData:true})`);
+        await tap('#send-mic-report');
+        for (let index=0;index<100&&!navigations.length;index++)await pause(50);
+        assert.equal(navigations.length, 1, 'Only the explicit Send touch initiates a private navigation');
+        const navigation=navigations[0], destination=new URL(navigation.request.url);
+        assert.equal(destination.origin+destination.pathname, privateBase); assert.equal(navigation.resourceType, 'Document'); assert.equal(navigation.frameId, frame);
+        assert.equal(navigation.request.method, 'GET'); assert.equal(destination.username, ''); assert.equal(destination.password, '');
+        const transmitted=destination.searchParams.get('report'); assert.equal(JSON.parse(transmitted).reportId, fault.reportId);
+        assert.ok(encodeURIComponent(transmitted).length<=6000); assert.ok(destination.href.length<12000);
+        assert.equal(destination.href.includes('PRIVATE_VENDOR_MESSAGE_MUST_NOT_SURVIVE'), false);
+        // Fail at request interception: not one byte reaches the real private inbox.
+        await send('Fetch.failRequest', { requestId:navigation.requestId, errorReason:'Aborted' });
+        await send('Fetch.disable'); socket.onmessage=previousHandler;
+        const status=statuses.find(value=>value.includes('Opening the private report page'))||'';
+        assert.match(status,/Opening the private report page/); assert.doesNotMatch(status,/uploaded|delivered|sent successfully/i);
+        diagnosticsEvidence={faultReportId:fault.reportId,faultCode:fault.snapshot.errorCode,clipboardRejected:true,sharedFile:{...shared,text:undefined},shareCancelled:true,download:{path:downloadPath,bytes:Buffer.byteLength(downloadedText),reportId:JSON.parse(downloadedText).reportId},initialLayout,exportControls,reloadPreserved:true,reloadReturnsToLobby:true,send:{origin:destination.origin,path:destination.pathname,resourceType:navigation.resourceType,method:navigation.request.method,payloadEncodedLength:encodeURIComponent(transmitted).length,urlLength:destination.href.length,topLevel:true,interceptedBeforeNetwork:true,status}};
+        pass('Only Send report navigates the top-level window to the configured private review page with a bounded metadata query; interception prevents actual transmission and the game claims no upload receipt');
+    }
+
+    if (diagnosticsReviewOnly) {
+        const privateBase='https://fionas-dojo-mic-reports.bumnumber1.chatgpt.site/import',navigations=[],statuses=[],priorHandler=socket.onmessage;
+        socket.onmessage=event=>{const message=JSON.parse(event.data);if(message.method==='Fetch.requestPaused')navigations.push(message.params);if(message.method==='Runtime.bindingCalled'&&message.params.name==='__auditReportStatus')statuses.push(message.params.payload);priorHandler(event);};
+        await send('Fetch.enable',{patterns:[{urlPattern:privateBase+'*',requestStage:'Request'}]});
+        await send('Emulation.setDeviceMetricsOverride',{width:1024,height:768,deviceScaleFactor:2,mobile:true});
+        await fresh(true,[],'',false);
+        await evaluate(`DojoMicDiagnostics.record('live-error',{code:'network'});DojoMicDiagnostics.capture({...__voice.getDiagnostics(),stage:'error',stream:{lastErrorCode:'network'}},{reason:'error',mode:'manual',phase:'lobby'})`);
+        const report=await evaluate('DojoMicDiagnostics.getSavedReport()');
+        await tap('#mic-report-button');await waitFor(`document.querySelector('#mic-details-dialog').open`);
+        const layouts=[];
+        for(const viewport of [{width:1024,height:768},{width:744,height:1133}]){
+            await send('Emulation.setDeviceMetricsOverride',{...viewport,deviceScaleFactor:2,mobile:true});
+            await evaluate(`document.querySelector('#mic-details-dialog').scrollTop=0;document.querySelector('#mic-details-dialog .dialog-close').focus({preventScroll:true})`);
+            await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+            const geometry=await evaluate(`['#send-mic-report','#download-mic-report','#share-mic-report'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {selector,x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight,scrollTop:document.querySelector('#mic-details-dialog').scrollTop};})`);
+            for(const r of geometry){assert.ok(r.width>=43.5&&r.height>=43.5,r.selector+' has a 44px target');assert.ok(r.x>=-1&&r.y>=-1&&r.right<=r.viewportWidth+1&&r.bottom<=r.viewportHeight+1,r.selector+' is visible without scrolling on '+viewport.width+'x'+viewport.height);assert.equal(r.scrollTop,0);}
+            layouts.push({viewport,controls:geometry});await screenshot('safari-mic-report-initial-'+viewport.width+'x'+viewport.height);
+        }
+        pass('Send report, Download file, and Share report are visible immediately without scrolling and have 44-pixel targets at 1024×768 and 744×1133');
+        assert.equal(navigations.length,0,'No report is sent merely by opening the dialog');
+        await send('Runtime.addBinding',{name:'__auditReportStatus'});
+        await evaluate(`new MutationObserver(()=>__auditReportStatus(document.querySelector('#mic-copy-status').textContent)).observe(document.querySelector('#mic-copy-status'),{childList:true,subtree:true,characterData:true})`);
+        const frame=(await send('Page.getFrameTree')).frameTree.frame.id;
+        await tap('#send-mic-report');for(let index=0;index<100&&!navigations.length;index++)await pause(50);
+        assert.equal(navigations.length,1);const navigation=navigations[0],destination=new URL(navigation.request.url),transport=destination.searchParams.get('report');
+        assert.equal(destination.origin+destination.pathname,privateBase);assert.equal(navigation.resourceType,'Document');assert.equal(navigation.frameId,frame);assert.equal(navigation.request.method,'GET');
+        assert.equal(JSON.parse(transport).reportId,report.reportId);assert.ok(encodeURIComponent(transport).length<=6000);assert.ok(destination.href.length<12000);
+        await send('Fetch.failRequest',{requestId:navigation.requestId,errorReason:'Aborted'});await send('Fetch.disable');socket.onmessage=priorHandler;
+        const status=statuses.find(value=>value.includes('Opening the private report page'))||'';
+        assert.match(status,/Opening the private report page/);assert.doesNotMatch(status,/uploaded|delivered|sent successfully/i);
+        diagnosticsEvidence={reviewOnly:true,layouts,reportId:report.reportId,reportFixture:'Synthetic metadata seed only; native-error freeze, persistence, Share, and download are covered separately.',send:{origin:destination.origin,path:destination.pathname,method:navigation.request.method,resourceType:navigation.resourceType,topLevel:true,payloadEncodedLength:encodeURIComponent(transport).length,urlLength:destination.href.length,interceptedBeforeNetwork:true,status}};
+        pass('An explicit touch opens the private review URL as a bounded top-level GET and updates truthful status; interception prevents any report transmission');
+    }
+
     // This continuation can run alone with DOJO_CACHE_ONLY=1. It verifies cached
     // runtime bytes and save restoration, not speech recognition while offline.
+    if (!diagnosticsOnly) {
     const workerSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     const expectedCache = /const CACHE = '([^']+)'/.exec(workerSource)[1];
     const expectedAssets = JSON.parse(/const ASSETS = (\[[^\n]+\]);/.exec(workerSource)[1]);
-    const runtimeFiles = ['taekwondo.css','taekwondo-engine.js','taekwondo-writing.js','taekwondo-safari-stream.js','taekwondo-voice.js','taekwondo-scene.js','taekwondo.js'];
     const expectedRuntimeHashes = Object.fromEntries(runtimeFiles.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')).digest('hex')]));
     const responses = [];
     const originalMessageHandler = socket.onmessage;
@@ -418,7 +574,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     const onlineSave = (await snapshot()).save;
     assert.ok(onlineSave.fight && onlineSave.fight.journal.length === 1 && onlineSave.fight.opponentHp < onlineSave.fight.opponentMaxHp, 'Offline restoration uses a real nonempty fight, not a blank save');
     const cached = await evaluate(`(async()=>{const cache=await caches.open(${JSON.stringify(expectedCache)}),missing=[];for(const asset of ${JSON.stringify(expectedAssets)})if(!await cache.match(new URL(asset,location.href).href))missing.push(asset);return {name:${JSON.stringify(expectedCache)},expected:${expectedAssets.length},keys:(await cache.keys()).length,missing,worker:navigator.serviceWorker.controller.scriptURL};})()`);
-    assert.equal(cached.expected, 338); assert.deepEqual(cached.missing, []);
+    assert.equal(cached.expected, 339); assert.deepEqual(cached.missing, []);
     const offlineMarker = 'offline-' + Date.now();
     await send('Page.addScriptToEvaluateOnNewDocument', { source: 'window.__offlineCacheMarker=' + JSON.stringify(offlineMarker) });
     await send('Network.setCacheDisabled', { cacheDisabled: true });
@@ -432,10 +588,10 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     const offlineRuntime = await evaluate(`(async()=>{const urls=[...document.querySelectorAll('script[src],link[rel="stylesheet"]')].map(element=>element.src||element.href).filter(url=>${JSON.stringify(runtimeFiles)}.includes(new URL(url).pathname.split('/').pop()));
         const files={};for(const url of urls){const response=await fetch(url);if(!response.ok)throw Error('Uncached dojo asset '+url);const source=(await response.text()).replace(/\\r\\n/g,'\\n');const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source));files[new URL(url).pathname.split('/').pop()]=[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');}
         return {urls,files,build:__voice.getDiagnostics().build,micUI:Boolean(document.querySelector('#mic-session-controls')&&document.querySelector('#mic-capture-status')&&document.querySelector('#stop-microphone')),capture:__voice.captureActive,starts:__native.starts};})()`);
-    assert.equal(offlineRuntime.urls.length, 7);
-    for (const url of offlineRuntime.urls) assert.equal(new URL(url).searchParams.get('v'), 'safari-capture-2');
-    assert.deepEqual(offlineRuntime.files, expectedRuntimeHashes, 'All seven offline query URLs return current source bytes');
-    assert.equal(offlineRuntime.build, '2026-10-29 safari-capture-2'); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
+    assert.equal(offlineRuntime.urls.length, 8);
+    for (const url of offlineRuntime.urls) assert.equal(new URL(url).searchParams.get('v'), 'mic-report-1');
+    assert.deepEqual(offlineRuntime.files, expectedRuntimeHashes, 'All eight offline query URLs return current source bytes');
+    assert.equal(offlineRuntime.build, '2026-10-29 mic-report-1'); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
     const offlineResponses = responses.slice(responseOffset).filter(response => runtimeFiles.includes(new URL(response.url).pathname.split('/').pop()));
     for (const file of runtimeFiles) assert.ok(offlineResponses.some(response => new URL(response.url).pathname.endsWith('/' + file) && response.status === 200 && response.fromServiceWorker), file + ' is served by the worker while HTTP cache and network are unavailable');
     assert.equal(responses.some(response => response.status === 404 && /taekwondo/.test(response.url)), false);
@@ -448,14 +604,17 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         scope: 'Current cached game runtime and saved fight restoration only. Live browser speech service and microphone availability offline are not tested.' };
     await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
     await send('Network.setCacheDisabled', { cacheDisabled: false });
-    pass('All 338 generated assets are cached; offline reload serves all seven current revision URLs through the worker and preserves the saved fight without activating a microphone');
+    pass('All 339 generated assets are cached; offline reload serves all eight current revision URLs through the worker and preserves the saved fight without activating a microphone');
+    }
     assert.equal(exceptions.length, 0);
     const sources = Object.fromEntries([...runtimeFiles, 'taekwondo.html', 'sw.js', 'generate_sw.js'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')).digest('hex')]));
-    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ passed: true, cacheOnly, checks, exceptions, controls, cacheEvidence, scope: 'Synthetic Safari native audio/lifecycle and cumulative results in isolated Chromium; real CDP touch input. Offline runtime caching is separate from live speech-service availability. No physical WebKit or real microphone claim.', sources }, null, 2));
+    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ passed: true, cacheOnly, diagnosticsOnly, diagnosticsReviewOnly, checks, exceptions, controls, cacheEvidence, diagnosticsEvidence, scope: 'Synthetic Safari native audio/lifecycle and cumulative results in isolated Chromium; real CDP touch input. Share is a native-API contract stub; Save verifies a Chromium download; Send is intercepted before any network transmission. Offline runtime caching is separate from live speech-service availability. No physical WebKit or real microphone claim.', sources }, null, 2));
     console.log('\n' + checks.length + ' focused Safari controller checks passed. Evidence: ' + output);
 })().catch(async error => {
     console.error(error.stack || error);
-    try { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ error: String(error.stack || error), checks, exceptions, failedRequests: requests.filter(request => request.status >= 400), state: evaluate ? await evaluate(`({body:document.body.innerText,diagnostics:window.__voice?.getDiagnostics(),native:window.__native&&{starts:__native.starts,stops:__native.stops,aborts:__native.aborts,overlaps:__native.overlaps}})`) : null }, null, 2)); } catch (_) {}
+    let state=null;
+    if(evaluate)try{state=await Promise.race([evaluate(`({body:document.body.innerText,diagnostics:window.__voice?.getDiagnostics(),native:window.__native&&{starts:__native.starts,stops:__native.stops,aborts:__native.aborts,overlaps:__native.overlaps}})`),pause(2000).then(()=>null)]);}catch(_){}
+    try { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ error: String(error.stack || error), checks, exceptions, failedRequests: requests.filter(request => request.status >= 400), state }, null, 2)); } catch (_) {}
     process.exitCode = 1;
 }).finally(async () => {
     if (socket) socket.close(); if (browser && browser.exitCode === null) browser.kill();

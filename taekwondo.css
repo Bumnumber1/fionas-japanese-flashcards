@@ -1374,8 +1374,10 @@ dialog p{
 .mic-build{font-weight:700;color:var(--ink)}
 .mic-report-label{display:block;font-size:12px;margin:14px 0 6px;color:var(--ink)}
 .mic-diagnostics{width:100%;resize:vertical;min-height:140px;max-height:35dvh;box-sizing:border-box;border:1px solid var(--line);border-radius:7px;background:#f4f5ef;color:var(--ink);font:16px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;padding:10px;user-select:text;-webkit-user-select:text}
-.mic-dialog-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.mic-dialog-actions button{min-height:44px;flex:1;border:1px solid var(--line);border-radius:7px;padding:10px;font-weight:700;touch-action:manipulation}
+.mic-dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.mic-dialog-actions button{min-height:44px;border:1px solid var(--line);border-radius:7px;padding:10px;font-weight:700;touch-action:manipulation}
+.mic-dialog-actions #send-mic-report{grid-column:1/-1}
+.mic-dialog-actions .text-button{grid-column:1/-1}
 .mic-dialog-actions .primary{border-color:transparent}
 .reset-game-button{min-height:44px;touch-action:manipulation}
 .reset-dialog-actions{display:grid;gap:10px;margin-top:20px}
@@ -1464,6 +1466,7 @@ dialog p{
   body.is-playing .brand small{display:none}
   body.is-playing .topbar nav{width:auto;gap:4px;flex-wrap:nowrap}
   body.is-playing .topbar nav a{display:none}
+  body.is-playing .topbar nav #mic-report-button{display:none}
   body.is-playing .topbar nav button{font-size:12px;padding:8px 12px;border-radius:7px}
   body.is-playing .topbar nav button:last-child{border:0;background:#ffffff8c}
   body.is-playing main{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr)}

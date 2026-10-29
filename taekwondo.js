@@ -44,6 +44,9 @@
   let listening = false;
   let voiceStatus = 'idle';
   let voiceLive = false;
+  let micReport = null;
+  let micReportExport = null;
+  const MIC_REPORT_INBOX = window.DOJO_MIC_REPORT_URL || 'https://fionas-dojo-mic-reports.bumnumber1.chatgpt.site/import';
   let handsFree = false;
   let recoveryHandsFree = false;
   let resetResumeHandsFree = false, resetConfirmed = false, resetReturnFocus = null;
@@ -159,6 +162,53 @@
       storageAvailable = true;
     } catch (_) { storageAvailable = false; }
     $('save-status').textContent = storageAvailable ? '● Progress saved on this device' : 'Progress is temporary · browser storage unavailable';
+  }
+  function captureMicReport(reason = 'details') {
+    try {
+      if (!window.DojoMicDiagnostics) return null;
+      const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 mic-report-1', captureState: 'off' };
+      micReport = DojoMicDiagnostics.capture(details, { reason, mode: handsFree ? 'hands-free' : 'manual', phase });
+      return micReport;
+    } catch (_) { return null; }
+  }
+  function savedMicReport() {
+    if (micReport) return micReport;
+    if (window.DojoMicDiagnostics) micReport = DojoMicDiagnostics.getSavedReport();
+    return micReport || captureMicReport('manual');
+  }
+  function micReportFile() {
+    const report = savedMicReport();
+    if (!report || !window.DojoMicDiagnostics) throw Error('No microphone report is available yet.');
+    if (micReportExport && micReportExport.report.reportId === report.reportId) return micReportExport;
+    const serialized = DojoMicDiagnostics.serialize(report, { maxEncodedLength: 10500 });
+    if (!serialized) throw Error('The microphone report is unavailable.');
+    const name = `fionas-dojo-mic-${report.reportId}.txt`;
+    let file = null;
+    try { if (typeof File === 'function') file = new File([serialized + '\n'], name, { type: 'text/plain' }); } catch (_) { /* Text sharing and download remain available. */ }
+    micReportExport = { report, serialized, name, file };
+    return micReportExport;
+  }
+  function downloadMicReport() {
+    try {
+      const item = micReportFile(), url = URL.createObjectURL(new Blob([item.serialized + '\n'], { type: 'text/plain;charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url; link.download = item.name;
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      $('mic-copy-status').textContent = 'Report file prepared. Use your browser’s save or share controls if it opens a preview.';
+    } catch (error) { $('mic-copy-status').textContent = error.message; }
+  }
+  function openMicReport() {
+    // Freeze the native failure before opening this dialog cancels capture.
+    const report = captureMicReport('details') || savedMicReport();
+    if (report) { try { micReportFile(); } catch (_) { /* Keep the readable report available. */ } }
+    resetFlurry(); cancelVoice();
+    $('mic-build').textContent = 'Microphone build · ' + (voice && voice.getDiagnostics ? voice.getDiagnostics().build : '2026-10-29 mic-report-1');
+    $('mic-diagnostics').value = report ? JSON.stringify(report, null, 2) : '';
+    const retained = Boolean(window.DojoMicDiagnostics && DojoMicDiagnostics.storageAvailable);
+    $('mic-report-retained').textContent = report ? `Saved report: ${new Date(report.createdAt).toLocaleString()} · ${retained ? 'retained on this device after reload' : 'available in this tab; download or send before closing'}.` : 'No report was captured. Reload the game to load microphone diagnostics.';
+    $('mic-copy-status').textContent = report ? 'Send report opens a private page. Sign in to this ChatGPT account if asked, then finish sending there. A receipt confirms delivery.' : 'A microphone report is not available.';
+    $('send-mic-report').disabled = !report || !MIC_REPORT_INBOX;
+    open($('mic-details-dialog'));
   }
   function askResetGame(button) {
     if ($('reset-game-dialog').open) return;
@@ -762,6 +812,7 @@
         submit(result.correct, converted ? `Recognized ${recognizedSound}; browser wrote “${result.transcript}”.` : `Heard “${result.transcript}”.`, readingMs);
       },
       onError: error => {
+        captureMicReport('error');
         // Unclear speech is not an answer. Its retry uses the same real-time
         // window without adding a hit or erasing accepted correct answers.
         if (!['no-speech', 'no-match'].includes(error.code)) resetFlurry();
@@ -794,6 +845,10 @@
       }
     });
   } catch (_) { voice = null; }
+  setInterval(() => {
+    if (!voice || !voice.captureActive || !window.DojoMicDiagnostics) return;
+    try { DojoMicDiagnostics.checkpoint(voice.getDiagnostics(), { mode: handsFree ? 'hands-free' : 'manual', phase }); } catch (_) { /* Diagnostics never interrupt a reading turn. */ }
+  }, 5000);
   $('show-moves-button').addEventListener('click', () => openTabletPanel('moves'));
   $('show-journey-button').addEventListener('click', () => openTabletPanel('journey'));
   document.querySelectorAll('[data-close-panel]').forEach(button => button.addEventListener('click', () => closeTabletPanel()));
@@ -880,13 +935,30 @@
     startReading(false);
   });
   $('reload-fight').addEventListener('click', () => { stopHandsFree(); save(); location.reload(); });
-  $('mic-details-button').addEventListener('click', () => {
-    const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 safari-capture-2', supported: Boolean(voice && voice.supported) };
-    resetFlurry(); cancelVoice();
-    $('mic-build').textContent = 'Microphone build · ' + (details.build || '2026-10-29 safari-capture-2');
-    $('mic-diagnostics').value = JSON.stringify(details, null, 2);
-    $('mic-copy-status').textContent = 'These details stay on this device unless you choose to copy and share them.';
-    open($('mic-details-dialog'));
+  $('mic-details-button').addEventListener('click', openMicReport);
+  $('mic-report-button').addEventListener('click', openMicReport);
+  $('download-mic-report').addEventListener('click', downloadMicReport);
+  $('share-mic-report').addEventListener('click', async () => {
+    try {
+      const item = micReportFile();
+      if (!navigator.share) { downloadMicReport(); return; }
+      if (item.file && navigator.canShare && navigator.canShare({ files: [item.file] })) await navigator.share({ title: 'Fiona’s Dojo microphone report', files: [item.file] });
+      else await navigator.share({ title: 'Fiona’s Dojo microphone report', text: item.serialized });
+      $('mic-copy-status').textContent = 'Share sheet completed. Your saved report remains available here.';
+    } catch (error) { $('mic-copy-status').textContent = error.name === 'AbortError' ? 'Sharing cancelled. Your saved report is still here.' : 'Sharing is unavailable here. Use Send report or Download file.'; }
+  });
+  $('send-mic-report').addEventListener('click', () => {
+    try {
+      const item = micReportFile(), destination = new URL(MIC_REPORT_INBOX);
+      if (destination.protocol !== 'https:' || destination.username || destination.password) throw Error('The private report inbox is not connected. Use Download file or Share report.');
+      const transport = DojoMicDiagnostics.serialize(item.report, { maxEncodedLength: 6000 });
+      destination.search = ''; destination.hash = ''; destination.searchParams.set('report', transport);
+      if (destination.href.length > 12000) throw Error('Use Download file to send this report.');
+      stopHandsFree(); save();
+      if (window.DojoMicDiagnostics) DojoMicDiagnostics.flush();
+      $('mic-copy-status').textContent = 'Opening the private report page. Your report remains saved on this device.';
+      location.assign(destination.href);
+    } catch (error) { $('mic-copy-status').textContent = error.message; }
   });
   $('copy-mic-details').addEventListener('click', async () => {
     const report = $('mic-diagnostics');
@@ -949,7 +1021,7 @@
   $('sound-toggle').addEventListener('click', () => { soundEnabled = !soundEnabled; applyPreferences(); save(); if (soundEnabled) sound('hit'); });
   $('motion-toggle').addEventListener('click', () => { reducedMotion = !reducedMotion; applyPreferences(); save(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { resetResumeHandsFree = false; stopHandsFree('Microphone stopped while the dojo is hidden. Start hands-free to continue.'); } });
-  window.addEventListener('pagehide', () => { resetResumeHandsFree = false; stopHandsFree(); save(); });
+  window.addEventListener('pagehide', () => { resetResumeHandsFree = false; stopHandsFree(); save(); if (window.DojoMicDiagnostics) DojoMicDiagnostics.flush(); });
   function canonicalQuestion(candidate, allowLegacy = false) {
     if (!fight || !candidate || typeof candidate !== 'object' || Array.isArray(candidate) || typeof candidate.id !== 'string' || typeof candidate.answer !== 'string' || typeof candidate.prompt !== 'string') return null;
     const available = G.availableMoves(progress.belt);

@@ -290,7 +290,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-10-29 safari-capture-2';
+    const VOICE_BUILD = '2026-10-29 mic-report-1';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
@@ -366,9 +366,16 @@
         record(stage, details = {}) {
             this.lastStage = stage;
             // Only call with event metadata: never store audio, answers, or
-            // transcripts in diagnostics or transmit them to another service.
+            // transcripts in diagnostics. Sharing is an explicit user action.
             this.events.push({ ms: Math.round(this.now()), stage, ...details });
             if (this.events.length > 48) this.events.shift();
+            try {
+                if (global.DojoMicDiagnostics && typeof global.DojoMicDiagnostics.record === 'function') {
+                    const { nativeMessage, ...metadata } = details;
+                    global.DojoMicDiagnostics.record(stage, { ...metadata, build: VOICE_BUILD,
+                        profile: this.safariMode ? 'Safari' : 'standard', captureState: this.captureState });
+                }
+            } catch (_) { /* Diagnostic storage must never interrupt a reading turn. */ }
         }
 
         getDiagnostics() {

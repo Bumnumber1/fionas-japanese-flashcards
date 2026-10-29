@@ -50,6 +50,7 @@ function environment(options = {}) {
         },
         speechSynthesis: { speaking: true, pending: false, cancellations: 0, cancel() { this.cancellations++; this.speaking = false; this.pending = false; } }
     };
+    if (options.diagnostics) sandbox.DojoMicDiagnostics = options.diagnostics;
     if (!options.unsupported) sandbox[options.prefixed ? 'webkitSpeechRecognition' : 'SpeechRecognition'] = Recognition;
     sandbox.window = sandbox;
     vm.createContext(sandbox);
@@ -988,7 +989,7 @@ test('Microphone diagnostics retain bounded lifecycle metadata without answers o
     const diagnostics = env.voice.getDiagnostics(), encoded = JSON.stringify(diagnostics);
     assert.ok(diagnostics && typeof diagnostics === 'object');
     assert.equal(encoded.includes('猫'), false); assert.equal(encoded.includes('ねこ'), false);
-    assert.match(encoded, /2026-10-29\s+safari-capture-2/);
+    assert.match(encoded, /2026-10-29\s+mic-report-1/);
     assert.ok(encoded.length < 30000, 'A bounded event history cannot grow into an audio log');
     env.voice.destroy();
 });
@@ -1037,6 +1038,20 @@ test('A requested stop followed by its final and native end does not manufacture
     rec.end(); env.tick(120); const next = env.instances[1]; assert.equal(next.starts, 1);
     next.onstart(); next.onaudiostart(); next.onresult(cumulative([['猫', true]]));
     assert.equal(env.results.length, 2); assert.equal(env.errors.length, 0); env.voice.destroy();
+});
+
+test('A broken optional diagnostics hook cannot interrupt recognition or error recovery', () => {
+    for (const live of [false, true]) {
+        const env = environment({ ...(live ? { navigator: safariNavigator } : {}), diagnostics: {
+            record() { throw Error('Synthetic diagnostics write failure'); }, capture() { throw Error('Synthetic diagnostics capture failure'); }
+        } });
+        assert.doesNotThrow(() => env.voice.start(kanaQuestion, { keepAlive: live }));
+        const rec = env.instances[0]; rec.onstart(); if (live) rec.onaudiostart();
+        assert.doesNotThrow(() => rec.onresult(event(['し']))); assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
+        env.voice.start(wordQuestion, { keepAlive: live }); const next = env.instances.at(-1);
+        assert.doesNotThrow(() => next.onerror({ error: 'network' })); assert.equal(env.errors.at(-1).code, 'network');
+        env.voice.destroy();
+    }
 });
 
 console.log('\n' + passed + ' voice tests passed. Live Japanese microphone recognition still requires a supported browser, permission, and its speech service.');

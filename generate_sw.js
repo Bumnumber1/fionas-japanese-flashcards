@@ -19,7 +19,7 @@ assets.push('wordcats.js');
 assets.push('activities.js');
 assets.push('weekly-workbook.js');
 assets.push('year1-review.js', 'year1-review.css');
-assets.push('taekwondo.css', 'taekwondo-engine.js', 'taekwondo-writing.js', 'taekwondo-safari-stream.js', 'taekwondo-voice.js', 'taekwondo-scene.js', 'taekwondo.js');
+assets.push('taekwondo.css', 'taekwondo-engine.js', 'taekwondo-writing.js', 'taekwondo-safari-stream.js', 'taekwondo-diagnostics.js', 'taekwondo-voice.js', 'taekwondo-scene.js', 'taekwondo.js');
 assets.push('taekwondo-demo.js');
 assets.push('year1-review-data.js', 'garden-material.js', 'garden-games.js', 'garden-games.css',
     'garden-session.js', 'garden-legacy.js', 'garden-embed.css', 'activity-styles.css');
