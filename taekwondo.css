@@ -1362,6 +1362,15 @@ dialog p{
 #voice-status{font-size:11px;line-height:1.7;color:var(--muted);margin:12px 0 0}
 .voice-transcript{font-size:14px;line-height:1.7;background:#edf3e6;border:1px solid #cfddc8;border-radius:5px;padding:9px 11px;overflow-wrap:anywhere;margin:10px 0 0}
 .voice-note{font-size:9px;color:var(--muted);line-height:1.7;margin:10px 0 0}
+.voice-recovery{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.voice-recovery button{min-height:44px;border:1px solid #b2c2b8;border-radius:7px;background:#edf4ee;color:#244b4c;font-size:12px;font-weight:700;padding:8px;touch-action:manipulation}
+.mic-details-button{min-height:44px;margin:4px 0 0;padding:8px 0;font-size:11px;color:var(--muted);text-align:left;touch-action:manipulation}
+.mic-build{font-weight:700;color:var(--ink)}
+.mic-report-label{display:block;font-size:12px;margin:14px 0 6px;color:var(--ink)}
+.mic-diagnostics{width:100%;resize:vertical;min-height:140px;max-height:35dvh;box-sizing:border-box;border:1px solid var(--line);border-radius:7px;background:#f4f5ef;color:var(--ink);font:16px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;padding:10px;user-select:text;-webkit-user-select:text}
+.mic-dialog-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.mic-dialog-actions button{min-height:44px;flex:1;border:1px solid var(--line);border-radius:7px;padding:10px;font-weight:700;touch-action:manipulation}
+.mic-dialog-actions .primary{border-color:transparent}
 .reward-list{width:100%;display:grid;gap:7px;margin:5px 0}
 .reward-item{display:flex;gap:10px;align-items:center;width:100%;border:1px solid #ccd3bb;background:#f6f5e9;text-align:left;border-radius:6px;padding:9px 10px;font-size:10px;font-weight:900;min-height:50px}
 .reward-item>span:first-child{font-size:22px}

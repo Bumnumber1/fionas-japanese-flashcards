@@ -283,6 +283,24 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
+    const VOICE_BUILD = '2026-10-29 safari-live-1';
+
+    function judgeAlternatives(target, alternatives, readingMs) {
+        alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
+        if (!alternatives.length) return { error: { code: 'no-speech' } };
+        const matched = alternatives.find(transcript => matches(target, transcript));
+        const isolated = target.mode === 'kana-read' && /^[ぁ-ゖ]$/u.test(normalizeTranscript(target.prompt));
+        // Dictation can invent a word for one syllable. An unrelated transcript
+        // is inconclusive; a clearly recognized different kana remains wrong.
+        const knownSound = transcript => KANA.some(([prompt, reading]) => matches({ mode: 'kana-read', prompt, reading }, transcript));
+        if (matched === undefined && isolated && !alternatives.some(knownSound)) {
+            return { error: { code: 'no-match', transcript: alternatives[0],
+                message: `The recognizer did not return a clear kana sound: “${alternatives[0]}”. Try the same sound again. No energy was lost.` } };
+        }
+        const transcript = matched === undefined ? alternatives[0] : matched;
+        return { result: { correct: matched !== undefined, transcript, alternatives, normalized: normalizeTranscript(transcript), readingMs } };
+    }
+
     class DojoVoice {
         constructor(options) {
             options = options || {};
@@ -295,6 +313,11 @@
             this.draining = null;
             this.launchTimer = null;
             this.readyAfter = 0;
+            this.stream = null;
+            this.streamTarget = null;
+            this.pendingStreamArm = false;
+            this.events = [];
+            this.lastStage = 'idle';
             this.generation = 0;
             this.destroyed = false;
             this.pageHide = () => this.cancel();
@@ -308,11 +331,34 @@
         static aliasesFor(question) { return aliasesFor(question); }
         static matches(question, transcript) { return matches(question, transcript); }
 
-        emitState(status, transcript) {
-            if (!this.destroyed && this.onState) this.onState(transcript === undefined ? { status } : { status, transcript });
+        get captureActive() {
+            return Boolean(this.draining || this.session && this.session.nativeRequested && !this.session.nativeEnded || this.stream && this.stream.active);
+        }
+
+        record(stage, details = {}) {
+            this.lastStage = stage;
+            // Only call with event metadata: never store audio, answers, or
+            // transcripts in diagnostics or transmit them to another service.
+            this.events.push({ ms: Math.round(this.now()), stage, ...details });
+            if (this.events.length > 48) this.events.shift();
+        }
+
+        getDiagnostics() {
+            const nav = global.navigator || {};
+            return { build: VOICE_BUILD, profile: this.safariMode ? 'Safari' : 'standard', language: 'ja-JP',
+                browser: String(nav.userAgent || '').slice(0, 320), platform: String(nav.platform || '').slice(0, 40),
+                secureContext: global.isSecureContext !== false, online: nav.onLine !== false, standalone: nav.standalone === true,
+                supported: this.supported, captureActive: this.captureActive, stage: this.lastStage,
+                mode: this.streamTarget || this.stream && this.stream.active ? 'hands-free live' : 'single answer',
+                stream: this.stream ? this.stream.getDiagnostics() : null, events: this.events.map(event => ({ ...event })) };
+        }
+
+        emitState(status, transcript, details = {}) {
+            if (!this.destroyed && this.onState) this.onState({ status, ...(transcript === undefined ? {} : { transcript }), ...details });
         }
 
         emitError(code, details) {
+            this.record('error', { code, ...(details && details.nativeMessage ? { nativeMessage: String(details.nativeMessage).slice(0, 160) } : {}) });
             let message = ERROR_MESSAGES[code] || ERROR_MESSAGES['recognition-error'];
             if (this.safariMode && ['not-allowed', 'service-not-allowed', 'language-not-supported', 'recognition-timeout'].includes(code)) {
                 message += ' In Safari, allow this site’s microphone and enable Siri in Settings. If using a Home Screen shortcut, try the game in a normal Safari tab.';
@@ -332,11 +378,8 @@
         }
 
         prepareEndpoint(session, transcript) {
-            // WebKit finalizes a one-shot utterance itself. Cutting a short kana
-            // hypothesis off after 200ms can interrupt its native final result.
-            if (this.safariMode) return;
             const candidate = normalizeTranscript(transcript);
-            if (session.stopping || session.startedAt === null || !matches(session.target, transcript)) {
+            if (session.stopping || session.startedAt === null || !candidate || !this.safariMode && !matches(session.target, transcript)) {
                 this.clearEndpoint(session);
                 return;
             }
@@ -347,13 +390,25 @@
             // It cannot score: only the service's final result below can do that.
             session.endpointTimer = global.setTimeout(() => {
                 if (this.current(session) && session.endpointCandidate === candidate && normalizeTranscript(session.interim) === candidate) this.stop();
-            }, 200);
+            }, this.safariMode ? 900 : 200);
+        }
+
+        markReady(session, stage) {
+            if (!this.current(session) || session.stopping) return;
+            this.record(stage);
+            if (session.startedAt === null) {
+                session.startedAt = this.now();
+                global.clearTimeout(session.startTimer);
+                global.clearTimeout(session.recordTimer);
+                session.recordTimer = global.setTimeout(() => { if (this.current(session)) this.stop(); }, 10000);
+            }
+            this.emitState('listening', undefined, { captureReady: true, speechDetected: session.speechDetected });
         }
 
         dispose(session, abort) {
             session.settled = true;
             for (const timer of [session.startTimer, session.recordTimer, session.processTimer, session.endpointTimer]) if (timer != null) global.clearTimeout(timer);
-            for (const event of ['onstart', 'onresult', 'onerror', 'onend', 'onnomatch', 'onspeechend', 'onaudioend']) session.rec[event] = null;
+            for (const event of ['onstart', 'onaudiostart', 'onspeechstart', 'onresult', 'onerror', 'onend', 'onnomatch', 'onspeechend', 'onaudioend']) session.rec[event] = null;
             if (this.session === session) this.session = null;
             if (this.safariMode && session.nativeRequested && !session.nativeEnded && !this.destroyed) {
                 // A final result precedes native end in WebKit. Keep the release
@@ -363,7 +418,7 @@
                 this.watchDrain(session);
                 try {
                     if (abort) session.rec.abort();
-                    else if (!session.stopping) session.rec.stop();
+                    else if (!session.nativeStopRequested) { session.nativeStopRequested = true; session.rec.stop(); }
                 } catch (_) { /* The bounded release watchdog handles missing end. */ }
             } else if (abort && (!this.safariMode || session.nativeRequested && !session.nativeEnded)) {
                 try { session.rec.abort(); } catch (_) { try { session.rec.stop(); } catch (_) {} }
@@ -381,6 +436,7 @@
                 session.drainTimedOut = true;
                 // Never overlap a still-owned native mic just to hide a timeout.
                 if (this.session && !this.session.nativeRequested) this.fail(this.session, 'microphone-busy');
+                else if (this.streamTarget && this.pendingStreamArm) this.failStream('microphone-busy');
             }, 4000);
         }
 
@@ -390,13 +446,21 @@
             global.clearTimeout(session.drainAbortTimer); global.clearTimeout(session.drainTimer);
             this.draining = null;
             this.readyAfter = this.now() + 120;
+            this.record('released');
             if (this.session) this.queueLaunch(this.session);
+            else if (this.streamTarget && this.pendingStreamArm) this.queueStreamArm();
         }
 
         queueLaunch(session) {
             if (!this.current(session)) return false;
             if (this.draining) {
                 if (this.draining.drainTimedOut) this.watchDrain(this.draining);
+                return true;
+            }
+            if (this.stream && this.stream.active) {
+                if (session.streamWaitAt === undefined) session.streamWaitAt = this.now();
+                if (this.now() - session.streamWaitAt >= 4000) { this.fail(session, 'microphone-busy'); return false; }
+                this.launchTimer = global.setTimeout(() => { this.launchTimer = null; this.queueLaunch(session); }, 100);
                 return true;
             }
             const delay = this.safariMode ? Math.max(0, this.readyAfter - this.now()) : 0;
@@ -406,10 +470,11 @@
             }
             session.startTimer = global.setTimeout(() => this.fail(session, 'recognition-timeout'), 15000);
             session.nativeRequested = true;
+            this.record('start-request', { mode: 'single answer' });
             try { session.rec.start(); return true; }
             catch (error) {
                 session.nativeRequested = false;
-                this.fail(session, error && error.name === 'NotAllowedError' ? 'not-allowed' : 'recognition-error');
+                this.fail(session, error && error.name === 'NotAllowedError' ? 'not-allowed' : 'recognition-error', { nativeMessage: error && error.message });
                 return false;
             }
         }
@@ -421,8 +486,77 @@
             if (this.generation === session.generation) this.emitError(code, details);
         }
 
-        start(question) {
+        startStream(question) {
+            this.disarm();
+            if (!this.supported) { this.emitError('unsupported'); return false; }
+            if (!aliasesFor(question).length) { this.emitError('invalid-question'); return false; }
+            try { if (global.speechSynthesis && (global.speechSynthesis.speaking || global.speechSynthesis.pending)) global.speechSynthesis.cancel(); } catch (_) {}
+            if (!this.stream) {
+                try {
+                    this.stream = new global.DojoSafariStream({ Recognition: global.SpeechRecognition || global.webkitSpeechRecognition,
+                        onEvent: (stage, details) => this.record('live-' + stage, details),
+                        onState: state => {
+                            const entry = this.streamTarget;
+                            if (entry && entry.epoch === state.epoch && this.generation === entry.epoch) {
+                                this.emitState(state.status, state.transcript, { captureReady: Boolean(state.captureReady), speechDetected: Boolean(state.speechDetected), live: true });
+                            }
+                        },
+                        onResult: value => {
+                            const entry = this.streamTarget;
+                            if (!entry || entry.epoch !== value.epoch || this.generation !== entry.epoch || this.destroyed) return;
+                            this.streamTarget = null; this.pendingStreamArm = false;
+                            const judged = judgeAlternatives(entry.target, value.alternatives, value.readingMs);
+                            this.emitState('idle', judged.result && judged.result.transcript, { live: true, captureReady: this.captureActive });
+                            if (this.generation !== entry.epoch || this.destroyed) return;
+                            if (judged.error) this.emitError(judged.error.code, judged.error);
+                            else if (this.onResult) this.onResult(judged.result);
+                        },
+                        onError: error => {
+                            if (this.destroyed || this.session) return;
+                            const entry = this.streamTarget;
+                            if (error.epoch != null && (!entry || entry.epoch !== error.epoch || this.generation !== entry.epoch)) return;
+                            this.streamTarget = null; this.pendingStreamArm = false;
+                            const generation = this.generation;
+                            this.emitState('idle');
+                            if (generation === this.generation) this.emitError(error.code, { ...(error.nativeMessage ? { nativeMessage: error.nativeMessage } : {}) });
+                        }
+                    });
+                } catch (error) { this.emitError('recognition-error', { nativeMessage: error && error.message }); return false; }
+            }
+            const target = { ...question, voiceAliases: Array.isArray(question.voiceAliases) ? question.voiceAliases.slice() : [] };
+            this.streamTarget = { target, epoch: this.generation };
+            this.pendingStreamArm = true;
+            this.emitState('starting', undefined, { captureReady: false, live: true });
+            return this.queueStreamArm();
+        }
+
+        queueStreamArm() {
+            if (!this.streamTarget || !this.pendingStreamArm || this.destroyed) return false;
+            if (this.draining) {
+                if (this.draining.drainTimedOut) this.watchDrain(this.draining);
+                return true;
+            }
+            const delay = Math.max(0, this.readyAfter - this.now());
+            if (delay) {
+                this.launchTimer = global.setTimeout(() => { this.launchTimer = null; this.queueStreamArm(); }, delay);
+                return true;
+            }
+            const entry = this.streamTarget;
+            this.pendingStreamArm = false;
+            return this.stream.arm(entry.target, entry.epoch);
+        }
+
+        failStream(code) {
+            const entry = this.streamTarget;
+            if (!entry) return;
+            this.streamTarget = null; this.pendingStreamArm = false;
+            this.emitState('idle');
+            if (!this.destroyed && this.generation === entry.epoch) this.emitError(code);
+        }
+
+        start(question, options = {}) {
             if (this.destroyed) return false;
+            if (this.safariMode && options.keepAlive && global.DojoSafariStream) return this.startStream(question);
             this.cancel();
             if (!this.supported) { this.emitError('unsupported'); return false; }
             if (!aliasesFor(question).length) { this.emitError('invalid-question'); return false; }
@@ -432,7 +566,7 @@
             // Snapshot the target: mutating/navigating the controller cannot turn
             // speech from the previous activity into a new activity's answer.
             const target = Object.assign({}, question, { voiceAliases: Array.isArray(question.voiceAliases) ? question.voiceAliases.slice() : [] });
-            const session = { rec, target, generation: this.generation, settled: false, stopping: false, nativeRequested: false, nativeEnded: false, interim: '', startedAt: null, endedAt: null, endpointCandidate: '', endpointTimer: null };
+            const session = { rec, target, generation: this.generation, settled: false, stopping: false, nativeStopRequested: false, nativeRequested: false, nativeEnded: false, speechDetected: false, interim: '', startedAt: null, endedAt: null, endpointCandidate: '', endpointTimer: null };
             this.session = session;
             rec.lang = 'ja-JP';
             rec.interimResults = true;
@@ -440,12 +574,12 @@
             rec.maxAlternatives = 10;
             rec.onstart = () => {
                 if (!this.current(session) || session.stopping) return;
-                if (session.startedAt === null) session.startedAt = this.now();
-                global.clearTimeout(session.startTimer);
-                global.clearTimeout(session.recordTimer);
-                session.recordTimer = global.setTimeout(() => { if (this.current(session)) this.stop(); }, 10000);
-                this.emitState('listening');
+                this.record('service-start');
+                if (!this.safariMode) this.markReady(session, 'ready');
+                else if (session.startedAt === null) this.emitState('starting', undefined, { captureReady: false });
             };
+            rec.onaudiostart = () => this.markReady(session, 'audio-start');
+            rec.onspeechstart = () => { session.speechDetected = true; this.markReady(session, 'speech-start'); };
             rec.onresult = event => {
                 if (!this.current(session)) return;
                 const groups = [];
@@ -463,9 +597,11 @@
                     if (alternatives.length) groups.push(alternatives);
                 }
                 if (unfinished || !groups.length) {
+                    if (this.safariMode && completeHypothesis.length && session.startedAt === null) this.markReady(session, 'speech-evidence');
                     session.interim = completeHypothesis.join(' ').trim();
+                    this.record('interim', { groups: event.results.length, characters: session.interim.length });
                     this.prepareEndpoint(session, session.interim);
-                    this.emitState(session.stopping ? 'processing' : session.startedAt === null ? 'starting' : 'listening', session.interim);
+                    this.emitState(session.stopping ? 'processing' : session.startedAt === null ? 'starting' : 'listening', session.interim, { captureReady: session.startedAt !== null, speechDetected: true });
                     return;
                 }
                 this.clearEndpoint(session);
@@ -473,35 +609,27 @@
                 // vendor emits several, grade complete joined hypotheses only.
                 let alternatives = [''];
                 for (const group of groups) alternatives = alternatives.flatMap(prefix => group.map(text => (prefix + ' ' + text).trim())).slice(0, 100);
-                alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
-                if (!alternatives.length) { this.fail(session, 'no-speech'); return; }
-                const matched = alternatives.find(transcript => matches(target, transcript));
-                // Isolated sounds are often converted into a number by dictation
-                // (for example, spoken sa becoming "3"). That is inconclusive,
-                // never evidence for a hit or a mistake. Keep the same challenge.
-                const isolatedKana = target.mode === 'kana-read' && /^[ぁ-ゖ]$/u.test(normalizeTranscript(target.prompt));
-                if (matched === undefined && isolatedKana && alternatives.some(text => /^[0-9〇零一二三四五六七八九十百千万億兆点]+$/u.test(normalizeTranscript(text)))) {
-                    this.fail(session, 'no-match', { transcript: alternatives[0], message: `The recognizer returned a number instead of a clear kana sound: “${alternatives[0]}”. Say just the sound again. No energy was lost.` }); return;
-                }
-                const transcript = matched === undefined ? alternatives[0] : matched;
                 const finishedAt = this.now();
                 const readingMs = session.startedAt === null ? null : Math.max(1, (session.endedAt === null ? finishedAt : session.endedAt) - session.startedAt);
-                const result = { correct: matched !== undefined, transcript, alternatives, normalized: normalizeTranscript(transcript), readingMs };
+                const judged = judgeAlternatives(target, alternatives, readingMs);
+                this.record('final', { groups: groups.length, alternatives: alternatives.length });
+                if (judged.error) { this.fail(session, judged.error.code, judged.error); return; }
                 this.dispose(session, !this.safariMode);
-                this.emitState('idle', transcript);
-                if (!this.destroyed && this.generation === session.generation && this.onResult) this.onResult(result);
+                this.emitState('idle', judged.result.transcript);
+                if (!this.destroyed && this.generation === session.generation && this.onResult) this.onResult(judged.result);
             };
-            rec.onerror = event => this.fail(session, event && event.error ? event.error : 'recognition-error');
+            rec.onerror = event => this.fail(session, event && event.error ? event.error : 'recognition-error', { nativeMessage: event && event.message });
             rec.onnomatch = () => this.fail(session, 'no-match');
             rec.onend = () => {
                 session.nativeEnded = true;
+                this.record('native-end');
                 if (this.current(session)) this.fail(session, session.interim ? 'no-match' : 'no-speech');
             };
-            rec.onspeechend = () => { if (this.current(session)) this.finishCapture(session, !this.safariMode); };
-            rec.onaudioend = () => { if (this.current(session) && !session.stopping) this.finishCapture(session, !this.safariMode); };
+            rec.onspeechend = () => { if (this.current(session)) this.finishCapture(session, true); };
+            rec.onaudioend = () => { if (this.current(session)) this.finishCapture(session, true); };
             // Cancel target audio first, as in activities.js. The app must never
             // earn a hit by recognizing its own speech synthesis.
-            try { if (global.speechSynthesis) global.speechSynthesis.cancel(); } catch (_) {}
+            try { if (global.speechSynthesis && (global.speechSynthesis.speaking || global.speechSynthesis.pending)) global.speechSynthesis.cancel(); } catch (_) {}
             this.emitState('starting');
             if (!this.current(session)) return false;
             return this.queueLaunch(session);
@@ -509,32 +637,64 @@
 
         finishCapture(session, stopNative) {
             if (!this.current(session)) return false;
-            if (session.stopping) return true;
-            session.stopping = true;
-            session.endedAt = this.now();
-            this.clearEndpoint(session);
-            global.clearTimeout(session.startTimer);
-            global.clearTimeout(session.recordTimer);
-            this.emitState('processing', session.interim);
-            if (!this.current(session)) return false;
-            session.processTimer = global.setTimeout(() => this.fail(session, session.interim ? 'no-match' : 'no-speech'), this.safariMode ? 8000 : 3000);
-            if (stopNative) { try { session.rec.stop(); } catch (_) { this.fail(session, 'recognition-error'); } }
+            if (!session.stopping) {
+                session.stopping = true;
+                session.endedAt = this.now();
+                this.clearEndpoint(session);
+                global.clearTimeout(session.startTimer);
+                global.clearTimeout(session.recordTimer);
+                this.record('processing', { requestedStop: stopNative });
+                this.emitState('processing', session.interim, { captureReady: session.startedAt !== null });
+                if (!this.current(session)) return false;
+                session.processTimer = global.setTimeout(() => this.fail(session, session.interim ? 'no-match' : 'no-speech'), this.safariMode ? 8000 : 3000);
+            }
+            // Native speechend can precede finalization. The Finish button must
+            // still send stop once even when the UI already says Checking.
+            if (stopNative && !session.nativeStopRequested) {
+                session.nativeStopRequested = true;
+                this.record('stop-request');
+                try { session.rec.stop(); } catch (_) { this.fail(session, 'recognition-error'); }
+            }
             return true;
         }
 
         stop() {
+            if (this.streamTarget && this.stream) return this.stream.stop();
             const session = this.session;
             if (!session || !this.current(session)) return false;
             if (!session.nativeRequested) { this.cancel(); return true; }
             return this.finishCapture(session, true);
         }
 
-        cancel() {
+        disarm() {
             this.generation++;
             global.clearTimeout(this.launchTimer); this.launchTimer = null;
+            this.streamTarget = null; this.pendingStreamArm = false;
+            if (this.stream) this.stream.disarm();
             const session = this.session;
             if (session) this.dispose(session, true);
-            this.emitState('idle');
+            this.emitState('idle', undefined, { live: Boolean(this.stream && this.stream.active), captureReady: this.captureActive });
+        }
+
+        cancel() {
+            this.disarm();
+            if (this.stream) this.stream.cancel();
+        }
+
+        reset() {
+            if (this.destroyed) return false;
+            this.cancel();
+            if (this.stream) { this.stream.destroy(); this.stream = null; }
+            if (this.draining) {
+                const old = this.draining;
+                global.clearTimeout(old.drainAbortTimer); global.clearTimeout(old.drainTimer);
+                old.rec.onend = null;
+                try { old.rec.abort(); } catch (_) {}
+                this.draining = null;
+            }
+            this.readyAfter = this.now() + 400;
+            this.record('manual-reset');
+            return true;
         }
 
         destroy() {
@@ -543,6 +703,8 @@
             this.generation++;
             global.clearTimeout(this.launchTimer); this.launchTimer = null;
             if (this.session) this.dispose(this.session, true);
+            if (this.stream) { this.stream.destroy(); this.stream = null; }
+            this.streamTarget = null; this.pendingStreamArm = false;
             if (this.draining) {
                 const session = this.draining;
                 global.clearTimeout(session.drainAbortTimer); global.clearTimeout(session.drainTimer);
