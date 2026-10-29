@@ -53,7 +53,11 @@ function isBookPage(url) {
 self.addEventListener('install', e => {
     e.waitUntil(
         caches.open(CACHE)
-            .then(c => c.addAll(ASSETS))
+            // A new cache name alone does not bypass Safari's HTTP cache.
+            // Refresh dojo code from the network before storing the new build.
+            .then(c => c.addAll(ASSETS.map(asset => new Request(asset, {
+                cache: asset.startsWith('taekwondo') ? 'reload' : 'default'
+            }))))
             .then(() => self.skipWaiting())
     );
 });
@@ -95,7 +99,7 @@ self.addEventListener('fetch', e => {
         // Pages and dojo code: network first so updates apply on the next load,
         // cache fallback keeps them working offline
         e.respondWith(
-            fetch(e.request).then(resp => {
+            fetch(e.request, dojoAsset || dojoName === 'taekwondo.html' ? { cache: 'no-cache' } : undefined).then(resp => {
                 if (resp.ok) {
                     const copy = resp.clone();
                     caches.open(CACHE).then(c => c.put(e.request, copy));

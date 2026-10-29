@@ -938,16 +938,35 @@ test('Safari persistent reading clocks start at audio readiness or the new quest
     env.voice.destroy();
 });
 
-test('Safari persistent stable speech requests a final but never grades its provisional words', () => {
+test('Safari keeps a healthy continuous capture through slow interim-to-final delivery for three answers', () => {
     const env = safariEnvironment(); env.voice.start(wordQuestion, { keepAlive: true });
     const rec = env.instances[0]; rec.onstart(); rec.onaudiostart();
-    rec.onresult(cumulative([['犬', false]], 0)); env.tick(500);
-    rec.onresult(cumulative([['猫', false]], 0)); env.tick(899);
-    assert.equal(rec.stops, 0); assert.equal(env.results.length, 0);
-    env.tick(1); assert.equal(rec.stops, 1); assert.equal(env.results.length, 0);
-    env.tick(3500); rec.onresult(cumulative([['猫', true]], 0));
-    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
-    rec.end(); env.voice.destroy();
+    const history = [];
+    for (let answer = 0; answer < 3; answer++) {
+        if (answer) { env.voice.disarm(); env.voice.start(wordQuestion, { keepAlive: true }); }
+        history.push(['猫', false]); rec.onresult(cumulative(history, answer)); env.tick(1200);
+        assert.equal(rec.stops, 0, 'A healthy native final can take longer than 900ms'); assert.equal(rec.aborts, 0);
+        assert.equal(env.results.length, answer, 'No provisional speech is scored');
+        history[answer][1] = true; rec.onresult(cumulative(history, answer));
+        assert.equal(env.results.length, answer + 1); assert.equal(env.results[answer].correct, true);
+    }
+    assert.equal(env.instances.length, 1); assert.equal(rec.starts, 1); env.voice.destroy();
+});
+
+test('A quiet Safari question expires softly and retries on the same live native capture', () => {
+    for (const hadInterim of [false, true]) {
+        const env = safariEnvironment(); env.voice.start(wordQuestion, { keepAlive: true });
+        const rec = env.instances[0]; rec.onstart(); rec.onaudiostart();
+        if (hadInterim) rec.onresult(cumulative([['猫', false]], 0));
+        env.tick(9999); assert.equal(env.errors.length, 0); env.tick(1);
+        assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, hadInterim ? 'no-match' : 'no-speech');
+        assert.equal(env.results.length, 0); assert.equal(rec.stops, 0); assert.equal(rec.aborts, 0); assert.equal(env.voice.captureActive, true);
+        env.voice.start(wordQuestion, { keepAlive: true });
+        const groups = hadInterim ? [['猫', true], ['猫', true]] : [['猫', true]];
+        rec.onresult(cumulative(groups, groups.length - 1));
+        assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true); assert.equal(env.instances.length, 1);
+        env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
 });
 
 test('Cancelling a persistent microphone invalidates old epochs and explicit reset preserves only a new target', () => {
@@ -969,7 +988,7 @@ test('Microphone diagnostics retain bounded lifecycle metadata without answers o
     const diagnostics = env.voice.getDiagnostics(), encoded = JSON.stringify(diagnostics);
     assert.ok(diagnostics && typeof diagnostics === 'object');
     assert.equal(encoded.includes('猫'), false); assert.equal(encoded.includes('ねこ'), false);
-    assert.match(encoded, /2026-10-29\s+dojo-reset-1/);
+    assert.match(encoded, /2026-10-29\s+safari-capture-2/);
     assert.ok(encoded.length < 30000, 'A bounded event history cannot grow into an audio log');
     env.voice.destroy();
 });
@@ -1012,7 +1031,7 @@ test('A clean native end between accepted answers permits a fresh capture withou
 
 test('A requested stop followed by its final and native end does not manufacture a stream interruption', () => {
     const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
-    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', false]])); env.tick(900);
+    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', false]])); env.voice.stop();
     assert.equal(rec.stops, 1); rec.onresult(cumulative([['し', true]])); env.voice.disarm();
     env.voice.start(wordQuestion, { keepAlive: true }); assert.equal(env.instances.length, 1);
     rec.end(); env.tick(120); const next = env.instances[1]; assert.equal(next.starts, 1);

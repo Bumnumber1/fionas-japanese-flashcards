@@ -290,7 +290,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-10-29 dojo-reset-1';
+    const VOICE_BUILD = '2026-10-29 safari-capture-2';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
@@ -352,6 +352,17 @@
             return Boolean(this.draining || this.session && this.session.nativeRequested && !this.session.nativeEnded || this.stream && this.stream.active);
         }
 
+        get captureState() {
+            if (this.stream && this.stream.active) {
+                const state = this.stream.getDiagnostics();
+                return state.releasing || state.stopping ? 'closing' : state.captureReady ? 'on' : 'opening';
+            }
+            if (this.draining) return 'closing';
+            if (this.streamTarget && this.pendingStreamArm) return 'opening';
+            if (this.session) return this.session.stopping ? 'closing' : this.session.startedAt === null ? 'opening' : 'on';
+            return 'off';
+        }
+
         record(stage, details = {}) {
             this.lastStage = stage;
             // Only call with event metadata: never store audio, answers, or
@@ -365,13 +376,13 @@
             return { build: VOICE_BUILD, profile: this.safariMode ? 'Safari' : 'standard', language: 'ja-JP',
                 browser: String(nav.userAgent || '').slice(0, 320), platform: String(nav.platform || '').slice(0, 40),
                 secureContext: global.isSecureContext !== false, online: nav.onLine !== false, standalone: nav.standalone === true,
-                supported: this.supported, captureActive: this.captureActive, stage: this.lastStage,
+                supported: this.supported, captureActive: this.captureActive, captureState: this.captureState, stage: this.lastStage,
                 mode: this.streamTarget || this.stream && this.stream.active ? 'hands-free live' : 'single answer',
                 stream: this.stream ? this.stream.getDiagnostics() : null, events: this.events.map(event => ({ ...event })) };
         }
 
         emitState(status, transcript, details = {}) {
-            if (!this.destroyed && this.onState) this.onState({ status, ...(transcript === undefined ? {} : { transcript }), ...details });
+            if (!this.destroyed && this.onState) this.onState({ status, captureState: this.captureState, ...(transcript === undefined ? {} : { transcript }), ...details });
         }
 
         emitError(code, details) {
@@ -466,6 +477,7 @@
             this.record('released');
             if (this.session) this.queueLaunch(this.session);
             else if (this.streamTarget && this.pendingStreamArm) this.queueStreamArm();
+            else this.emitState('idle');
         }
 
         queueLaunch(session) {
@@ -511,7 +523,10 @@
             if (!this.stream) {
                 try {
                     this.stream = new global.DojoSafariStream({ Recognition: global.SpeechRecognition || global.webkitSpeechRecognition,
-                        onEvent: (stage, details) => this.record('live-' + stage, details),
+                        onEvent: (stage, details) => {
+                            this.record('live-' + stage, details);
+                            if (['released', 'cancel'].includes(stage) && !this.streamTarget && !this.session) this.emitState('idle');
+                        },
                         onState: state => {
                             const entry = this.streamTarget;
                             if (entry && entry.epoch === state.epoch && this.generation === entry.epoch) {

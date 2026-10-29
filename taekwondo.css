@@ -1365,6 +1365,12 @@ dialog p{
 .voice-recovery{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .voice-recovery button{min-height:44px;border:1px solid #b2c2b8;border-radius:7px;background:#edf4ee;color:#244b4c;font-size:12px;font-weight:700;padding:8px;touch-action:manipulation}
 .mic-details-button{min-height:44px;margin:4px 0 0;padding:8px 0;font-size:11px;color:var(--muted);text-align:left;touch-action:manipulation}
+.mic-session-controls{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:4px;border-radius:7px;padding:0 7px;background:#eef0e8}
+.mic-session-controls.mic-is-open{background:#e4f1e6;border:1px solid #83a991}
+.mic-session-controls[data-capture-state=closing]{background:#f2ede0;border-color:#c5b38f}
+#mic-capture-status{flex:1;min-width:0;font-size:11px;line-height:1.4;font-weight:800;color:#365c48}
+.mic-session-controls .mic-details-button{flex:none;margin:0;font-size:11px;padding:8px 0}
+#stop-microphone{flex:none;min-height:44px;min-width:72px;border:0;border-radius:5px;background:#854932;color:#fff;padding:7px 9px;font-size:12px;font-weight:800;touch-action:manipulation}
 .mic-build{font-weight:700;color:var(--ink)}
 .mic-report-label{display:block;font-size:12px;margin:14px 0 6px;color:var(--ink)}
 .mic-diagnostics{width:100%;resize:vertical;min-height:140px;max-height:35dvh;box-sizing:border-box;border:1px solid var(--line);border-radius:7px;background:#f4f5ef;color:var(--ink);font:16px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;padding:10px;user-select:text;-webkit-user-select:text}

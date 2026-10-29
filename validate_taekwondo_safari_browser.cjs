@@ -1,6 +1,7 @@
 // Safari lifecycle contracts in isolated Chromium, with real CDP touch input.
 // Native audio and cumulative recognizer events are synthetic. This does not
 // establish physical Safari, iPad microphone, speech-service, or audio quality.
+// DOJO_CACHE_ONLY=1 runs only the generated-worker offline runtime check.
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -13,11 +14,15 @@ const root = __dirname;
 const output = process.env.AUDIT_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'dojo-safari-live-'));
 fs.mkdirSync(output, { recursive: true });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-const checks = [], exceptions = [];
+const checks = [], exceptions = [], requests = [];
+const cacheOnly = process.env.DOJO_CACHE_ONLY === '1';
+let controls = [], cacheEvidence = null;
 const server = http.createServer((request, response) => {
-    const file = path.resolve(root, '.' + new URL(request.url, 'http://localhost').pathname);
-    if (!file.startsWith(root + path.sep)) { response.writeHead(403).end(); return; }
+    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
+    if (!file.startsWith(root + path.sep)) { requests.push({ path: pathname, status: 403 }); response.writeHead(403).end(); return; }
     fs.readFile(file, (error, bytes) => {
+        requests.push({ path: pathname, status: error ? 404 : 200 });
         if (error) { response.writeHead(404).end(); return; }
         response.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' })[path.extname(file)] || 'application/octet-stream');
         response.end(bytes);
@@ -43,7 +48,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     }
     assert.ok(port, 'Isolated browser starts');
     const targets = await (await fetch('http://127.0.0.1:' + port + '/json')).json();
-    socket = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl);
+    const auditTarget = targets.find(target => target.type === 'page');
+    socket = new WebSocket(auditTarget.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
     let serial = 0; const pending = new Map();
     socket.onmessage = event => {
@@ -86,7 +92,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         const query=new URL(location.href).searchParams;
         if(location.pathname.endsWith('/taekwondo.html')&&query.get('preserve')!=='1')localStorage.clear();
         Object.defineProperty(navigator,'maxTouchPoints',{get:()=>5});
-        window.__native={instances:[],starts:0,stops:0,aborts:0,overlaps:0,audioDelay:180,dropEnd:false,holdAudioAfterAbort:false,finalizeOnStop:false,scriptedPrompts:[]};
+        window.__native={instances:[],starts:0,stops:0,aborts:0,overlaps:0,audioDelay:180,dropEnd:false,holdAudioAfterAbort:false,finalizeOnStop:false,deafRestarts:false,scriptedPrompts:[]};
         // Only this fixture's lesson selection is deterministic. The real
         // canonical generator, move metadata, fight rules, and saves still run.
         let Game;Object.defineProperty(window,'DojoGame',{configurable:true,get:()=>Game,set:G=>{Game=Object.freeze({...G,createQuestion(...args){
@@ -103,6 +109,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
             if(fixture!=='reset-lobby'){
                 const belt=fixture==='reset-writing'?4:0;fight=G.startFight(progress,belt);question=G.createQuestion(belt,{},[],()=>.4,'front-kick',progress.belt);
                 if(fixture==='reset-loss'){for(let turn=0;turn<40&&fight.status==='fighting';turn++)G.resolveAnswer(fight,{correct:false,assisted:false,move:'front-kick',challengeKind:'basic'});if(fight.status!=='lost')throw Error('Loss fixture failed');phase='answered';answerResolved=true;}
+                else if(fixture==='reset-terminal-manual'){for(let turn=0;turn<32&&fight.opponentHp>7&&fight.status==='fighting';turn++)G.resolveAnswer(fight,{correct:true,assisted:true,move:'front-kick',challengeKind:'basic'});if(fight.status!=='fighting'||fight.opponentHp>7)throw Error('Terminal manual fixture failed');phase='question';}
                 else{G.resolveAnswer(fight,{correct:false,move:'front-kick'});G.resolveAnswer(fight,{correct:false,move:'front-kick'});G.resolveAnswer(fight,{correct:true,move:'front-kick'});phase='question';}
             }
             localStorage.setItem(G.SAVE_VERSION,JSON.stringify({progress,fight,question,phase,answerResolved,answerWasBlock:false,assisted:false,writingIndex:0,selectedMove:'front-kick',recent:question?[question.id]:[],challengeSet:null,writingDraft:null,soundEnabled:true,reducedMotion:true}));
@@ -115,8 +122,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         if(Audio){window.AudioContext=class extends Audio{constructor(...args){super(...args);__audio.constructs++;}resume(){__audio.resumes++;return super.resume();}suspend(){__audio.suspends++;return super.suspend();}};}
         class NativeRecognition {
             constructor(){this.active=false;this.ready=false;this.history=[];__native.instances.push(this);}
-            start(){if(__native.instances.some(rec=>rec!==this&&rec.active)){__native.overlaps++;throw new DOMException('Synthetic audio lease is still held','InvalidStateError');}this.active=true;this.activated=Boolean(navigator.userActivation?.isActive);__native.starts++;setTimeout(()=>{if(this.active)this.onstart?.();},30);setTimeout(()=>{if(this.active){this.ready=true;this.onaudiostart?.();}},__native.audioDelay);}
-            emit(groups,resultIndex=0){this.history=groups;const results=groups.map(([words,final=true])=>Object.assign((Array.isArray(words)?words:[words]).map(transcript=>({transcript,confidence:.8})),{isFinal:final}));this.onresult?.({resultIndex,results});}
+            start(){if(__native.instances.some(rec=>rec!==this&&rec.active)){__native.overlaps++;throw new DOMException('Synthetic audio lease is still held','InvalidStateError');}this.active=true;this.hearsAudio=!__native.deafRestarts||__native.starts===0;this.activated=Boolean(navigator.userActivation?.isActive);__native.starts++;setTimeout(()=>{if(this.active)this.onstart?.();},30);setTimeout(()=>{if(this.active&&this.hearsAudio){this.ready=true;this.onaudiostart?.();}},__native.audioDelay);}
+            emit(groups,resultIndex=0){if(!this.hearsAudio)return;this.history=groups;const results=groups.map(([words,final=true])=>Object.assign((Array.isArray(words)?words:[words]).map(transcript=>({transcript,confidence:.8})),{isFinal:final}));this.onresult?.({resultIndex,results});}
             stop(){__native.stops++;this.ready=false;if(__native.finalizeOnStop){setTimeout(()=>this.emit(this.history.map(([words])=>[words,true]),Math.max(0,this.history.length-1)),40);setTimeout(()=>this.end(),160);}}
             abort(){__native.aborts++;this.ready=false;if(!__native.holdAudioAfterAbort)this.active=false;if(!__native.dropEnd)setTimeout(()=>this.end(),20);}
             end(){this.active=false;this.ready=false;this.onaudioend?.();this.onend?.();}
@@ -135,6 +142,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         assert.equal(await evaluate('__voice.safariMode'), safari);
     }
 
+    if (!cacheOnly) {
     await fresh(true, ['こ','さ','し','そ']); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
     await pause(100); let state = await snapshot();
     assert.equal(state.starts, 1); assert.doesNotMatch(state.status, /^Listening/);
@@ -202,7 +210,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
 
     await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
     const details = await evaluate(`document.querySelector('#mic-diagnostics').value`);
-    assert.match(details, /2026-10-29\s+dojo-reset-1/); assert.equal(details.includes(before.save.question.prompt), false);
+    assert.match(details, /2026-10-29\s+safari-capture-2/); assert.equal(details.includes(before.save.question.prompt), false);
     await tap('#copy-mic-details'); assert.equal(await evaluate('__copiedMicDetails'), details);
     await screenshot('safari-microphone-diagnostics');
     await tap('#mic-details-dialog .primary[data-close]');
@@ -223,10 +231,31 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     assert.equal(after.handsfree, true); assert.equal(after.recovery, false); assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player); assert.equal(after.overlaps, 0);
     pass('A Safari service that cleanly ends after a correct answer can open the next capture without stopping hands-free');
 
-    await fresh(); await evaluate('__native.finalizeOnStop=true'); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
-    await result([[before.save.question.prompt, false]]); await ready(2); after = await snapshot();
-    assert.equal(after.handsfree, true); assert.equal(after.recovery, false); assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player); assert.equal(after.overlaps, 0);
-    pass('A conservative stop followed by a genuine final and native end also continues the next hands-free question');
+    await fresh(); await evaluate('__native.deafRestarts=true'); await tap('#handsfree-toggle'); await ready(1);
+    const continuousHistory = [];
+    for (let turn = 0; turn < 3; turn++) {
+        before = await snapshot(); continuousHistory.push([before.save.question.prompt, false]); await result(continuousHistory, turn); await pause(1200);
+        after = await snapshot(); assert.equal(after.opponent, before.opponent); assert.equal(after.player, before.player);
+        assert.equal(after.starts, 1); assert.equal(after.stops, 0); assert.equal(after.aborts, 0);
+        continuousHistory[turn][1] = true; await result(continuousHistory, turn); after = await snapshot();
+        assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
+        if (turn < 2) await nextQuestion(before.save.question.id);
+    }
+    assert.equal((await snapshot()).starts, 1);
+    pass('Hands-free survives three healthy 1.2-second interim-to-final delays without reopening a native capture that would be deaf on restart');
+
+    await nextQuestion(before.save.question.id); before = await snapshot();
+    await tap('#stop-microphone'); await waitFor(`!__voice.captureActive`); after = await snapshot();
+    assert.equal(after.handsfree, false); assert.equal(after.player, before.player); assert.equal(after.opponent, before.opponent); assert.deepEqual(after.save.question, before.save.question);
+    assert.match(await evaluate(`document.querySelector('#mic-capture-status').textContent`), /off/i); assert.ok(after.aborts > 0);
+    pass('Stop mic closes a persistent capture without grading or losing the assigned question');
+
+    await fresh(); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
+    await pause(11100); after = await snapshot();
+    assert.equal(after.starts, 1); assert.equal(after.stops, 0); assert.equal(after.aborts, 0); assert.equal(after.capture, true);
+    assert.equal(after.player, before.player); assert.equal(after.opponent, before.opponent); assert.deepEqual(after.save.question, before.save.question);
+    await result([[before.save.question.prompt, true]]); assert.ok((await snapshot()).opponent < before.opponent);
+    pass('A ten-second quiet question retries on the same native microphone without a stop, restart, health penalty, or replacement question');
 
     await fresh(); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
     await evaluate(`__native.dropEnd=true;__native.holdAudioAfterAbort=true;__native.instances[0].onerror?.({error:'network',message:'Synthetic speech service unavailable'})`);
@@ -235,19 +264,45 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     assert.doesNotMatch(after.status, /^Listening/); assert.equal(after.player, before.player); assert.equal(after.opponent, before.opponent); assert.deepEqual(after.save.question, before.save.question);
     pass('If native audio truly remains busy, reconnect reports failure instead of manufacturing Listening or consuming an answer');
 
-    await fresh(); await evaluate('__native.finalizeOnStop=true'); await tap('#listen-button'); await ready(1); before = await snapshot();
-    await result([[before.save.question.prompt, false]]); await pause(500);
-    assert.equal((await snapshot()).stops, 0); assert.equal((await snapshot()).opponent, before.opponent);
-    await waitFor(`JSON.parse(localStorage.getItem(DojoGame.SAVE_VERSION)).phase==='answered'`, 'Native final produced only by a conservative stop request');
-    after = await snapshot(); assert.equal(after.stops, 1); assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
-    assert.equal(after.handsfree, false);
-    pass('Single-answer mode can finalize interim-only Safari speech through a conservative stop, without ever grading the interim');
+    await fresh(true, ['こ','さ','し']); await evaluate('__native.deafRestarts=true'); await tap('#listen-button'); await ready(1);
+    const manualHistory = [];
+    for (let turn = 0; turn < 3; turn++) {
+        before = await snapshot(); manualHistory.push([['子','差','市'][turn], false]); await result(manualHistory, turn); await pause(1200);
+        after = await snapshot(); assert.equal(after.starts, 1); assert.equal(after.stops, 0); assert.equal(after.aborts, 0); assert.equal(after.opponent, before.opponent);
+        assert.equal(await evaluate(`document.querySelector('#stop-listening').hidden`), true, 'Safari has privacy Stop mic instead of a finalizing Finish button');
+        manualHistory[turn][1] = true; await result(manualHistory, turn); after = await snapshot();
+        assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player); assert.equal(after.handsfree, false); assert.equal(after.capture, true);
+        assert.match(await evaluate(`document.querySelector('#mic-capture-status').textContent`), /Mic on.*Next/i);
+        if (!turn) await screenshot('safari-manual-mic-on-between-answers');
+        if (turn < 2) {
+            await tap('#next-button'); await waitFor(`JSON.parse(localStorage.getItem(DojoGame.SAVE_VERSION)).phase==='question'`);
+            assert.equal(await evaluate('__voice.getDiagnostics().stream.armed'), false);
+            assert.match(await evaluate(`document.querySelector('#mic-capture-status').textContent`), /Mic on.*Speak/i);
+            await tap('#listen-button'); await ready(1);
+        }
+    }
+    assert.equal((await snapshot()).starts, 1);
+    pass('Speak to strike also survives three 1.2-second native final delays on one capture; Mic on truthfully persists through Next and Speak');
+
+    await fresh(); await tap('#listen-button'); await ready(1); before = await snapshot(); const priorStarts = before.starts;
+    const otherTarget = await send('Target.createTarget', { url: 'about:blank' }); await send('Target.activateTarget', { targetId: otherTarget.targetId });
+    await waitFor('document.hidden', 'Native tab visibility becomes hidden'); await waitFor('!__voice.captureActive', 'Hidden tab closes microphone');
+    await send('Target.activateTarget', { targetId: auditTarget.id }); await send('Target.closeTarget', { targetId: otherTarget.targetId });
+    await waitFor('!document.hidden'); await pause(350); after = await snapshot();
+    assert.equal(after.starts, priorStarts); assert.equal(after.capture, false); assert.equal(after.player, before.player); assert.deepEqual(after.save.question, before.save.question);
+    pass('Leaving the actual tab closes even a manual persistent microphone and returning cannot silently restart it');
+
+    await fresh(true, [], 'reset-terminal-manual'); await tap('#listen-button'); await ready(1); before = await snapshot(); assert.ok(before.opponent <= 7);
+    await result([[before.save.question.prompt, true]]); await waitFor('!__voice.captureActive'); after = await snapshot();
+    assert.equal(after.save.fight.status, 'won'); assert.equal(after.opponent, 0); assert.equal(after.handsfree, false); assert.ok(after.aborts > 0);
+    assert.match(await evaluate(`document.querySelector('#mic-capture-status').textContent`), /off/i);
+    pass('A winning manual answer closes the actual microphone immediately instead of leaving an idle capture after the bout');
 
     await send('Emulation.setDeviceMetricsOverride', { width: 1024, height: 768, deviceScaleFactor: 2, mobile: true });
     await fresh(); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
     await evaluate(`__native.instances[0].onerror?.({error:'not-allowed',message:'Synthetic permission refusal'})`);
     await waitFor(`!document.querySelector('#voice-recovery').hidden`);
-    const controls = await evaluate(`['#question-glyph','#handsfree-toggle','#listen-button','#voice-status','#reconnect-mic','#reload-fight','#mic-details-button'].map(selector=>{const element=document.querySelector(selector),rect=element.getBoundingClientRect();return {selector,x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};})`);
+    controls = await evaluate(`['#question-glyph','#handsfree-toggle','#listen-button','#voice-status','#reconnect-mic','#reload-fight','#mic-details-button'].map(selector=>{const element=document.querySelector(selector),rect=element.getBoundingClientRect();return {selector,x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};})`);
     for (const control of controls) assert.ok(control.width > 0 && control.height > 0, control.selector + ' visible');
     const recoveryAccess = await evaluate(`(() => {const card=document.querySelector('.practice-card'),button=document.querySelector('#mic-details-button');button.scrollIntoView({block:'nearest'});const r=button.getBoundingClientRect();return {bottom:r.bottom,top:r.top,scrollY,overflow:getComputedStyle(card).overflowY};})()`);
     assert.ok(recoveryAccess.top >= 0 && recoveryAccess.bottom <= 768.5); assert.equal(recoveryAccess.scrollY, 0); assert.equal(recoveryAccess.overflow, 'auto');
@@ -335,13 +390,72 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     await result([[before.save.question.prompt, false]]); await ready(2); after = await snapshot();
     assert.equal(after.handsfree, true); assert.equal(after.player, before.player); assert.ok(after.opponent < before.opponent); assert.equal(after.overlaps, 0);
     pass('Desktop Chrome retains its fast one-shot endpoint and automatic next microphone after the final');
+    }
+
+    // This continuation can run alone with DOJO_CACHE_ONLY=1. It verifies cached
+    // runtime bytes and save restoration, not speech recognition while offline.
+    const workerSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+    const expectedCache = /const CACHE = '([^']+)'/.exec(workerSource)[1];
+    const expectedAssets = JSON.parse(/const ASSETS = (\[[^\n]+\]);/.exec(workerSource)[1]);
+    const runtimeFiles = ['taekwondo.css','taekwondo-engine.js','taekwondo-writing.js','taekwondo-safari-stream.js','taekwondo-voice.js','taekwondo-scene.js','taekwondo.js'];
+    const expectedRuntimeHashes = Object.fromEntries(runtimeFiles.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')).digest('hex')]));
+    const responses = [];
+    const originalMessageHandler = socket.onmessage;
+    socket.onmessage = event => {
+        const message = JSON.parse(event.data);
+        if (message.method === 'Network.responseReceived') responses.push({ url: message.params.response.url, status: message.params.response.status, fromServiceWorker: Boolean(message.params.response.fromServiceWorker) });
+        originalMessageHandler(event);
+    };
+    await send('Network.enable');
+    await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15', platform: 'MacIntel' });
+    await fresh(true, ['こ']); await tap('#listen-button'); await ready(1);
+    await result([['子', true]]); await tap('#stop-microphone'); await waitFor('!__voice.captureActive');
+    await tap('#pause-button'); await waitFor(`document.querySelector('#pause-dialog').open`); await tap('#leave-button');
+    await send('Page.navigate', { url: address + '?preserve=1' }); await waitFor(`document.documentElement.dataset.dojoReady==='true'`);
+    await evaluate('navigator.serviceWorker.ready');
+    await waitFor(`Boolean(navigator.serviceWorker.controller)`, 'The generated worker controls this page');
+    await waitFor(`(async()=>{if(!await caches.has(${JSON.stringify(expectedCache)}))return false;const cache=await caches.open(${JSON.stringify(expectedCache)});return (await cache.keys()).length>=${expectedAssets.length};})()`, 'Every generated course asset is precached');
+    const onlineSave = (await snapshot()).save;
+    assert.ok(onlineSave.fight && onlineSave.fight.journal.length === 1 && onlineSave.fight.opponentHp < onlineSave.fight.opponentMaxHp, 'Offline restoration uses a real nonempty fight, not a blank save');
+    const cached = await evaluate(`(async()=>{const cache=await caches.open(${JSON.stringify(expectedCache)}),missing=[];for(const asset of ${JSON.stringify(expectedAssets)})if(!await cache.match(new URL(asset,location.href).href))missing.push(asset);return {name:${JSON.stringify(expectedCache)},expected:${expectedAssets.length},keys:(await cache.keys()).length,missing,worker:navigator.serviceWorker.controller.scriptURL};})()`);
+    assert.equal(cached.expected, 338); assert.deepEqual(cached.missing, []);
+    const offlineMarker = 'offline-' + Date.now();
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: 'window.__offlineCacheMarker=' + JSON.stringify(offlineMarker) });
+    await send('Network.setCacheDisabled', { cacheDisabled: true });
+    await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+    const responseOffset = responses.length;
+    await send('Page.reload', { ignoreCache: false });
+    await waitFor(`window.__offlineCacheMarker===${JSON.stringify(offlineMarker)}&&document.documentElement.dataset.dojoReady==='true'`, 'Offline reload boots the current dojo runtime');
+    const offlineSave = (await snapshot()).save;
+    const learnerState = value => { const copy = structuredClone(value); if (copy.fight) delete copy.fight.id; return copy; };
+    assert.deepEqual(learnerState(offlineSave), learnerState(onlineSave), 'Offline pagehide/reload preserves the fight journal, health, question, answer lock, preferences, and progress');
+    const offlineRuntime = await evaluate(`(async()=>{const urls=[...document.querySelectorAll('script[src],link[rel="stylesheet"]')].map(element=>element.src||element.href).filter(url=>${JSON.stringify(runtimeFiles)}.includes(new URL(url).pathname.split('/').pop()));
+        const files={};for(const url of urls){const response=await fetch(url);if(!response.ok)throw Error('Uncached dojo asset '+url);const source=(await response.text()).replace(/\\r\\n/g,'\\n');const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source));files[new URL(url).pathname.split('/').pop()]=[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');}
+        return {urls,files,build:__voice.getDiagnostics().build,micUI:Boolean(document.querySelector('#mic-session-controls')&&document.querySelector('#mic-capture-status')&&document.querySelector('#stop-microphone')),capture:__voice.captureActive,starts:__native.starts};})()`);
+    assert.equal(offlineRuntime.urls.length, 7);
+    for (const url of offlineRuntime.urls) assert.equal(new URL(url).searchParams.get('v'), 'safari-capture-2');
+    assert.deepEqual(offlineRuntime.files, expectedRuntimeHashes, 'All seven offline query URLs return current source bytes');
+    assert.equal(offlineRuntime.build, '2026-10-29 safari-capture-2'); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
+    const offlineResponses = responses.slice(responseOffset).filter(response => runtimeFiles.includes(new URL(response.url).pathname.split('/').pop()));
+    for (const file of runtimeFiles) assert.ok(offlineResponses.some(response => new URL(response.url).pathname.endsWith('/' + file) && response.status === 200 && response.fromServiceWorker), file + ' is served by the worker while HTTP cache and network are unavailable');
+    assert.equal(responses.some(response => response.status === 404 && /taekwondo/.test(response.url)), false);
+    // Cache verification uses the existing button listener directly; native
+    // touch behavior is covered by the separate 23 UI checks above.
+    await evaluate(`document.querySelector('#start-button').click()`); await waitFor(`!document.querySelector('#challenge-panel').hidden`);
+    assert.equal((await snapshot()).capture, false); assert.equal((await snapshot()).starts, 0);
+    await screenshot('safari-current-runtime-offline');
+    cacheEvidence = { ...cached, offlineRuntime, offlineResponses, savePreserved: true, regeneratedInternalFightId: offlineSave.fight.id !== onlineSave.fight.id, httpCacheDisabled: true, networkOffline: true,
+        scope: 'Current cached game runtime and saved fight restoration only. Live browser speech service and microphone availability offline are not tested.' };
+    await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await send('Network.setCacheDisabled', { cacheDisabled: false });
+    pass('All 338 generated assets are cached; offline reload serves all seven current revision URLs through the worker and preserves the saved fight without activating a microphone');
     assert.equal(exceptions.length, 0);
-    const sources = Object.fromEntries(['taekwondo-safari-stream.js', 'taekwondo-voice.js', 'taekwondo.js', 'taekwondo.html', 'taekwondo.css'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')).digest('hex')]));
-    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ passed: true, checks, exceptions, controls, scope: 'Synthetic Safari native audio/lifecycle and cumulative results in isolated Chromium; real CDP touch input. No physical WebKit or real microphone claim.', sources }, null, 2));
+    const sources = Object.fromEntries([...runtimeFiles, 'taekwondo.html', 'sw.js', 'generate_sw.js'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')).digest('hex')]));
+    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ passed: true, cacheOnly, checks, exceptions, controls, cacheEvidence, scope: 'Synthetic Safari native audio/lifecycle and cumulative results in isolated Chromium; real CDP touch input. Offline runtime caching is separate from live speech-service availability. No physical WebKit or real microphone claim.', sources }, null, 2));
     console.log('\n' + checks.length + ' focused Safari controller checks passed. Evidence: ' + output);
 })().catch(async error => {
     console.error(error.stack || error);
-    try { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ error: String(error.stack || error), checks, exceptions, state: evaluate ? await evaluate(`({body:document.body.innerText,diagnostics:window.__voice?.getDiagnostics(),native:window.__native&&{starts:__native.starts,stops:__native.stops,aborts:__native.aborts,overlaps:__native.overlaps}})`) : null }, null, 2)); } catch (_) {}
+    try { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ error: String(error.stack || error), checks, exceptions, failedRequests: requests.filter(request => request.status >= 400), state: evaluate ? await evaluate(`({body:document.body.innerText,diagnostics:window.__voice?.getDiagnostics(),native:window.__native&&{starts:__native.starts,stops:__native.stops,aborts:__native.aborts,overlaps:__native.overlaps}})`) : null }, null, 2)); } catch (_) {}
     process.exitCode = 1;
 }).finally(async () => {
     if (socket) socket.close(); if (browser && browser.exitCode === null) browser.kill();

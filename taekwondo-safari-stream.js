@@ -50,7 +50,7 @@
 
         clearTargetTimers(context) {
             if (!context) return;
-            for (const timer of [context.recordTimer, context.endpointTimer, context.finalTimer]) global.clearTimeout(timer);
+            for (const timer of [context.recordTimer, context.finalTimer]) global.clearTimeout(timer);
         }
 
         disarm() {
@@ -68,7 +68,7 @@
             const context = { target: Object.assign({}, target, {
                 voiceAliases: Array.isArray(target.voiceAliases) ? target.voiceAliases.slice() : []
             }), epoch, floor: this.highestSeen + 1, startedAt: null, endedAt: null,
-                interim: '', endpointKey: '', waitingFinal: false, speechDetected: false };
+                interim: '', waitingFinal: false, speechDetected: false };
             this.armed = context;
             this.counts.arms++;
             this.event('arm', { floor: context.floor });
@@ -100,8 +100,25 @@
             if (context.startedAt === null && timestamp !== null) context.startedAt = timestamp;
             if (context.recordTimer == null && !context.waitingFinal) {
                 context.recordTimer = global.setTimeout(() => {
-                    if (this.armed === context) this.stop();
+                    if (this.armed === context) this.expireTarget(context);
                 }, 10000);
+            }
+        }
+
+        expireTarget(context) {
+            const capture = this.capture;
+            if (this.armed !== context || !this.current(capture)) return;
+            const code = context.interim ? 'no-match' : 'no-speech';
+            this.disarm();
+            const deliveryVersion = this.targetVersion;
+            this.counts.errors++; this.lastErrorCode = code;
+            this.event('answer-timeout', { hadInterim: Boolean(context.interim) });
+            this.state('idle', context);
+            // Expire the unanswered target, not the native recording. A bounded
+            // controller retry may arm the same question on this open stream.
+            // Explicit Stop/Pause and the controller's retry limit still close it.
+            if (!this.destroyed && this.targetVersion === deliveryVersion && this.current(capture) && typeof this.onError === 'function') {
+                this.onError({ code, epoch: context.epoch, target: context.target, nativeMessage: '' });
             }
         }
 
@@ -121,7 +138,7 @@
         }
 
         current(capture) {
-            return !this.destroyed && this.capture === capture && !capture.cancelled && !capture.failed;
+            return Boolean(capture) && !this.destroyed && this.capture === capture && !capture.cancelled && !capture.failed;
         }
 
         launch(context) {
@@ -228,14 +245,6 @@
                 context.interim = top;
                 this.event('interim', { groups: windowGroups.length });
                 this.state(context.waitingFinal ? 'processing' : 'listening', context, top);
-                if (this.armed !== context || !this.current(capture)) return;
-                const key = transcriptKey(top);
-                if (!context.waitingFinal && key && key !== context.endpointKey) {
-                    global.clearTimeout(context.endpointTimer); context.endpointKey = key;
-                    context.endpointTimer = global.setTimeout(() => {
-                        if (this.armed === context && context.endpointKey === key) this.stop();
-                    }, 900);
-                } else if (!key) { global.clearTimeout(context.endpointTimer); context.endpointKey = ''; }
                 return;
             }
             let alternatives = [''];
@@ -260,7 +269,7 @@
             if (this.armed !== context) return;
             context.waitingFinal = true;
             if (context.endedAt === null) context.endedAt = now();
-            global.clearTimeout(context.recordTimer); global.clearTimeout(context.endpointTimer);
+            global.clearTimeout(context.recordTimer);
             if (context.finalTimer == null) context.finalTimer = global.setTimeout(() => {
                 if (this.armed === context) this.fail(this.capture, context.interim ? 'no-match' : 'no-speech');
             }, 8000);
@@ -316,6 +325,7 @@
             for (const name of ['onstart', 'onaudiostart', 'onspeechstart', 'onspeechend', 'onaudioend', 'onresult', 'onnomatch', 'onerror', 'onend']) capture.rec[name] = null;
             this.capture = null; this.captureReady = false;
             this.readyAfter = now() + 120;
+            this.event('released');
             if (resume && this.armed && !this.destroyed) {
                 const context = this.armed;
                 this.queueLaunch(context);
