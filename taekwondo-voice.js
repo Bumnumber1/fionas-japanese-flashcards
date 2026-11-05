@@ -148,31 +148,109 @@
 
     // A recognizer can choose a short kanji homophone for an isolated syllable.
     // These explicit whole-result aliases never rewrite arbitrary Japanese text.
+    // Include cross-readings (e.g. 工 is ku/kou) so polyphonic spellings cannot
+    // be mistaken for unique evidence of a wrong sound. Readings checked with
+    // the Agency for Cultural Affairs on/kun index and Kanjipedia:
+    // https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/naikaku/kanji/joyokanjisakuin/
+    // https://www.kanjipedia.jp/
     const KANA_FORMS = {
-        'あ': ['亜', '阿'], 'い': ['胃', '井', '位', '意', '医', '衣'], 'う': ['鵜', '卯', '宇'],
-        'え': ['絵', '柄', '江'], 'お': ['尾', '緒'], 'か': ['蚊', '課', '科', '火', '可', '化', '加', '下', '歌'],
-        'き': ['木', '気', '機', '期', '記', '基', '季', '器'], 'く': ['区', '句', '苦', '九', '9'], 'け': ['毛'], 'こ': ['子', '個', '古', '庫', '湖'],
-        'さ': ['差', '左', '佐', '査'], 'し': ['詩', '市', '氏', '四', '4', '死', '師', '士', '史', '紙', '志', '私'],
-        'す': ['酢', '巣', '素', '須'], 'せ': ['背', '瀬'], 'そ': ['祖', '粗', '蘇'],
-        'た': ['田', '多', '他', '太'], 'ち': ['地', '血', '知', '智', '値'], 'つ': ['津'], 'て': ['手'], 'と': ['戸', '都', '斗', '途'],
-        'な': ['名', '菜', '那'], 'に': ['二', '2', '荷', '煮', '似'], 'ね': ['根', '音', '値'], 'の': ['野', '乃'], 'は': ['葉', '歯', '刃', '派', '波'],
-        'ひ': ['日', '火', '非', '比', '費', '碑', '陽'], 'ふ': ['府', '負', '不', '譜', '符', '布'], 'へ': ['屁'],
-        'ほ': ['穂', '歩', '帆', '保', '補'], 'ま': ['間', '真', '魔', '麻'], 'み': ['実', '身', '美', '味'],
-        'む': ['無'], 'め': ['目', '芽'], 'も': ['喪', '藻'], 'や': ['矢', '夜', '屋'], 'ゆ': ['湯'], 'よ': ['世', '夜', '余', '与', '予'],
-        'ら': ['羅'], 'り': ['理', '利', '里', '李'], 'ろ': ['炉', '路', '呂'], 'わ': ['輪', '和', '話'], 'を': ['お', '尾', '緒']
+        'あ': ['亜', '阿'], 'い': ['胃', '井', '位', '意', '医', '衣', '伊', '異', '移', '居', '委'], 'う': ['鵜', '卯', '宇', '烏', '有'],
+        'え': ['絵', '柄', '江', '得'], 'お': ['尾', '緒', '御', '小', '和', '雄', '烏'], 'か': ['蚊', '課', '科', '火', '可', '化', '加', '下', '歌', '家', '花', '夏', '果', '価', '過', '香', '仮', '何', '荷', '日'],
+        'き': ['木', '気', '機', '期', '記', '基', '季', '器', '黄', '生'], 'く': ['区', '句', '苦', '九', '9', '駆', '久', '庫', '工', '口', '功'], 'け': ['毛', '家', '化', '仮', '気'], 'こ': ['子', '個', '古', '庫', '湖', '小', '故', '粉', '呼', '木', '黄', '戸', '居'],
+        'さ': ['差', '左', '佐', '査'], 'し': ['詩', '市', '氏', '四', '4', '死', '師', '士', '史', '紙', '志', '私', '子', '施', '歯', '矢', '之'],
+        'す': ['酢', '巣', '素', '須', '子', '蘇'], 'せ': ['背', '瀬', '世', '施'], 'そ': ['祖', '粗', '蘇', '素'],
+        'た': ['田', '多', '他', '太', '手'], 'ち': ['地', '血', '知', '智', '値'], 'つ': ['津', '都'], 'て': ['手'], 'と': ['戸', '都', '斗', '途'],
+        'な': ['名', '菜', '那', '奈', '納'], 'に': ['二', '2', '荷', '煮', '似', '尼', '弐'], 'ぬ': ['奴'], 'ね': ['根', '音', '値', '寝'], 'の': ['野', '乃', '之'], 'は': ['葉', '歯', '刃', '派', '波', '破', '覇'],
+        'ひ': ['日', '火', '非', '比', '費', '碑', '陽', '皮', '被', '否', '悲', '妃', '飛', '灯', '屁'], 'ふ': ['府', '負', '不', '譜', '符', '布', '夫', '婦', '富', '父', '歩'], 'へ': ['屁'],
+        'ほ': ['穂', '歩', '帆', '保', '補', '火'], 'ま': ['間', '真', '魔', '麻', '目'], 'み': ['実', '身', '美', '味', '見', '御'],
+        'む': ['無', '務'], 'め': ['目', '芽'], 'も': ['喪', '藻'], 'や': ['矢', '夜', '屋', '家', '野'], 'ゆ': ['湯', '油'], 'よ': ['世', '夜', '余', '与', '予', '四'],
+        'ら': ['羅'], 'り': ['理', '利', '里', '李'], 'る': ['留'], 'ろ': ['炉', '路', '呂'], 'わ': ['輪', '和', '話'], 'を': ['お', '尾', '緒']
+    };
+    // Dictation often writes a held isolated sound as a real word/kanji. These
+    // are complete long-sound readings, enabled only for basic single kana.
+    // Long e may be written ei, and long o ou:
+    // https://www.coelang.tufs.ac.jp/ja/en/pmod/practical/02-02-01.php
+    const HELD_KANA_FORMS = {
+        'あ': ['嗚呼'], 'い': ['良い', '好い'],
+        'え': ['英', '栄', '永', '映', '影', '衛', '営'], 'お': ['王', '欧', '央', '応', '黄', '負う', '生う'],
+        'く': ['空', '食う'], 'け': ['計', '系', '形', '型', '軽', '敬', '景', '経'],
+        'こ': ['校', '公', '工', '高', '口', '光', '交', '考', '候', '港', '講', '香', '功', '好', '甲', '航', '項', '江', '黄', '耗'],
+        'す': ['数', '吸う'],
+        'せ': ['正', '生', '性', '姓', '星', '声', '制', '成', '政', '精', '製', '聖', '清', '勢', '誠', '西', '井'],
+        'そ': ['層', '相', '総', '想', '走', '奏', '双', '荘', '僧', '曹', '草', '葬', '巣', '喪', '藻'],
+        'つ': ['通', '痛'], 'て': ['定', '低', '底', '帝', '邸', '亭', '訂', '貞', '庭', '廷', '提', '程', '鵜'],
+        'と': ['等', '党', '塔', '頭', '東', '当', '投', '灯', '刀', '糖', '冬', '棟', '答', '島', '統', '盗', '闘', '陶', '湯', '納'],
+        'ぬ': ['縫う'], 'の': ['能', '脳', '農', '濃', '納'], 'ふ': ['風', '封'], 'へ': ['平', '兵', '塀', '閉', '幣', '弊', '陛', '併', '丙', '柄'],
+        'ほ': ['方', '法', '宝', '放', '報', '豊', '峰', '砲', '邦', '包', '奉', '胞', '訪', '芳', '縫', '封'],
+        'め': ['名', '命', '明', '鳴', '銘', '盟', '迷', '姪'], 'も': ['毛', '猛', '網', '孟', '盲', '妄', '亡', '耗'],
+        'ゆ': ['優', '勇', '有', '友', '由', '遊', '夕', '雄', '悠', '郵'],
+        'よ': ['用', '要', '陽', '洋', '様', '葉', '曜', '容', '幼', '養', '羊', '溶', '酔う'],
+        'れ': ['例', '礼', '零', '霊', '令', '冷', '齢', '隷'], 'ろ': ['労', '老', '郎', '朗', '楼', '牢', '浪', '廊', '狼', '蝋'],
+        'ん': ['うん', 'うーん']
     };
     const SMALL_SPOKEN_KANA = { 'あ': 'ぁ', 'い': 'ぃ', 'う': 'ぅ', 'え': 'ぇ', 'お': 'ぉ', 'や': 'ゃ', 'ゆ': 'ゅ', 'よ': 'ょ', 'わ': 'ゎ' };
 
+    function basicKanaFor(question) {
+        if (!question || question.mode !== 'kana-read' || question.difficulty === 'special' || question.challengeKind === 'special') return null;
+        const normalized = normalizeTranscript(question.prompt);
+        return KANA.find(([kana]) => kana === normalized) || null;
+    }
+
+    function matchesIsolatedSound(question, transcript) {
+        const entry = basicKanaFor(question);
+        if (!entry) return false;
+        const [kana, reading] = entry;
+        const sound = kana === 'を' ? 'お' : kana;
+        const normalized = normalizeTranscript(transcript);
+        const candidates = [normalized, romajiToKana(transcript)];
+        for (let candidate of candidates) {
+            if (!candidate) continue;
+            if (kana === 'を' && candidate.startsWith('を')) candidate = 'お' + candidate.slice(1);
+            if (kana === 'ん') {
+                // An isolated nasal is routinely spelled as the interjection
+                // うん / うーん by dictation. This never rewrites n inside words.
+                if (/^(?:んー{1,4}|う[うぅー]{0,4}んー{0,4})$/u.test(candidate)) return true;
+                continue;
+            }
+            // Small vowels/glides and a single terminal glottal stop preserve
+            // this isolated sound, but small tsu alone is never spoken tsu.
+            for (const [full, small] of Object.entries(SMALL_SPOKEN_KANA)) candidate = candidate.replaceAll(small, full);
+            if (candidate === sound + 'っ') return true;
+            if (candidate[0] !== sound) continue;
+            const suffix = candidate.slice(1);
+            if (!suffix || suffix.length > 4) continue;
+            const vowel = ROMAJI[reading.slice(-1)];
+            if ([...suffix].every(char => char === vowel || char === 'ー')) return true;
+            const spellingVowel = reading.endsWith('e') ? 'い' : reading.endsWith('o') ? 'う' : '';
+            if (spellingVowel && [...suffix].every(char => char === spellingVowel || char === 'ー')) return true;
+        }
+        return false;
+    }
+
     function normalizeTranscript(value) {
         return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
+            .replace(/[’‘ʼ]/g, "'")
             .replace(/[ァ-ヶ]/g, character => String.fromCharCode(character.charCodeAt(0) - 0x60))
-            .replace(/[\p{P}\p{Z}\s]/gu, '');
+            .replace(/[\p{Z}\s]/gu, '')
+            .replace(/^'(.*)'$/u, '$1')
+            .replace(/\p{P}/gu, (character, offset, text) => {
+                // Quotation and sentence punctuation are formatting. Signs and
+                // separators are evidence: -2 is not 2, and ka/na is not kana.
+                if (/[-/\\_]/u.test(character) || /\p{Pd}/u.test(character)) return character;
+                if (character === "'") {
+                    const before = text[offset - 1] || '', after = text[offset + 1] || '';
+                    // A nasal boundary changes the sound (shin'ya / shinya).
+                    // Keep internal roman apostrophes and terminal n', while
+                    // still permitting ordinary quoted answers such as 'shi'.
+                    if (/[a-zāīūēō]/u.test(before) && (/[a-zāīūēō]/u.test(after) || before === 'n')) return character;
+                }
+                return '';
+            });
     }
 
     function romajiToKana(value) {
-        let roman = String(value || '').normalize('NFKC').toLowerCase().replace(/[’‘]/g, "'")
-            .replace(/ā/g, 'aa').replace(/ī/g, 'ii').replace(/ū/g, 'uu').replace(/ē/g, 'ee').replace(/ō/g, 'ou')
-            .replace(/[\p{P}\p{Z}\s]/gu, character => character === "'" ? character : '');
+        let roman = normalizeTranscript(value)
+            .replace(/ā/g, 'aa').replace(/ī/g, 'ii').replace(/ū/g, 'uu').replace(/ē/g, 'ee').replace(/ō/g, 'ou');
         if (!/^[a-z']+$/.test(roman)) return '';
         let kana = '';
         while (roman) {
@@ -180,6 +258,10 @@
             if (roman === 'nn') { kana += 'ん'; break; }
             if (roman[0] === 'n' && (roman.length === 1 || !/[aeiouy]/.test(roman[1]))) {
                 kana += 'ん'; roman = roman.slice(1); continue;
+            }
+            // Hepburn writes the geminate before chi/cha as t: matcha, kotchi.
+            if (/^tch[aiuo]/.test(roman)) {
+                kana += 'っ'; roman = roman.slice(1); continue;
             }
             if (roman.length > 1 && roman[0] === roman[1] && /[bcdfghjkmprstvwz]/.test(roman[0])) {
                 kana += 'っ'; roman = roman.slice(1); continue;
@@ -197,7 +279,7 @@
 
     function romanSignature(value) {
         const roman = normalizeTranscript(value);
-        if (!/^[a-zāīūēō]+$/.test(roman)) return '';
+        if (!/^[a-zāīūēō']+$/.test(roman)) return '';
         return roman.replace(/ou|oo/g, 'ō').replace(/uu/g, 'ū').replace(/aa/g, 'ā').replace(/ii/g, 'ī').replace(/ee/g, 'ē');
     }
 
@@ -236,9 +318,11 @@
         if (!isolatedKana && SPEECH_WORD_FORMS[normalized]) SPEECH_WORD_FORMS[normalized].forEach(add);
         if (isolatedKana && question.difficulty !== 'special' && question.challengeKind !== 'special') {
             // An isolated sound is often held naturally: "カー" / "かあ".
-            // Permit just one extra matching vowel or long mark. Never apply
-            // this tolerance to words, where vowel length changes the answer.
+            // Common complete aliases are listed here; matchesIsolatedSound
+            // also handles bounded longer holds and small vowel spellings.
+            // Never apply this to words, where vowel length changes the answer.
             const syllable = normalized === 'を' ? 'お' : normalized;
+            if (HELD_KANA_FORMS[syllable]) HELD_KANA_FORMS[syllable].forEach(add);
             const kanaReading = (KANA.find(([kana]) => kana === syllable) || [])[1];
             const vowel = kanaReading && /[aeiou]$/.test(kanaReading) ? kanaReading.slice(-1) : '';
             const vowelKana = vowel ? ROMAJI[vowel] : '';
@@ -265,7 +349,7 @@
         const normalized = normalizeTranscript(transcript);
         if (!normalized) return false;
         const aliases = aliasesFor(question);
-        return aliases.includes(normalized) || aliases.includes(romajiToKana(transcript)) || aliases.includes(romanSignature(transcript));
+        return aliases.includes(normalized) || aliases.includes(romajiToKana(transcript)) || aliases.includes(romanSignature(transcript)) || matchesIsolatedSound(question, transcript);
     }
 
     const ERROR_MESSAGES = {
@@ -290,7 +374,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-10-29 mic-report-1';
+    const VOICE_BUILD = '2026-11-05 syllables-1';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
@@ -299,15 +383,26 @@
         const isolated = target.mode === 'kana-read' && /^[ぁ-ゖ]$/u.test(normalizeTranscript(target.prompt));
         // Dictation can invent a word for one syllable. An unrelated transcript
         // is inconclusive; a clearly recognized different kana remains wrong.
-        const soundReadings = transcript => KANA.filter(([prompt, reading]) => matches({ mode: 'kana-read', prompt, reading }, transcript));
-        const knownSound = transcript => soundReadings(transcript).length > 0;
-        if (matched === undefined && isolated && !alternatives.some(knownSound)) {
-            return { error: { code: 'no-match', transcript: alternatives[0],
-                message: `The recognizer did not return a clear kana sound: “${alternatives[0]}”. Try the same sound again. No energy was lost.` } };
+        const soundReadings = transcript => KANA.filter(([prompt, reading]) => matches({ mode: 'kana-read', prompt, reading }, transcript))
+            // Keep を-only spellings, but count お/を as one spoken sound.
+            .filter(([prompt], index, readings) => prompt !== 'を' || !readings.slice(0, index).some(([kana]) => kana === 'お'));
+        let knownAlternative;
+        let actualReadings = [];
+        if (matched === undefined && isolated) {
+            // Select the actual evidence, not an unrelated top suggestion. A
+            // polyphonic spelling (火: ka/hi, 名: na/mei) cannot prove a mistake.
+            for (const alternative of alternatives) {
+                const readings = soundReadings(alternative);
+                if (readings.length !== 1) continue;
+                knownAlternative = alternative; actualReadings = readings; break;
+            }
+            if (knownAlternative === undefined) {
+                return { error: { code: 'no-match', transcript: alternatives[0],
+                    message: `The recognizer did not return a clear kana sound: “${alternatives[0]}”. Try the same sound again. No energy was lost.` } };
+            }
         }
-        const transcript = matched === undefined ? alternatives[0] : matched;
+        const transcript = matched === undefined ? knownAlternative === undefined ? alternatives[0] : knownAlternative : matched;
         const correct = matched !== undefined;
-        const actualReadings = isolated && !correct ? soundReadings(transcript) : [];
         const kana = correct ? normalizeTranscript(target.expectedKana || target.promptJapanese || target.prompt) :
             actualReadings.length === 1 ? actualReadings[0][0] : null;
         const roman = correct ? target.reading || (KANA.find(([prompt]) => prompt === kana) || [])[1] :

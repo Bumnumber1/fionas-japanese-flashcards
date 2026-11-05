@@ -3,6 +3,7 @@
 // establish physical Safari, iPad microphone, speech-service, or audio quality.
 // DOJO_CACHE_ONLY=1 runs only the generated-worker offline runtime check.
 // DOJO_DIAGNOSTICS_ONLY=1 runs only report persistence and user-driven export.
+// DOJO_SYLLABLES_ONLY=1 runs dictation regressions and the Chrome endpoint check.
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -19,6 +20,7 @@ const checks = [], exceptions = [], requests = [];
 const cacheOnly = process.env.DOJO_CACHE_ONLY === '1';
 const diagnosticsReviewOnly = process.env.DOJO_DIAGNOSTICS_REVIEW_ONLY === '1';
 const diagnosticsOnly = process.env.DOJO_DIAGNOSTICS_ONLY === '1' || diagnosticsReviewOnly;
+const syllablesOnly = process.env.DOJO_SYLLABLES_ONLY === '1';
 const runtimeFiles = ['taekwondo.css','taekwondo-engine.js','taekwondo-writing.js','taekwondo-safari-stream.js','taekwondo-diagnostics.js','taekwondo-voice.js','taekwondo-scene.js','taekwondo.js'];
 let controls = [], cacheEvidence = null, diagnosticsEvidence = null;
 const server = http.createServer((request, response) => {
@@ -109,10 +111,10 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         const fixture=query.get('fixture');
         if(fixture&&fixture.startsWith('reset-')){
             const progress=G.createProgress();
-            for(let belt=0;belt<(fixture==='reset-writing'?4:2);belt++){const win=G.startFight(progress,belt);for(let turn=0;turn<32&&win.status==='fighting';turn++)G.resolveAnswer(win,{correct:true,assisted:false,move:'front-kick',challengeKind:'basic'});if(win.status!=='won')throw Error('Earned fixture failed');G.completeFight(progress,win);}
-            progress.rewards.reading.claimed=true;progress.rewards.reading.flavor='matcha';
+            for(let belt=0;belt<(fixture==='reset-syllables'?1:fixture==='reset-writing'?4:2);belt++){const win=G.startFight(progress,belt);for(let turn=0;turn<32&&win.status==='fighting';turn++)G.resolveAnswer(win,{correct:true,assisted:false,move:'front-kick',challengeKind:'basic'});if(win.status!=='won')throw Error('Earned fixture failed');G.completeFight(progress,win);}
+            if(fixture!=='reset-syllables'){progress.rewards.reading.claimed=true;progress.rewards.reading.flavor='matcha';}
             let fight=null,question=null,phase='lobby',answerResolved=false;
-            if(fixture!=='reset-lobby'){
+            if(fixture!=='reset-lobby'&&fixture!=='reset-syllables'){
                 const belt=fixture==='reset-writing'?4:0;fight=G.startFight(progress,belt);question=G.createQuestion(belt,{},[],()=>.4,'front-kick',progress.belt);
                 if(fixture==='reset-loss'){for(let turn=0;turn<40&&fight.status==='fighting';turn++)G.resolveAnswer(fight,{correct:false,assisted:false,move:'front-kick',challengeKind:'basic'});if(fight.status!=='lost')throw Error('Loss fixture failed');phase='answered';answerResolved=true;}
                 else if(fixture==='reset-terminal-manual'){for(let turn=0;turn<32&&fight.opponentHp>7&&fight.status==='fighting';turn++)G.resolveAnswer(fight,{correct:true,assisted:true,move:'front-kick',challengeKind:'basic'});if(fight.status!=='fighting'||fight.opponentHp>7)throw Error('Terminal manual fixture failed');phase='question';}
@@ -149,6 +151,8 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     }
 
     if (!cacheOnly && !diagnosticsOnly) {
+    await verifySyllableDictation();
+    if (!syllablesOnly) {
     await fresh(true, ['こ','さ','し','そ']); await evaluate('__native.audioDelay=900'); await tap('#handsfree-toggle');
     await pause(100); let state = await snapshot();
     assert.equal(state.starts, 1); assert.doesNotMatch(state.status, /^Listening/);
@@ -216,10 +220,10 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
 
     await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
     const details = await evaluate(`document.querySelector('#mic-diagnostics').value`);
-    assert.match(details, /2026-10-29\s+mic-report-1/); assert.equal(details.includes(before.save.question.prompt), false);
+    assert.match(details, /2026-11-05\s+syllables-1/); assert.equal(details.includes(before.save.question.prompt), false);
     await tap('#copy-mic-details'); assert.equal(await evaluate('__copiedMicDetails'), details);
     await screenshot('safari-microphone-diagnostics');
-    await tap('#mic-details-dialog .primary[data-close]');
+    await tap('#mic-details-dialog .text-button[data-close]');
     pass('Microphone details identify the deployed build and copy lifecycle metadata without the answer or recorded audio');
 
     await fresh(); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
@@ -389,11 +393,57 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     await assertFreshDojo('Writing reset'); assert.equal(await evaluate('__writing.strokes.length'), 0); assert.equal(await evaluate('Boolean(__writing.reference)'), false);
     assert.equal((await snapshot()).save.writingDraft, null); assert.equal((await snapshot()).save.challengeSet, null);
     pass('Reset cancellation preserves native touch ink; confirmation clears the actual writing pad and draft without saving an old challenge');
+    }
+
+    async function verifySyllableDictation() {
+    let before, after;
+    // Earn white belt through the real rules before selecting yellow's complete
+    // kana inventory. Script only prompt selection; no targets or hits are forged.
+    for (const nasal of ['un', 'うーん']) {
+        await fresh(true, ['ん','せ','こ','ら','か'], 'reset-syllables');
+        await tap('#handsfree-toggle'); await ready(1);
+        const syllableHistory = [];
+        for (const [prompt, transcript] of [['ん', nasal], ['せ', 'せい'], ['こ', '校']]) {
+            before = await snapshot();
+            assert.equal(before.save.progress.belt, 1); assert.equal(before.save.progress.wins, 1);
+            assert.equal(before.save.question.prompt, prompt); assert.equal(before.save.question.challengeKind, 'basic');
+            syllableHistory.push([transcript, false]); await result(syllableHistory, syllableHistory.length - 1);
+            const interim = await snapshot();
+            assert.equal(interim.opponent, before.opponent); assert.equal(interim.player, before.player); assert.deepEqual(interim.save.question, before.save.question);
+            syllableHistory.pop();
+            syllableHistory.push([transcript, true]); await result(syllableHistory, syllableHistory.length - 1);
+            after = await snapshot();
+            assert.ok(after.opponent < before.opponent); assert.equal(after.player, before.player);
+            const heard = await evaluate(`document.querySelector('#voice-transcript').textContent`);
+            assert.ok(heard.includes(prompt) && heard.includes(transcript), 'Feedback identifies the intended sound and preserves ' + transcript);
+            assert.equal(after.starts, 1); assert.equal(after.overlaps, 0);
+            await nextQuestion(before.save.question.id);
+        }
+        before = await snapshot(); assert.equal(before.save.question.prompt, 'ら');
+        syllableHistory.push(['火', true]); await result(syllableHistory, syllableHistory.length - 1);
+        after = await snapshot();
+        assert.equal(after.opponent, before.opponent); assert.equal(after.player, before.player);
+        assert.deepEqual(after.save.question, before.save.question); assert.equal(after.save.phase, 'question');
+        assert.equal(after.save.fight.pendingDamage, before.save.fight.pendingDamage);
+        assert.match(await evaluate(`document.querySelector('#voice-transcript').textContent`), /火.*unclear/);
+        await waitFor(`__voice.getDiagnostics().stream?.armed===true`, 'Ambiguous dictation re-arms the same assigned question');
+        syllableHistory.push(['ら', true]); await result(syllableHistory, syllableHistory.length - 1);
+        await nextQuestion(before.save.question.id); before = await snapshot(); assert.equal(before.save.question.prompt, 'か');
+        syllableHistory.push([['意味不明', 'し'], true]); await result(syllableHistory, syllableHistory.length - 1);
+        after = await snapshot();
+        assert.equal(after.player, before.player); assert.equal(after.opponent, before.opponent);
+        assert.ok(after.save.fight.pendingDamage > 0); assert.equal(after.save.phase, 'answered');
+        const wrongHeard = await evaluate(`document.querySelector('#voice-transcript').textContent`);
+        assert.match(wrongHeard, /し/); assert.equal(wrongHeard.includes('意味不明'), false);
+        assert.equal(after.starts, 1); assert.equal(after.overlaps, 0);
+        pass('Yellow-belt Safari stream accepts ん as ' + nasal + ', held せい and 校, retries ambiguous 火 without damage, and shows the known wrong alternative');
+    }
+    }
 
     await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', platform: 'Win32' });
-    await fresh(false); await evaluate('__native.finalizeOnStop=true'); await tap('#handsfree-toggle'); await ready(1); before = await snapshot();
+    await fresh(false); await evaluate('__native.finalizeOnStop=true'); await tap('#handsfree-toggle'); await ready(1); let before = await snapshot();
     assert.equal(await evaluate('__native.instances[0].continuous'), false);
-    await result([[before.save.question.prompt, false]]); await ready(2); after = await snapshot();
+    await result([[before.save.question.prompt, false]]); await ready(2); let after = await snapshot();
     assert.equal(after.handsfree, true); assert.equal(after.player, before.player); assert.ok(after.opponent < before.opponent); assert.equal(after.overlaps, 0);
     pass('Desktop Chrome retains its fast one-shot endpoint and automatic next microphone after the final');
     }
@@ -423,7 +473,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         const failed = await snapshot(), fault = await evaluate('DojoMicDiagnostics.getSavedReport()');
         assert.equal(failed.player, healthy.player); assert.equal(failed.opponent, healthy.opponent);
         assert.deepEqual(failed.save, healthy.save, 'Service failure does not consume the assigned question or health');
-        assert.equal(fault.reason, 'error'); assert.equal(fault.snapshot.errorCode, 'network'); assert.match(fault.build, /mic-report-1/);
+        assert.equal(fault.reason, 'error'); assert.equal(fault.snapshot.errorCode, 'network'); assert.match(fault.build, /syllables-1/);
         await send('Emulation.setDeviceMetricsOverride', {width:1024,height:768,deviceScaleFactor:2,mobile:true});
         await tap('#mic-details-button'); await waitFor(`document.querySelector('#mic-details-dialog').open`);
         const initialLayout=await evaluate(`(()=>{const button=document.querySelector('#send-mic-report'),r=button.getBoundingClientRect(),dialog=document.querySelector('#mic-details-dialog');return {x:r.x,y:r.y,bottom:r.bottom,height:r.height,viewportHeight:innerHeight,visible:r.top>=0&&r.bottom<=innerHeight,dialogScrollTop:dialog.scrollTop,dialogHeight:dialog.clientHeight,dialogScrollHeight:dialog.scrollHeight};})()`);
@@ -550,7 +600,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
 
     // This continuation can run alone with DOJO_CACHE_ONLY=1. It verifies cached
     // runtime bytes and save restoration, not speech recognition while offline.
-    if (!diagnosticsOnly) {
+    if (!diagnosticsOnly && !syllablesOnly) {
     const workerSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     const expectedCache = /const CACHE = '([^']+)'/.exec(workerSource)[1];
     const expectedAssets = JSON.parse(/const ASSETS = (\[[^\n]+\]);/.exec(workerSource)[1]);
@@ -589,9 +639,12 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
         const files={};for(const url of urls){const response=await fetch(url);if(!response.ok)throw Error('Uncached dojo asset '+url);const source=(await response.text()).replace(/\\r\\n/g,'\\n');const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source));files[new URL(url).pathname.split('/').pop()]=[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');}
         return {urls,files,build:__voice.getDiagnostics().build,micUI:Boolean(document.querySelector('#mic-session-controls')&&document.querySelector('#mic-capture-status')&&document.querySelector('#stop-microphone')),capture:__voice.captureActive,starts:__native.starts};})()`);
     assert.equal(offlineRuntime.urls.length, 8);
-    for (const url of offlineRuntime.urls) assert.equal(new URL(url).searchParams.get('v'), 'mic-report-1');
+    for (const url of offlineRuntime.urls) {
+        const asset = new URL(url);
+        assert.equal(asset.searchParams.get('v'), asset.pathname.endsWith('/taekwondo-voice.js') ? 'syllables-1' : 'mic-report-1');
+    }
     assert.deepEqual(offlineRuntime.files, expectedRuntimeHashes, 'All eight offline query URLs return current source bytes');
-    assert.equal(offlineRuntime.build, '2026-10-29 mic-report-1'); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
+    assert.equal(offlineRuntime.build, '2026-11-05 syllables-1'); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
     const offlineResponses = responses.slice(responseOffset).filter(response => runtimeFiles.includes(new URL(response.url).pathname.split('/').pop()));
     for (const file of runtimeFiles) assert.ok(offlineResponses.some(response => new URL(response.url).pathname.endsWith('/' + file) && response.status === 200 && response.fromServiceWorker), file + ' is served by the worker while HTTP cache and network are unavailable');
     assert.equal(responses.some(response => response.status === 404 && /taekwondo/.test(response.url)), false);
@@ -608,7 +661,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     }
     assert.equal(exceptions.length, 0);
     const sources = Object.fromEntries([...runtimeFiles, 'taekwondo.html', 'sw.js', 'generate_sw.js'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')).digest('hex')]));
-    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ passed: true, cacheOnly, diagnosticsOnly, diagnosticsReviewOnly, checks, exceptions, controls, cacheEvidence, diagnosticsEvidence, scope: 'Synthetic Safari native audio/lifecycle and cumulative results in isolated Chromium; real CDP touch input. Share is a native-API contract stub; Save verifies a Chromium download; Send is intercepted before any network transmission. Offline runtime caching is separate from live speech-service availability. No physical WebKit or real microphone claim.', sources }, null, 2));
+    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ passed: true, cacheOnly, diagnosticsOnly, diagnosticsReviewOnly, syllablesOnly, checks, exceptions, controls, cacheEvidence, diagnosticsEvidence, scope: syllablesOnly ? 'Focused synthetic Safari cumulative final/interim dictation in an earned yellow-belt fight plus the Chrome one-shot endpoint, using real CDP touch controls in isolated Chromium. Covers nasal/held kana/kanji, ambiguity retries, and alternative feedback. Excludes handwriting, WebGL, general reset/report/cache checks, physical Safari, live microphones, and vendor speech accuracy.' : 'Synthetic Safari native audio/lifecycle and cumulative results in isolated Chromium; real CDP touch input. Share is a native-API contract stub; Save verifies a Chromium download; Send is intercepted before any network transmission. Offline runtime caching is separate from live speech-service availability. No physical WebKit or real microphone claim.', sources }, null, 2));
     console.log('\n' + checks.length + ' focused Safari controller checks passed. Evidence: ' + output);
 })().catch(async error => {
     console.error(error.stack || error);
