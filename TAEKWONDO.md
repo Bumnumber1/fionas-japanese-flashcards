@@ -11,7 +11,7 @@ Fiona is a female fighter with shoulder-length orange hair and bangs, with no po
 | Belts | Challenge |
 | --- | --- |
 | White, yellow | Read the first 23, then all 46 hiragana aloud with speech recognition |
-| Orange, gold | Read the first 23, then all 46 katakana aloud with speech recognition |
+| Orange, camo | Read the first 23, then all 46 katakana aloud with speech recognition |
 | Green, blue | Write the first 23, then all 46 hiragana from memory |
 | Purple, brown | Write the first 23, then all 46 katakana from memory |
 | Red, red-black | Read Japanese words aloud with speech recognition |
@@ -29,7 +29,7 @@ Each new belt earns one special with a harder activity and more damage:
 | --- | --- | --- |
 | Yellow | Double kick | +10 |
 | Orange | Jump front kick | +12 |
-| Gold | Jump side kick | +15 |
+| Camo | Jump side kick | +15 |
 | Green | Spinning hook kick | +17 |
 | Blue | Tornado kick | +20 |
 | Purple | Flying double kick | +22 |
@@ -42,7 +42,7 @@ Selecting a special changes the unanswered activity: complete canonical hiragana
 
 Move choices cannot reroll an unanswered exchange. All basic techniques share one question, and each special retains its first assigned challenge when switched away from and back to. These choices survive pause, lobby, and reload for the same exchange. A hint or any handwriting locks the technique until the answer resolves, even after clearing ink. Previewing another technique also removes speed eligibility for that exchange, so changing moves cannot restart the speed clock for a bonus. The next resolved exchange gets a fresh set of challenges.
 
-Six separate ice cream rewards unlock after defeating the last opponent of hiragana reading (yellow), katakana reading (gold), hiragana writing (blue), katakana writing (brown), word reading (red-black), and kanji writing (black). Each reward stores its own claimed state and chosen flavour on the device. Beating the black-belt kanji challenge also earns the champion title. Earned belts can be replayed; a real replay win can earn an uncompleted section reward.
+Six separate ice cream rewards unlock after defeating the last opponent of hiragana reading (yellow), katakana reading (camo), hiragana writing (blue), katakana writing (brown), word reading (red-black), and kanji writing (black). The yellow-belt reward and its parlour screen explicitly announce that orange belt starts katakana reading. Camo replaces the former gold belt in the same position, with camouflage on its journey swatch and fighters’ belts. Each reward stores its own claimed state and chosen flavour on the device. Beating the black-belt kanji challenge also earns the champion title. Earned belts can be replayed; a real replay win can earn an uncompleted section reward.
 
 Reading requires a user-started microphone session through the browser's SpeechRecognition / webkitSpeechRecognition API, explicitly set to **Japanese (`ja-JP`)**. The UI shows Starting until the native recognizer is ready, then Listening. Only final recognition results resolve an activity. There is no typed, choice, or self-awarded bypass. Permission, silence, unsupported browsers, and network errors leave the turn and energy unchanged. Recognition availability depends on the browser and its speech service; it may require internet access. Writing remains available offline after assets are cached. Speech matching uses complete normalized kana, canonical word spellings, and explicit sound-equivalent kanji/homophone aliases. Up to ten final alternatives can identify a correct answer. A basic isolated kana may be held with up to four matching vowel/long marks, including small vowels, ei for held e, and ou for held o. A single terminal small っ preserves a clipped sound. Isolated ん also accepts dictation’s うん / un / うーん spellings. Common short- and long-sound kanji readings are explicit complete-result aliases. Word and special prompts retain strict vowel length. Roman apostrophes preserve nasal boundaries (shin'ya differs from shinya), and signed numbers or separated syllables cannot collapse into valid aliases. If an incorrect isolated result is an ambiguous kanji reading, retry without damage; a uniquely recognized wrong alternative supplies its actual sound for feedback. Unmatched numeric results for isolated kana (such as Chrome transcribing `さ` as `3`) are inconclusive: retry the same question without damage or a free hit. Reading-only homophones cannot become kanji-writing targets. Japanese dictation may spell a correct isolated sound with kanji, such as 子 for こ (ko). When a known reading is identified, feedback shows that recognized sound alongside the browser’s spelling. An incorrect answer never displays the expected sound as though it was heard. Safari requires Siri to be enabled and microphone permission for this site. The game displays Japanese recognition explicitly and keeps the current question and health after any microphone failure.
 
@@ -57,6 +57,8 @@ Fast combinations keep their full choreography even when answers arrive quickly.
 **Five answers in five seconds:** five consecutive clean attack answers in an inclusive rolling five-second window trigger a knockdown on the fifth strike, with a gold notification and a full fall-to-the-mat/recovery animation. The five answers are consumed, so another knockdown needs another five. The effect adds no damage or rank credit. Hints, mistakes, blocks, hard microphone errors, stopping hands-free, pause/help/reward dialogs, leaving the page, changing bouts, and reload reset this short chain. Unclear speech is not an answer: a retry adds no hit and keeps the original five-second clock running. Ordinary clean streaks still follow their existing rules. New rivals have 150 energy, letting five Lightning basic attacks land for 139 total damage before they fall and get up; Fiona keeps 100 energy. Earlier saved fights retain their original 100-energy rival and exact journal history.
 
 ## Existing systems and references
+
+**Handwriting recognition:** the scorer aligns the whole character for normal differences in position and size, preserving the relative placement and direction of its strokes. Local pen tremor is smoothed before shape and length checks, and small reference marks use proportional limits. One accidental pen lift can be joined when adjacent fragments meet and their complete stroke matches. Empty ink, tiny taps, missing strokes, reversed strokes, disconnected extras, and substantial scribbles remain incorrect. Feedback identifies stroke shape and placement rather than requiring exact centering.
 
 **iPad play layout:** touch screens from 600–1400 CSS pixels wide automatically use a viewport-filling fight view while answering. Landscape keeps a large arena beside the active lesson controls; portrait places the arena above them. The page uses dynamic viewport height and safe-area insets, with at least 44-pixel touch controls. Moves and the belt/reward journey open as dismissible drawers with focus containment; opening one pauses microphone capture and automatic advancement, and returning restores one listener when hands-free is active. Existing fixed questions and handwriting remain intact. Normal desktop and small-phone layouts remain available. Full screen is offered only when the browser supports it, with a working inline fallback after denial. Safari’s Add to Home Screen can launch a standalone view; if speech recognition is unavailable there, use a normal Safari tab for reading. Page zoom remains enabled. Resizing the pad cancels only an unfinished stroke; completed normalized ink, assistance, and question locks are preserved.
 
@@ -91,7 +93,7 @@ The private report inbox is `https://fionas-dojo-mic-reports.bumnumber1.chatgpt.
 **Reset game:** the header, Pause menu, and loss-result screen offer a fresh-start action. Its confirmation opens with Cancel focused; cancelling or pressing Escape preserves the exact current match and progress while microphone capture pauses. Confirming resets Fiona's Dojo to white belt with seven basics, no completed matches, no current question, no streak, and no ice creams. It overwrites only `fiona-taekwondo-v1`, preserves other lesson storage and Sound/Calm motion preferences, and turns the microphone off. Live state is replaced before dialogs close or saving, so pagehide cannot restore the old losing match. This is separate from Reconnect mic and Reload saved fight, which preserve progress.
 
 ```sh
-node validate_taekwondo.js
+node validate_taekwondo.js # includes handwriting variation and rejection checks
 node validate_taekwondo_voice.js
 node validate_taekwondo_syllables.js
 node validate_taekwondo_voice_boundaries.js

@@ -69,7 +69,7 @@
   const modeShort = { 'word-read': 'Read words', 'kanji-write': 'Write kanji words' };
   const scriptName = activity => activity.script === 'katakana' ? 'katakana' : 'hiragana';
   const activityLabel = activity => activity.mode === 'kana-read' || activity.mode === 'kana-write' ? `${scriptName(activity).toUpperCase()} ${activity.mode === 'kana-read' ? 'READING' : 'WRITING'}` : modeLabels[activity.mode];
-  const activityShort = activity => activity.mode === 'kana-read' || activity.mode === 'kana-write' ? `${activity.mode === 'kana-read' ? 'Read' : 'Write'} ${scriptName(activity)}` : modeShort[activity.mode];
+  const activityShort = activity => activity.mode === 'kana-read' || activity.mode === 'kana-write' ? `${activity.mode === 'kana-read' ? 'Read' : 'Write'} ${scriptName(activity)} · ${activity.kanaCount}/46` : modeShort[activity.mode];
   const open = dialog => { if (!dialog.open) dialog.showModal(); };
 
   function updateScreenMode() {
@@ -306,7 +306,7 @@
     if (phase === 'lobby') $('arena-caption').textContent = opponent.story;
   }
   function updateFighters() {
-    if (scene) scene.setFighters({ playerBelt: G.BELTS[progress.belt].color, opponent: { ...G.OPPONENTS[selectedBelt], belt: G.BELTS[selectedBelt].color, color: G.OPPONENTS[selectedBelt].accent, scale: [.98, .93, 1.06, 1.03, .97, 1.05, .95, 1.02, .98, 1.02, 1.02][selectedBelt] || 1 } });
+    if (scene) scene.setFighters({ playerBelt: G.BELTS[progress.belt].color, playerBeltPattern: G.BELTS[progress.belt].id === 'camo' ? 'camo' : null, opponent: { ...G.OPPONENTS[selectedBelt], belt: G.BELTS[selectedBelt].color, beltPattern: G.BELTS[selectedBelt].id === 'camo' ? 'camo' : null, color: G.OPPONENTS[selectedBelt].accent, scale: [.98, .93, 1.06, 1.03, .97, 1.05, .95, 1.02, .98, 1.02, 1.02][selectedBelt] || 1 } });
   }
   function renderProgress() {
     $('belt-counter').replaceChildren(document.createTextNode(String(progress.belt + 1)), Object.assign(document.createElement('span'), { textContent: '/' + G.BELTS.length }));
@@ -315,6 +315,7 @@
       const button = document.createElement('button');
       button.type = 'button'; button.className = 'belt-step' + (index === selectedBelt ? ' current' : '');
       button.disabled = index > progress.belt || phase !== 'lobby';
+      button.dataset.belt = belt.id;
       button.style.setProperty('--belt', belt.color);
       button.setAttribute('aria-label', belt.name + ' belt: ' + activityShort(belt) + (index > progress.belt ? ', locked' : ', select match'));
       if (index === selectedBelt) button.setAttribute('aria-current', 'step');
@@ -704,6 +705,12 @@
     }
     renderFeedback(fight.pendingDamage > 0 ? 'Counter incoming! Block on the next challenge.' : answerWasBlock && last && last.correct ? 'Your block is saved.' : 'Your answer is saved.', `${text}. ${fight.pendingDamage > 0 ? 'No damage yet. Stop ' + fight.pendingDamage + ' damage by completing the next activity.' : 'This exchange is complete; continue for your next attack.'}`, last && !last.correct);
   }
+  function nextSectionNotice(completedBelt = selectedBelt) {
+    if (!resultSummary || !resultSummary.promoted) return '';
+    const current = G.BELTS[completedBelt], next = G.BELTS[progress.belt];
+    if (current.mode === next.mode && current.script === next.script) return '';
+    return `Next: ${next.name.toLowerCase()} belt starts ${activityLabel(next).toLowerCase()}.`;
+  }
   function finishFight() {
     stopHandsFree();
     resultSummary = G.completeFight(progress, fight);
@@ -714,6 +721,7 @@
     $('result-symbol').textContent = won ? resultSummary.rewardUnlocked ? '🍦' : '✦' : '↺';
     $('result-heading').textContent = won && resultSummary.promoted ? `Your ${G.BELTS[progress.belt].name.toLowerCase()} belt is yours.` : won ? selectedBelt === FINAL_BELT ? 'A champion in every character.' : 'Practice makes progress.' : 'Every fighter gets back up.';
     $('result-copy').textContent = milestone ? `You defeated ${G.OPPONENTS[selectedBelt].name} and completed ${milestone.title.toLowerCase()}. Your ${G.REWARDS.indexOf(milestone) + 1} of ${G.REWARDS.length} ice cream rewards is earned! Choose its flavour and save it on this device.` : won && resultSummary.promoted ? `You defeated ${G.OPPONENTS[selectedBelt].name}. Up next: ${G.BELTS[progress.belt].description.toLowerCase()}.` : won ? 'Your focus and practice paid off. Replay any earned belt whenever you like.' : `${G.OPPONENTS[selectedBelt].name} won this time. Your earned belts stay safe. Try again with a full energy bar.`;
+    if (milestone && nextSectionNotice()) $('result-copy').textContent += ' ' + nextSectionNotice();
     if (resultSummary.promoted) {
       const newMove = G.MOVES.find(move => move.kind === 'special' && move.unlock === progress.belt);
       if (newMove) $('result-copy').textContent += ` New technique: ${newMove.name}. Choose its harder activity for +${newMove.bonus} damage.`;
@@ -749,6 +757,7 @@
     $('reward-eyebrow').textContent = `REWARD ${G.REWARDS.indexOf(selected) + 1} OF ${G.REWARDS.length} · SAVED ON THIS DEVICE`;
     $('reward-heading').textContent = selected.title + ' ice cream';
     $('reward-milestone').textContent = `You defeated ${G.OPPONENTS[selected.beltIndex].name} and completed this section. Choose this reward’s celebration flavour.`;
+    if (resultSummary && resultSummary.rewardId === selected.id && nextSectionNotice(selected.beltIndex)) $('reward-milestone').textContent += ' ' + nextSectionNotice(selected.beltIndex);
     $('ice-cream-art').dataset.reward = rewardId;
     renderFlavors(); open($('reward-dialog'));
   }

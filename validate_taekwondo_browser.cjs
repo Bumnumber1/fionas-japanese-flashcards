@@ -31,7 +31,7 @@ let browser, ws, send, evaluate;
 const errors = [], workerErrors = [], external = [], checks = [], campaign = [], rapidEvidence = [], impactEvidence = [], voiceLatencyEvidence = [], flurryEvidence = [], tabletEvidence = [];
 let comboRecording, flurryRecording;
 const moveCount = 17, beltCount = 11;
-const beltNames = ['white','yellow','orange','gold','green','blue','purple','brown','red','red-black','black'];
+const beltNames = ['white','yellow','orange','camo','green','blue','purple','brown','red','red-black','black'];
 const rewardMilestones = [['reading',1,'Strawberry'],['katakana-reading',3,'Strawberry'],['writing',5,'Matcha'],
   ['katakana-writing',7,'Vanilla'],['words',9,'Vanilla'],['kanji',10,'Strawberry']];
 function pass(name) { checks.push(name); console.log('PASS ' + name); }
@@ -656,7 +656,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
       if ([1, 2, 3, 4, 6, 7, 10].includes(belt)) {
         await evaluate(`document.querySelector('#challenge-panel').scrollIntoView({block:'center'})`);
         await screenshot({1:'belt-1-yellow-hard-hiragana-voice',2:'belt-2-orange-hard-katakana-voice',
-          3:'belt-3-gold-hard-katakana-voice',4:'belt-4-green-multi-hiragana-writing',
+          3:'belt-3-camo-hard-katakana-voice',4:'belt-4-green-multi-hiragana-writing',
           6:'belt-6-purple-multi-katakana-writing',7:'belt-7-brown-multi-katakana-writing',
           10:'belt-10-black-compound-finisher'}[belt]);
       }

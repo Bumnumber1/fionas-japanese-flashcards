@@ -34,6 +34,8 @@ function rngSequence() { let state = 4817; return () => ((state = (state * 16645
 
 test('Eleven belts, seven basics, ten belt specials, and eleven visually varied opponents', () => {
   assert.equal(dojo.BELTS.length, 11); assert.equal(dojo.MOVES.length, 17); assert.equal(dojo.OPPONENTS.length, 11);
+  assert.equal(dojo.BELTS[3].id, 'camo'); assert.equal(dojo.BELTS[3].name, 'Camo');
+  assert.equal(dojo.BELTS.some(belt => belt.id === 'gold'), false);
   assert.equal(new Set(dojo.BELTS.map(belt => belt.color)).size, 11);
   assert.equal(new Set(dojo.OPPONENTS.map(opponent => opponent.name)).size, 11);
   assert.ok(new Set(dojo.OPPONENTS.map(opponent => opponent.skin)).size >= 6);
@@ -74,6 +76,100 @@ test('Every offered hiragana, katakana, and kanji has local KanjiVG stroke cover
     const strokes = sandbox.KVG_DATA[character];
     assert.ok(Array.isArray(strokes) && strokes.length, character + ' needs offline stroke data');
     assert.ok(strokes.every(stroke => typeof stroke === 'string' && /^[Mm]/.test(stroke)), character + ' stroke paths');
+  }
+});
+
+// Independent cubic-Bezier sampling of the local SVG fixtures, followed by
+// browser-like arc-length spacing. These tests need no canvas, installed
+// browser, or learner save; browser SVG sampling is checked separately.
+function sampleWritingPath(data) {
+  const tokens = data.match(/[MCScs]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?/g);
+  let index = 0, command, cursor = { x: 0, y: 0 }, previousControl = null;
+  const points = [];
+  const number = () => Number(tokens[index++]);
+  while (index < tokens.length) {
+    if (/^[MCScs]$/.test(tokens[index])) command = tokens[index++];
+    if (command === 'M') { cursor = { x: number(), y: number() }; points.push(cursor); previousControl = null; continue; }
+    assert.ok(['c', 'C', 's', 'S'].includes(command), 'Supported local cubic SVG path');
+    const start = cursor, relative = command === command.toLowerCase();
+    const point = () => ({ x: number() + (relative ? start.x : 0), y: number() + (relative ? start.y : 0) });
+    const first = command.toLowerCase() === 's' ? previousControl ?
+      { x: start.x * 2 - previousControl.x, y: start.y * 2 - previousControl.y } : start : point();
+    const second = point(), end = point();
+    for (let step = 1; step <= 32; step++) {
+      const t = step / 32, u = 1 - t;
+      points.push({ x: u ** 3 * start.x + 3 * u * u * t * first.x + 3 * u * t * t * second.x + t ** 3 * end.x,
+        y: u ** 3 * start.y + 3 * u * u * t * first.y + 3 * u * t * t * second.y + t ** 3 * end.y });
+    }
+    cursor = end; previousControl = second;
+  }
+  const normalized = points.map(point => ({ x: 0.08 + point.x / 109 * 0.84, y: 0.08 + point.y / 109 * 0.84 }));
+  const cumulative = [0];
+  normalized.slice(1).forEach((point, index) => cumulative.push(cumulative[index] + Math.hypot(point.x - normalized[index].x, point.y - normalized[index].y)));
+  const length = cumulative[cumulative.length - 1], count = Math.min(240, Math.max(40, Math.ceil(length * 109 / 0.84 * 1.2)));
+  let segment = 0;
+  return Array.from({ length: count }, (_, index) => {
+    const target = length * index / (count - 1);
+    while (segment < normalized.length - 2 && cumulative[segment + 1] < target) segment++;
+    const fraction = (target - cumulative[segment]) / (cumulative[segment + 1] - cumulative[segment] || 1);
+    return { x: normalized[segment].x + (normalized[segment + 1].x - normalized[segment].x) * fraction,
+      y: normalized[segment].y + (normalized[segment + 1].y - normalized[segment].y) * fraction };
+  });
+}
+vm.runInContext(fs.readFileSync(path.join(__dirname, 'taekwondo-writing.js'), 'utf8'), sandbox);
+const writingReferences = new Map();
+function writingReference(character) {
+  if (!writingReferences.has(character)) writingReferences.set(character, sandbox.KVG_DATA[character].map(sampleWritingPath));
+  return writingReferences.get(character);
+}
+function checkWriting(character, strokes) {
+  return sandbox.DojoWriting.prototype.check.call({ reference: writingReference(character), strokes, assisted: false, activeStroke: null });
+}
+const transformWriting = (strokes, transform) => strokes.map((stroke, strokeIndex) => stroke.map((point, index) => transform(point, index, strokeIndex, stroke.length)));
+
+test('Recall handwriting accepts character-wide position, size, proportion, and modest pen variation', () => {
+  const characters = [...new Set(dojo.KANA.concat(dojo.KATAKANA).map(kana => kana.char).concat(material.kanji.flatMap(form => [...form.char]), material.advancedKanji.flatMap(form => [...form.char])))];
+  const variants = [
+    ['exact', point => ({ ...point })],
+    ['off-center', point => ({ x: point.x + 0.09, y: point.y - 0.06 })],
+    ['smaller', point => ({ x: 0.60 + (point.x - 0.5) * 0.66, y: 0.55 + (point.y - 0.5) * 0.66 })],
+    ['proportions', point => ({ x: 0.5 + (point.x - 0.5) * 0.88 + (point.y - 0.5) * 0.08, y: 0.5 + (point.y - 0.5) * 1.08 })],
+    ['pen tremor', (point, index, stroke) => ({ x: point.x + Math.sin(index * 1.7 + stroke) * 0.004, y: point.y + Math.cos(index * 1.3 + stroke) * 0.004 })],
+    ['smooth tremor', (point, index, stroke, count) => ({ x: point.x + Math.sin(index / (count - 1) * Math.PI * 12 + stroke) * 0.006, y: point.y + Math.sin(index / (count - 1) * Math.PI * 10 + stroke * 1.7) * 0.006 })],
+    ['stroke placement', (point, index, stroke) => ({ x: point.x + Math.sin(stroke * 2.2) * 0.012, y: point.y + Math.cos(stroke * 1.7) * 0.010 })]
+  ];
+  for (const character of characters) for (const [name, transform] of variants) {
+    const result = checkWriting(character, transformWriting(writingReference(character), transform));
+    assert.equal(result.correct, true, character + ' ' + name + ': ' + JSON.stringify(result));
+  }
+});
+
+test('A nearby accidental pen lift can preserve a stroke without accepting extra disconnected marks', () => {
+  for (const character of ['そ', 'し', 'カ', '木', '日']) {
+    const reference = writingReference(character), split = Math.floor(reference[0].length / 2);
+    const fragments = [reference[0].slice(0, split + 1), reference[0].slice(split)].concat(reference.slice(1));
+    assert.equal(checkWriting(character, fragments).correct, true, character + ': accidental lift');
+    const disconnected = fragments.map(stroke => stroke.map(point => ({ ...point })));
+    disconnected[1] = disconnected[1].map(point => ({ x: point.x + 0.20, y: point.y - 0.16 }));
+    assert.equal(checkWriting(character, disconnected).correct, false, character + ': disconnected extra mark');
+  }
+});
+
+test('Handwriting still rejects empty, tiny, reversed, missing, scrambled, and scribbled answers', () => {
+  assert.equal(checkWriting('あ', []).correct, false);
+  for (const character of ['あ', 'い', 'シ', 'ツ', '木', '日', '人']) {
+    const reference = writingReference(character);
+    for (const [name, strokes] of [
+      ['taps', reference.map(stroke => [stroke[0], stroke[0]])],
+      ['tiny', transformWriting(reference, point => ({ x: 0.5 + (point.x - 0.5) * 0.12, y: 0.5 + (point.y - 0.5) * 0.12 }))],
+      ['reversed', reference.map(stroke => stroke.slice().reverse())],
+      ['missing', reference.slice(1)],
+      ['scribbles', reference.map(() => Array.from({ length: 150 }, (_, index) => ({ x: 0.5 + Math.sin(index * 1.7) * 0.3, y: 0.5 + Math.cos(index * 2.3) * 0.3 })))],
+      ['scrambled order', reference.slice().reverse()]
+    ]) assert.equal(checkWriting(character, strokes).correct, false, character + ' ' + name);
+  }
+  for (const [expected, drawn] of [['シ', 'ツ'], ['ツ', 'シ'], ['ソ', 'ン'], ['ン', 'ソ'], ['人', '入'], ['入', '人'], ['め', 'ぬ'], ['ぬ', 'め'], ['れ', 'わ'], ['れ', 'ね'], ['る', 'ろ'], ['そ', 'る'], ['る', 'そ'], ['り', 'リ'], ['リ', 'り'], ['木', '本'], ['日', '目']]) {
+    assert.equal(checkWriting(expected, writingReference(drawn)).correct, false, 'Wrong character: ' + drawn + ' for ' + expected);
   }
 });
 test('Reading accepts standard romanization alternatives and fullwidth text', () => {

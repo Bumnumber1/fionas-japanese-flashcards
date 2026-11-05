@@ -83,23 +83,88 @@
 
     const average = numbers => numbers.reduce((sum, value) => sum + value, 0) / numbers.length;
 
+    function boundsOf(strokes) {
+        let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+        for (const stroke of strokes) for (const point of stroke) {
+            if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+            left = Math.min(left, point.x); right = Math.max(right, point.x);
+            top = Math.min(top, point.y); bottom = Math.max(bottom, point.y);
+        }
+        return { left, top, right, bottom, size: Math.max(right - left, bottom - top) };
+    }
+
+    function alignCharacter(strokes, reference) {
+        const ink = boundsOf(strokes), guide = boundsOf(reference);
+        // Match one whole glyph, preserving the placement, proportions, order,
+        // and direction of its strokes. Never fit each stroke independently.
+        // Tiny marks and drawings substantially outside the pad cannot expand
+        // into a correct answer through normalization.
+        if (!ink || !guide || ink.size < 0.20 || ink.size > 1.10 ||
+            ink.left < -0.06 || ink.top < -0.06 || ink.right > 1.06 || ink.bottom > 1.06) return null;
+        const scale = guide.size / ink.size;
+        if (!Number.isFinite(scale) || scale < 0.55 || scale > 2.5) return null;
+        const inkX = (ink.left + ink.right) / 2, inkY = (ink.top + ink.bottom) / 2;
+        const guideX = (guide.left + guide.right) / 2, guideY = (guide.top + guide.bottom) / 2;
+        return strokes.map(stroke => stroke.map(point => ({
+            x: guideX + (point.x - inkX) * scale,
+            y: guideY + (point.y - inkY) * scale
+        })));
+    }
+
+    function simplifyStroke(points) {
+        if (points.length < 3) return points;
+        // Keep the real endpoints; suppress only very local sample-to-sample
+        // tremor before simplifying. Large bends and loops remain in the path.
+        const filtered = points.map((point, index) => index === 0 || index === points.length - 1 ? point : ({
+            x: (points[index - 1].x + point.x * 2 + points[index + 1].x) / 4,
+            y: (points[index - 1].y + point.y * 2 + points[index + 1].y) / 4
+        }));
+        const keep = new Set([0, points.length - 1]), segments = [[0, points.length - 1]];
+        while (segments.length) {
+            const [first, last] = segments.pop(), a = filtered[first], b = filtered[last];
+            const dx = b.x - a.x, dy = b.y - a.y, squaredLength = dx * dx + dy * dy;
+            let furthest = -1, deviation = 0.006;
+            for (let index = first + 1; index < last; index++) {
+                const point = filtered[index];
+                const fraction = squaredLength ? clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / squaredLength, 0, 1) : 0;
+                const distance = pointDistance(point, { x: a.x + fraction * dx, y: a.y + fraction * dy });
+                if (distance > deviation) { deviation = distance; furthest = index; }
+            }
+            if (furthest !== -1) { keep.add(furthest); segments.push([first, furthest], [furthest, last]); }
+        }
+        return filtered.filter((_, index) => keep.has(index));
+    }
+
     // As in writing.html: compare stray ink AND missed reference geometry, then
     // endpoints. Ordered samples and length limits also reject reversed strokes,
     // repeated loops, half-strokes, stationary dots, and back-and-forth scribbles.
     function compareStroke(drawn, reference) {
-        const user = resample(drawn, 40);
+        const smooth = simplifyStroke(drawn);
+        const user = resample(smooth, 40);
         const guide = resample(reference, 40);
         const stray = nearestDistances(user, guide);
         const missed = nearestDistances(guide, user);
         const forward = pointDistance(user[0], guide[0]) + pointDistance(user[39], guide[39]);
         const reverse = pointDistance(user[0], guide[39]) + pointDistance(user[39], guide[0]);
-        const ordered = average(user.map((point, index) => pointDistance(point, guide[index])));
+        const orderedDistances = user.map((point, index) => pointDistance(point, guide[index]));
+        const ordered = average(orderedDistances);
         const reverseOrdered = average(user.map((point, index) => pointDistance(point, guide[39 - index])));
         const distance = Math.max(average(stray), average(missed), forward / 2, ordered * 0.75);
-        const lengthRatio = lengthOf(drawn) / lengthOf(reference);
+        // Dense finger/pen samples contain harmless local tremor. Measure the
+        // same spatially resampled paths so sampling rate cannot invent loops.
+        // Real loops/backtracking still change coverage, order, and this length.
+        const drawnLength = lengthOf(resample(smooth, 80));
+        const referenceLength = lengthOf(resample(reference, 80));
+        const lengthRatio = drawnLength / referenceLength;
         const backwards = reverseOrdered + 0.025 < ordered && (reverse + 0.025 < forward || reverseOrdered < 0.06);
-        const sizeOkay = lengthOf(drawn) >= 0.018 && lengthRatio >= 0.46 && lengthRatio <= 1.85;
-        const fits = distance <= 0.105 && ordered <= 0.13 && Math.max(...stray, ...missed) <= 0.195;
+        // A sub-pixel length difference should not reject a short dotted stroke.
+        const sizeOkay = drawnLength >= Math.min(0.018, referenceLength * 0.46) && lengthRatio >= 0.46 && drawnLength <= referenceLength * 1.85 + 0.005;
+        const distances = stray.concat(missed).sort((a, b) => a - b);
+        // Average proximity alone can hide a different loop or ending over a
+        // substantial part of a stroke. Keep its ordered structure as well.
+        const orderedTail = orderedDistances.slice().sort((a, b) => a - b)[Math.floor((orderedDistances.length - 1) * 0.95)];
+        const fits = distance <= 0.105 && ordered <= 0.13 &&
+            orderedTail <= 0.18 && distances[Math.floor((distances.length - 1) * 0.95)] <= 0.195 && distances[distances.length - 1] <= 0.26;
         return {
             score: clamp(1 - Math.max(0, distance - 0.032) / 0.15, 0, 1),
             backwards,
@@ -285,10 +350,31 @@
             if (!this.reference) return result(false, 0, 'Stroke data is unavailable for this character. Choose another practice item.');
             if (this.activeStroke) return result(false, 0, 'Lift your pen or finger before checking.');
             if (!this.strokes.length) return result(false, 0, 'Draw the character first.');
-            if (this.strokes.length !== this.reference.length) return result(false, 0,
+            if (this.strokes.length < this.reference.length || this.strokes.length > this.reference.length + 1) return result(false, 0,
                 'Use ' + this.reference.length + ' strokes; you drew ' + this.strokes.length + '. Undo a stroke or clear and try again.');
             if (this.strokes.some(stroke => stroke.overflow)) return result(false, 0, 'That stroke has too many extra marks. Clear the pad and use smooth strokes.');
-            const matches = this.strokes.map((stroke, index) => compareStroke(stroke, this.reference[index]));
+            if (this.strokes.some(stroke => stroke.length < 2 || lengthOf(stroke) < 0.003)) return result(false, 0, 'Use clear strokes instead of taps or tiny marks.');
+            const aligned = alignCharacter(this.strokes, this.reference);
+            if (!aligned) return result(false, 0, 'Draw a clear character inside the pad. Smaller or off-center writing is okay.');
+            const candidates = [];
+            if (aligned.length === this.reference.length) candidates.push(aligned);
+            else {
+                // One accidental pen lift may split a valid stroke. Only join
+                // adjacent fragments whose ends nearly touch, in their original
+                // order; the complete joined stroke still has to match.
+                for (let index = 0; index < aligned.length - 1; index++) {
+                    if (pointDistance(aligned[index][aligned[index].length - 1], aligned[index + 1][0]) > 0.055) continue;
+                    candidates.push(aligned.slice(0, index).concat([aligned[index].concat(aligned[index + 1])], aligned.slice(index + 2)));
+                }
+                if (!candidates.length) return result(false, 0, 'Use ' + this.reference.length + ' strokes. Separate extra marks cannot count as one stroke.');
+            }
+            const evaluated = candidates.map(strokes => {
+                const matches = strokes.map((stroke, index) => compareStroke(stroke, this.reference[index]));
+                const score = Math.round(average(matches.map(match => match.score)) * 100);
+                return { strokes, matches, score, correct: matches.every(match => match.correct) && score >= 72 };
+            });
+            const best = evaluated.find(candidate => candidate.correct) || evaluated.sort((a, b) => b.score - a.score)[0];
+            const { strokes, matches } = best;
             const score = Math.round(average(matches.map(match => match.score)) * 100);
             const backwards = matches.findIndex(match => match.backwards);
             if (backwards !== -1) return result(false, score, 'Stroke ' + (backwards + 1) + ' goes backwards. Start at its numbered dot and follow the arrow.');
@@ -296,10 +382,10 @@
             if (wrongSize !== -1) return result(false, score, 'Stroke ' + (wrongSize + 1) + ' is too short or has extra loops. Use one smooth stroke.');
             const wrongShape = matches.findIndex(match => !match.correct);
             if (wrongShape !== -1 || score < 72) {
-                const wrongOrder = this.strokes.some((stroke, index) => this.reference.some((guide, other) => other !== index && compareStroke(stroke, guide).score > matches[index].score + 0.22));
+                const wrongOrder = strokes.some((stroke, index) => this.reference.some((guide, other) => other !== index && compareStroke(stroke, guide).score > matches[index].score + 0.22));
                 if (wrongOrder) return result(false, score, 'Check the stroke order. Use Help to study the numbered strokes, then try from memory.');
                 const weakest = wrongShape !== -1 ? wrongShape : matches.reduce((best, match, index) => match.score < matches[best].score ? index : best, 0);
-                return result(false, score, 'Keep the character centered and check stroke ' + (weakest + 1) + '. Help shows the stroke order.');
+                return result(false, score, 'Check the shape and placement of stroke ' + (weakest + 1) + '. Help shows the stroke order.');
             }
             return result(true, score, this.assisted ? 'Good practice! Try the next one from memory to build your combo.' : 'Great writing! ' + score + '% accuracy.');
         }

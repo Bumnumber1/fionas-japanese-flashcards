@@ -17,7 +17,7 @@
     const ease = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
     const pulse = (t, a, b) => Math.sin(clamp((t - a) / (b - a), 0, 1) * PI);
     const namedColors = {
-        white: '#f6f1df', yellow: '#f5c940', orange: '#f28b39', green: '#38a879',
+        white: '#f6f1df', yellow: '#f5c940', orange: '#f28b39', camo: '#6b7846', green: '#38a879',
         blue: '#4c81d8', purple: '#925ed2', brown: '#976b45', red: '#e25154',
         black: '#252d40', pink: '#f28da7', teal: '#39b6b0', navy: '#293d5b'
     };
@@ -142,12 +142,14 @@
         uniform mat4 uViewProjection;
         varying vec3 vNormal;
         varying vec3 vPosition;
+        varying vec3 vLocalPosition;
         void main() {
             vec4 world = uModel * vec4(aPosition, 1.0);
             // Compensate for nonuniform scale before rotating normals.
             vec3 sx = uModel[0].xyz, sy = uModel[1].xyz, sz = uModel[2].xyz;
             vNormal = normalize(sx * aNormal.x / max(dot(sx,sx),0.00001) + sy * aNormal.y / max(dot(sy,sy),0.00001) + sz * aNormal.z / max(dot(sz,sz),0.00001));
             vPosition = world.xyz;
+            vLocalPosition = aPosition;
             gl_Position = uViewProjection * world;
         }
     `;
@@ -155,15 +157,29 @@
         precision mediump float;
         uniform vec4 uColor;
         uniform float uEmissive;
+        uniform float uCamo;
         varying vec3 vNormal;
         varying vec3 vPosition;
+        varying vec3 vLocalPosition;
         void main() {
             vec3 n = normalize(vNormal);
             float key = max(dot(n, normalize(vec3(-0.45, 0.9, 0.6))), 0.0);
             float fill = max(dot(n, normalize(vec3(0.8, 0.35, -0.6))), 0.0);
             float hemi = n.y * 0.5 + 0.5;
             vec3 light = mix(vec3(0.29, 0.28, 0.36), vec3(0.55, 0.61, 0.66), hemi) + key * vec3(0.57, 0.49, 0.38) + fill * vec3(0.15, 0.20, 0.28);
-            vec3 color = mix(uColor.rgb * light, uColor.rgb, uEmissive);
+            vec3 cloth = uColor.rgb;
+            if (uCamo > 0.5) {
+                // Mesh-local blotches stay on the cloth while the belt and
+                // tails move. No texture downloads or additional geometry.
+                vec3 p = vLocalPosition * vec3(5.0, 10.0, 5.0);
+                float patch = sin(p.x + 1.9 * sin(p.y * 0.8 + p.z))
+                    + sin(p.y * 1.3 + 1.2 * sin(p.z * 1.2 + p.x))
+                    + 0.65 * sin(p.z * 1.7 + p.x * 0.7);
+                if (patch > 1.0) cloth = vec3(0.76, 0.70, 0.54);
+                else if (patch < -0.7) cloth = vec3(0.20, 0.26, 0.18);
+                else if (patch > 0.1) cloth = vec3(0.50, 0.40, 0.27);
+            }
+            vec3 color = mix(cloth * light, cloth, uEmissive);
             float fog = smoothstep(7.0, 17.0, length(vPosition - vec3(0.0, 1.0, 5.5))) * 0.20;
             gl_FragColor = vec4(mix(color, vec3(0.14, 0.20, 0.27), fog), uColor.a);
         }
@@ -274,6 +290,7 @@
             this.lastFrame = 0;
             this.trails = [];
             this.playerBelt = rgb('white');
+            this.playerBeltPattern = null;
             this.opponent = this._opponent({ name: 'Hana', belt: 'yellow', hair: '#382b31', skin: '#d6a07d' });
             this._tick = this._tick.bind(this);
             this._onResize = this.resize.bind(this);
@@ -344,7 +361,7 @@
             if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(this.program));
             gl.useProgram(this.program);
             this.locations = {};
-            ['uModel', 'uViewProjection', 'uColor', 'uEmissive'].forEach(name => this.locations[name] = gl.getUniformLocation(this.program, name));
+            ['uModel', 'uViewProjection', 'uColor', 'uEmissive', 'uCamo'].forEach(name => this.locations[name] = gl.getUniformLocation(this.program, name));
             ['aPosition', 'aNormal'].forEach(name => this.locations[name] = gl.getAttribLocation(this.program, name));
             this.meshes = {};
             const data = { cube: cube(), sphere: sphere(), cylinder: cylinder(), taper: cylinder(.78, 1), cone: cylinder(.04, 1), torus: torus() };
@@ -371,6 +388,7 @@
             const seed = hash(o.name), skins = ['#c58b65', '#875333', '#e3af87', '#af7756', '#f1c5a2'];
             return {
                 name: o.name || 'Hana', belt: rgb(o.belt || o.color || 'yellow'),
+                beltPattern: o.beltPattern === 'camo' || o.belt === 'camo' ? 'camo' : null,
                 skin: rgb(o.skin, skins[seed % skins.length]), hair: rgb(o.hair, ['#332831', '#3c2920', '#202e3a', '#79553c'][seed % 4]),
                 scale: clamp(Number(o.scale) || (0.94 + seed % 5 * .035), .8, 1.16),
                 build: .94 + seed % 4 * .055,
@@ -380,7 +398,10 @@
         }
 
         setFighters(config = {}) {
-            if (config.playerBelt !== undefined) this.playerBelt = rgb(config.playerBelt);
+            if (config.playerBelt !== undefined) {
+                this.playerBelt = rgb(config.playerBelt);
+                this.playerBeltPattern = config.playerBeltPattern === 'camo' || config.playerBelt === 'camo' ? 'camo' : null;
+            }
             if (config.opponent) this.opponent = this._opponent(config.opponent);
             this.action = null;
             this.actionQueue.length = 0;
@@ -555,7 +576,7 @@
 
         _schedule() { if (!this.frame && !this.destroyed && this.available && !document.hidden) this.frame = requestAnimationFrame(this._tick); }
 
-        _draw(meshName, matrix, color, alpha = 1, emissive = 0) {
+        _draw(meshName, matrix, color, alpha = 1, emissive = 0, camo = false) {
             const gl = this.gl, mesh = this.meshes[meshName], l = this.locations;
             gl.bindBuffer(gl.ARRAY_BUFFER, mesh.p); gl.enableVertexAttribArray(l.aPosition); gl.vertexAttribPointer(l.aPosition, 3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, mesh.n); gl.enableVertexAttribArray(l.aNormal); gl.vertexAttribPointer(l.aNormal, 3, gl.FLOAT, false, 0, 0);
@@ -563,6 +584,7 @@
             gl.uniformMatrix4fv(l.uModel, false, matrix);
             gl.uniform4f(l.uColor, color[0], color[1], color[2], alpha);
             gl.uniform1f(l.uEmissive, emissive);
+            gl.uniform1f(l.uCamo, camo ? 1 : 0);
             gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
         }
 
@@ -1007,10 +1029,11 @@
             const heroine = actor === 'player', o = this.opponent;
             const skin = heroine ? rgb('#efb48e') : o.skin, hair = heroine ? rgb('#ee963d') : o.hair;
             const belt = heroine ? this.playerBelt : o.belt, uniform = heroine ? rgb('#f9f2df') : rgb('#e6e9e0');
+            const camoBelt = (heroine ? this.playerBeltPattern : o.beltPattern) === 'camo';
             const shade = heroine ? rgb('#d5d5c8') : rgb('#c4cfd0'), accent = heroine ? rgb('#bc5549') : o.accent;
             const build = heroine ? .94 : o.build, scale = heroine ? 1.02 : o.scale;
             const eye = rgb('#273b42'), root = append(M.identity(), M.translate(pose.x, .11 + pose.y + pose.bob + this._groundLift(pose, scale), pose.z), M.ry(pose.yaw), M.rx(pose.bodyPitch || 0), M.rz(pose.bodyRoll || 0), M.scale(scale, scale, scale));
-            const draw = (name, matrix, color, alpha, emissive) => this._draw(name, matrix, color, alpha, emissive);
+            const draw = (name, matrix, color, alpha, emissive) => this._draw(name, matrix, color, alpha, emissive, camoBelt && color === belt);
             const torso = append(root, M.translate(0, 1.1, 0), M.rx(pose.lean), M.rz(pose.tilt));
             // A fitted, layered dobok with modeled lapels, seam, belt knot, and tails.
             draw('taper', shape(torso, 0, .32, 0, .25 * build, .63, .165), uniform);

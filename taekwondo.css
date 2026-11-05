@@ -756,6 +756,16 @@ h1 em{
   border:1px solid #0001;
   border-radius:1px
 }
+.belt-step[data-belt="camo"] .belt-swatch,
+.belt-step[data-belt="camo"] .belt-swatch:after{
+  background-color:#6b7846;
+  background-image:
+    radial-gradient(ellipse at 20% 25%,#c1b18a 0 22%,transparent 25%),
+    radial-gradient(ellipse at 75% 70%,#34432e 0 26%,transparent 29%),
+    radial-gradient(ellipse at 75% 14%,#806646 0 21%,transparent 24%),
+    radial-gradient(ellipse at 10% 85%,#34432e 0 23%,transparent 26%);
+  background-size:17px 11px
+}
 .belt-step strong{
   font-size:11px;
   display:block

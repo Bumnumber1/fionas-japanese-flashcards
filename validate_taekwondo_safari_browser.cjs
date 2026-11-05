@@ -641,7 +641,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     assert.equal(offlineRuntime.urls.length, 8);
     for (const url of offlineRuntime.urls) {
         const asset = new URL(url);
-        assert.equal(asset.searchParams.get('v'), asset.pathname.endsWith('/taekwondo-voice.js') ? 'syllables-1' : 'mic-report-1');
+        assert.equal(asset.searchParams.get('v'), 'practice-20261105-1');
     }
     assert.deepEqual(offlineRuntime.files, expectedRuntimeHashes, 'All eight offline query URLs return current source bytes');
     assert.equal(offlineRuntime.build, '2026-11-05 syllables-1'); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
