@@ -28,13 +28,19 @@ OBSERVER = r"""
 <script>
 (() => {
   const ids = ['start-button','handsfree-toggle','pause-button','resume-button'];
-  let serial = 0, lastTap = null, eventCount = 0;
-  document.addEventListener('click', event => {
-    if (event.isTrusted) {
-      lastTap = {number: ++eventCount, id: event.target.closest?.('button')?.id || '',
-                 x:event.clientX, y:event.clientY};
-    }
-  }, true);
+  let serial = 0, lastTap = null, lastTouch = null;
+  const errors = [];
+  window.addEventListener('error', e => { if (errors.length<8) errors.push([e.message,e.error?.stack?.slice(0,600)]); });
+  function observeInput(event) {
+    if (!event.isTrusted) return;
+    const pointer = event.changedTouches?.[0] || event;
+    const previous = event.type === 'click' ? lastTap : lastTouch;
+    const evidence = {number:(previous?.number || 0)+1,type:event.type,
+      id:event.target.closest?.('button')?.id || '',x:pointer.clientX,y:pointer.clientY};
+    if(event.type === 'click') lastTap=evidence; else lastTouch=evidence;
+  }
+  for(const type of ['touchstart','pointerdown','click'])
+    document.addEventListener(type, observeInput, {capture:true,passive:true});
   function tick() {
     const el = id => document.getElementById(id);
     const viewport = window.visualViewport;
@@ -67,12 +73,12 @@ OBSERVER = r"""
     }
     const state = {serial:++serial,ready:document.documentElement.dataset.dojoReady==='true',
       ua:navigator.userAgent,touchPoints:navigator.maxTouchPoints,provider:typeof(window.SpeechRecognition||window.webkitSpeechRecognition),
-      secure:isSecureContext,controls,neutral,lastTap,scale:viewport?.scale||1,
+      secure:isSecureContext,controls,neutral,lastTap,lastTouch,scale:viewport?.scale||1,
       screenWidth:screen.width,screenHeight:screen.height,viewportHeight:viewport?.height||innerHeight,
       pause:el('pause-dialog')?.open,cue:el('voice-status')?.textContent,
       mic:el('mic-session-controls')?.dataset.captureState,on:el('handsfree-toggle')?.getAttribute('aria-pressed')==='true',
       fault:window.DojoMicDiagnostics?.getSavedReport()?.snapshot?.errorCode||'',
-      phase:saved?.phase,card:saved?.question?.id,kana:saved?.question?.prompt,
+      errors,phase:saved?.phase,card:saved?.question?.id,kana:saved?.question?.prompt,
       turns:saved?.fight?.journal?.length,hp:saved?.fight?.playerHp,opponent:saved?.fight?.opponentHp};
     fetch('/__observe/__TOKEN__',{method:'POST',body:JSON.stringify(state)}).catch(()=>{});
   }
@@ -106,6 +112,8 @@ class ObserverServer(SimpleHTTPRequestHandler):
         state = json.loads(self.rfile.read(n))
         if state["serial"] > latest.get("serial", 0):
             latest = state
+            if state.get("errors"):
+                REPORT["pageErrors"] = state["errors"]
             summary = {k:state.get(k) for k in ("mic","cue","fault","on","turns")}
             events = REPORT["captureEvents"]
             if not events or events[-1] != summary:
@@ -136,47 +144,74 @@ class Touch:
         self.offset = None
         self.viewport_height = None
 
-    def send(self, x, y, previous):
-        # The native command may finish after the actual touch. The browser's
-        # subsequent trusted click is the authoritative delivery receipt.
+    def send(self, x, y, kind):
+        previous = (latest.get(kind) or {}).get("number", 0)
+        item = {"point":[round(x),round(y)],"await":kind}
+        REPORT.setdefault("nativeInput",[]).append(item)
         proc = subprocess.Popen(["idb","ui","tap",str(round(x)),str(round(y))],
-                                env=self.audio.env, stdout=subprocess.DEVNULL)
+                                env=self.audio.env, stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
         try:
-            event = wait_for(lambda s:(s.get("lastTap") or {}).get("number",0)>previous, "trusted tap", 25)["lastTap"]
+            def received(state):
+                if proc.poll() not in (None,0):
+                    raise RuntimeError("idb tap exited " + str(proc.returncode) + ": " + proc.stderr.read()[-500:])
+                return (state.get(kind) or {}).get("number",0)>previous
+            event = wait_for(received, "trusted "+kind, 23)[kind]
+            item["received"] = event
             self.offset = (x-event["x"], y-event["y"])
             self.viewport_height = latest["viewportHeight"]
             return event
         finally:
-            if proc.poll() is None:
-                try:
-                    proc.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    proc.terminate()
+            try:
+                _, stderr=proc.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                _, stderr=proc.communicate()
+            item.update(exit=proc.returncode,stderr=stderr[-500:],lastTouch=latest.get("lastTouch"))
+
+    def ax_point(self, control, label):
+        status = {"requested":control}
+        REPORT.setdefault("accessibility",[]).append(status)
+        try:
+            tree = json.loads(self.audio.run(["idb","ui","describe-all","--nested"],40))
+            nodes=list(_nodes(tree))
+            buttons=[n for n in nodes if n.get("type")=="Button" and n.get("frame")]
+            status.update(elements=len(nodes),buttons=[n.get("AXLabel","") for n in buttons][:60])
+            def clean(s):
+                return (s or "").strip(" →←›●■").casefold()
+            for n in buttons:
+                if n.get("AXIdentifier")==control or clean(n.get("AXLabel"))==clean(label):
+                    f=n["frame"]
+                    if f.get("width",0)>0 and f.get("height",0)>0:
+                        return f["x"]+f["width"]/2,f["y"]+f["height"]/2
+        except (OSError,ValueError,RuntimeError,subprocess.TimeoutExpired) as error:
+            status["error"]=str(error)[:500]
+        return None
 
     def tap(self, control):
         state = wait_for(lambda s:control in s["controls"], "visible " + control)
         point = state["controls"][control]
-        count = (state.get("lastTap") or {}).get("number", 0)
         if self.offset is None or abs(state["viewportHeight"]-self.viewport_height)>1:
             if abs(state["scale"]-1)>.01:
                 raise RuntimeError("Native screen calibration requires a 1x viewport")
-            neutral = state.get("neutral")
-            if neutral:
-                event = self.send(neutral["x"],neutral["y"],count)
+            point_on_screen = self.ax_point(control, point["label"])
+            if point_on_screen:
+                self.offset = (point_on_screen[0]-point["x"],point_on_screen[1]-point["y"])
+            else:
+                neutral = latest.get("neutral")
+                if not neutral:
+                    raise RuntimeError("No safe coordinate calibration or accessible button for " + control)
+                for attempt in range(2):
+                    try:
+                        event=self.send(neutral["x"],neutral["y"],"lastTouch")
+                        break
+                    except RuntimeError:
+                        if attempt:
+                            raise
                 if event["id"]:
                     raise RuntimeError("Expected a neutral touch during screen calibration")
-                count = event["number"]
-            else:
-                tree = json.loads(self.audio.run(["idb","ui","describe-all","--nested"],15))
-                node = next((n for n in _nodes(tree) if n.get("type")=="Button" and
-                             n.get("AXLabel","").strip()==point["label"] and n.get("frame")), None)
-                if not node:
-                    raise RuntimeError("No safe coordinate calibration or accessible button for " + control)
-                frame = node["frame"]
-                self.offset = (frame["x"]+frame["width"]/2-point["x"],frame["y"]+frame["height"]/2-point["y"])
         state = wait_for(lambda s:control in s["controls"], control)
         point = state["controls"][control]
-        event = self.send(point["x"]+self.offset[0],point["y"]+self.offset[1],count)
+        event = self.send(point["x"]+self.offset[0],point["y"]+self.offset[1],"lastTap")
         if event["id"] != control:
             raise RuntimeError(f"Expected {control}; trusted click reached {event['id']!r}")
         REPORT["taps"].append(control)

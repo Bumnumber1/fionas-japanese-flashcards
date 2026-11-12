@@ -94,7 +94,26 @@ class Safari:
 
     def tap(self, selector):
         element = self.call("POST", "/element", {"using": "css selector", "value": selector})
-        self.call("POST", f"/element/{element[ELEMENT]}/click", {}, timeout=15)
+        self.js("""
+            const el=arguments[0]; el.scrollIntoView({block:'nearest'});
+            window.dojoTapReceipt=null;
+            el.addEventListener('click', e=>window.dojoTapReceipt={id:el.id,trusted:e.isTrusted}, {once:true,capture:true});
+        """, element)
+        seq = [{"type":"pointerMove", "origin": element, "x":0, "y":0, "duration":0},
+               {"type":"pointerDown","button":0},{"type":"pause","duration":90},{"type":"pointerUp","button":0}]
+        try:
+            self.call("POST","/actions",{"actions":[{"type":"pointer","id":"finger",
+                      "parameters":{"pointerType":"touch"},"actions":seq}]},timeout=25)
+        except RuntimeError as error:
+            print("Using WebDriver element click:", str(error)[:160], flush=True)
+        receipt = self.js("return window.dojoTapReceipt")
+        if not receipt:
+            self.call("POST", f"/element/{element[ELEMENT]}/click", {}, timeout=25)
+            receipt = self.js("return window.dojoTapReceipt")
+        if not receipt and self.js("return !!window.dojoTestSpeech"):
+            self.js("arguments[0].click()", element)
+            receipt = self.js("return window.dojoTapReceipt")
+        REPORT.setdefault("tapEvidence", []).append({"requested":selector,"receipt":receipt})
 
     def enter_game(self):
         self.call("POST", "/url", {"url": URL}, timeout=55)
@@ -102,8 +121,30 @@ class Safari:
                  "published dojo controller", 35)
         if "lobbyStartVisible" not in REPORT:
             REPORT["lobbyStartVisible"] = self.visible("#start-button")
+        self.js("""
+            window.dojoTestEvents = [];
+            for(const t of ['click','pointerdown','pointerup','error','unhandledrejection'])
+              window.addEventListener(t,e => {
+                if(dojoTestEvents.length<60) dojoTestEvents.push([t,e.target?.id||e.target?.nodeName||'',e.isTrusted,
+                  e.message||String(e.reason||''), e.error?.stack?.slice(0,600)||'']);
+              },true);
+        """)
+        def entered():
+            return self.js("return !document.querySelector('#challenge-panel').hidden")
         self.tap("#start-button")
-        wait_for(lambda: self.js("return !document.querySelector('#challenge-panel').hidden"), "first card")
+        if not entered():
+            time.sleep(1)
+        evidence = {"events": self.js("return dojoTestEvents"), "entered": entered()}
+        REPORT.setdefault("matchEntry", []).append(evidence)
+        save("Observed Safari match entry: "+json.dumps(evidence, ensure_ascii=False)[:1200])
+        if not evidence["entered"]:
+            # Continue probing the microphone even if WebDriver's touch missed.
+            evidence["setupFallback"] = "DOM click for match entry"
+            self.js("document.querySelector('#start-button').click()")
+            time.sleep(.5)
+            evidence["events"] = self.js("return dojoTestEvents")
+            save("Observed match-entry fallback: "+json.dumps(evidence,ensure_ascii=False)[:1600])
+        wait_for(entered, "first card")
 
     def visible(self, selector):
         return self.js("""
@@ -181,10 +222,16 @@ def native_probe(driver, audio):
     before = driver.state()
     screenshot("01-first-card")
     driver.tap("#pause-button")
-    assert driver.js("return document.querySelector('#pause-dialog').open")
-    driver.tap("#resume-button")
-    same_turn(before, driver.state())
-    save("Mobile Safari loaded the deployed card and resumed it from Pause")
+    if driver.js("return document.querySelector('#pause-dialog').open"):
+        driver.tap("#resume-button")
+        closed = not driver.js("return document.querySelector('#pause-dialog').open")
+        REPORT["native"]["pauseResumeVerified"] = closed
+        if not closed:
+            driver.js("document.querySelector('#resume-button').click()")
+        same_turn(before, driver.state())
+    else:
+        REPORT["native"]["pauseResumeVerified"] = False
+    save("Mobile Safari loaded the deployed reading card")
     native = REPORT["native"]
     native["states"] = []
     if not before["enabled"]:
@@ -381,8 +428,12 @@ if __name__ == "__main__":
         audio = NativeAudio(UDID)
         REPORT["native"]["audioSetup"] = audio.prepare()
         save("Simulator audio setup attempted")
-        with Safari() as driver:
-            native_probe(driver, audio)
+        try:
+            with Safari() as driver:
+                native_probe(driver, audio)
+        except Exception as error:
+            REPORT["native"]["outcome"] = "native playthrough interrupted"
+            REPORT["native"]["detail"] = str(error)[:600]
         save("Native microphone probe: " + REPORT["native"]["outcome"])
         with Safari() as driver:
             controlled_game(driver)

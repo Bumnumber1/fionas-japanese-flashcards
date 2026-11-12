@@ -82,12 +82,6 @@ jobs:
           udid=$(python3 -c 'import json;print(json.load(open("artifacts/ipad-safari/device.json"))["udid"])')
           xcrun simctl bootstatus "$udid" -b
           open -g -a "$(xcode-select -p)/Applications/Simulator.app" --args -CurrentDeviceUDID "$udid"
-      - name: Open the published game in Mobile Safari
-        if: matrix.mode == 'webdriver'
-        run: |
-          xcrun simctl openurl "$IPAD_UDID" "$DOJO_URL"
-          sleep 10
-          xcrun simctl io "$IPAD_UDID" screenshot artifacts/ipad-safari/launch.png
       - name: Exercise the reading controls
         if: matrix.mode == 'webdriver'
         shell: bash
