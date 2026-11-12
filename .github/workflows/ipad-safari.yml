@@ -1,0 +1,82 @@
+name: Playtest the dojo in iPad Safari
+on:
+  push:
+    branches: [codex/ipad-safari-playtest]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playtest:
+    runs-on: macos-15
+    timeout-minutes: 18
+    env:
+      DOJO_URL: https://bumnumber1.github.io/fionas-japanese-flashcards/taekwondo.html
+      SAFARIDRIVER_URL: http://127.0.0.1:4444
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Boot an iPad
+        shell: bash
+        run: |
+          set -eu
+          for app in /Applications/Xcode_26.3.app /Applications/Xcode_26.2.app; do
+            if [ -d "$app" ]; then sudo xcode-select --switch "$app/Contents/Developer"; break; fi
+          done
+          xcodebuild -version
+          mkdir -p artifacts/ipad-safari
+          python3 - <<'PY'
+          import json, os, subprocess
+          sdk = subprocess.check_output(["xcrun", "--sdk", "iphonesimulator", "--show-sdk-version"], text=True).strip()
+          devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))["devices"]
+          candidates = []
+          for runtime, items in devices.items():
+              if ".iOS-" not in runtime:
+                  continue
+              version = tuple(map(int, runtime.split(".iOS-")[1].split("-")))
+              if version[:2] > tuple(map(int, sdk.split(".")[:2])):
+                  continue
+              for device in items:
+                  if device["name"].startswith("iPad"):
+                      candidates.append((version, device["name"] == "iPad (A16)", device["name"], device["udid"]))
+          if not candidates:
+              raise SystemExit("No supported iPad Simulator runtime installed")
+          version, _, name, udid = max(candidates)
+          info = {"model": name, "runtime": ".".join(map(str, version)), "udid": udid}
+          print(info, flush=True)
+          with open("artifacts/ipad-safari/device.json", "w") as f:
+              json.dump(info, f)
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              print("IPAD_UDID=" + udid, file=f)
+          PY
+          udid=$(python3 -c 'import json;print(json.load(open("artifacts/ipad-safari/device.json"))["udid"])')
+          xcrun simctl bootstatus "$udid" -b
+          open -g -a "$(xcode-select -p)/Applications/Simulator.app"
+      - name: Open the published game in Mobile Safari
+        run: |
+          xcrun simctl openurl "$IPAD_UDID" "$DOJO_URL"
+          sleep 10
+          xcrun simctl io "$IPAD_UDID" screenshot artifacts/ipad-safari/launch.png
+      - name: Exercise the reading controls
+        if: ${{ hashFiles('tests/ipad_safari_playtest.py') != '' }}
+        shell: bash
+        run: |
+          set -eu
+          sudo /usr/bin/safaridriver --enable
+          /usr/bin/safaridriver --port 4444 > artifacts/ipad-safari/safaridriver.log 2>&1 &
+          driver=$!
+          trap 'kill "$driver" 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            if curl -fsS "$SAFARIDRIVER_URL/status" > /dev/null; then break; fi
+            sleep 1
+          done
+          python3 -u tests/ipad_safari_playtest.py
+      - name: Save simulator screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipad-safari-playtest
+          path: artifacts/ipad-safari/
+          retention-days: 7
