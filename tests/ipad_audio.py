@@ -11,6 +11,11 @@ import time
 import wave
 from pathlib import Path
 
+try:
+    from PIL import Image, ImageChops
+except ImportError:
+    Image = None
+
 
 SETUP_ERRORS = (OSError, RuntimeError, ValueError, wave.Error, subprocess.TimeoutExpired)
 PERMISSION_ERRORS = SETUP_ERRORS + (KeyError,)
@@ -135,14 +140,19 @@ class NativeAudio:
             raise ValueError("Expected the simulator screen dimensions in points")
         with tempfile.TemporaryDirectory(prefix="dojo-ipad-consent-") as tmp:
             shot = Path(tmp, "screen.png")
+            full_screen = False
             while not stop.is_set() and time.monotonic() < deadline and len(result["tapped"]) < 4:
                 found = None
-                if self.vision and screen:
+                if (self.vision or Image) and screen:
                     try:
                         shot.unlink(missing_ok=True)
                         self.run(["xcrun", "simctl", "io", self.env["IDB_UDID"], "screenshot", str(shot)], 9)
-                        rows = json.loads(self.run([self.vision, str(shot)], 7))
-                        found = _screen_permission(rows, screen)
+                        found = _matched_speech_prompt(shot, screen)
+                        if not found and self.vision:
+                            command = [self.vision, str(shot)] + (["--full"] if full_screen else [])
+                            full_screen = not full_screen
+                            rows = json.loads(self.run(command, 15))
+                            found = _screen_permission(rows, screen)
                     except SETUP_ERRORS as error:
                         result["lastScreenError"] = str(error)
                 if not found and not stop.is_set():
@@ -161,21 +171,42 @@ class NativeAudio:
                 kind, label, x, y, method = found
                 result["observations"].append({"kind": kind, "label": label, "method": method,
                                                "atSeconds": round(time.monotonic()-start, 2)})
-                if method == "screen" and shot.is_file():
+                if method.startswith("screen") and shot.is_file():
                     evidence = Path("artifacts/ipad-safari")
                     evidence.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(shot, evidence / f"permission-{kind}.png")
-                if delay_first:
-                    stop.wait(delay_first)
-                    delay_first = 0
+                remaining = start + delay_first - time.monotonic()
+                if remaining > 0:
+                    stop.wait(remaining)
                     continue  # Reconfirm the exact sheet before tapping after a delay.
                 try:
                     self.run(["idb", "ui", "tap", str(round(x)), str(round(y))], 8)
                     result["tapped"].append(label)
+                    result.setdefault("tapTimes", []).append(round(time.monotonic()-start, 2))
                 except SETUP_ERRORS as error:
                     result["lastTapError"] = str(error)
                 stop.wait(.5)
         return result
+
+
+def _matched_speech_prompt(screenshot, screen):
+    """Match the Safari speech alert's title and affirmative label on an A16 portrait iPad."""
+    if Image is None or tuple(screen) != (820, 1180):
+        return None
+    with Image.open(screenshot) as image:
+        if image.size != (1640, 2360):
+            return None
+        title = image.crop((575, 950, 1063, 1040)).convert("L").point(lambda g: 255 if g < 100 else 0)
+        red, _, blue = image.crop((908, 1334, 1003, 1378)).convert("RGB").split()
+        allow = ImageChops.subtract(blue, red).point(lambda v: 255 if v > 120 else 0)
+    for label, observed in (("speech-title", title), ("allow-label", allow)):
+        path = Path(__file__).with_name("ipad_permission") / (label + ".png")
+        with Image.open(path) as reference:
+            mask = reference.convert("L")
+            changed = ImageChops.difference(mask, observed).histogram()[255]
+            if changed > mask.histogram()[255] * .02:
+                return None
+    return "speech", "Allow", 478, 678, "screen-glyph-match"
 
 
 def _screen_permission(rows, screen):

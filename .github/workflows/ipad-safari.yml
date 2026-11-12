@@ -13,10 +13,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { mode: normal-tab, host: macos-15 }
-          - { mode: normal-tab-latest, host: macos-26 }
-          - { mode: webdriver, host: macos-26 }
+        include: >-
+          ${{ fromJSON(contains(github.event.head_commit.message, '[ipad18]')
+              && '[{"mode":"normal-tab","host":"macos-15"}]'
+              || '[{"mode":"normal-tab","host":"macos-15"},{"mode":"normal-tab-latest","host":"macos-26"},{"mode":"webdriver","host":"macos-26"}]') }}
     runs-on: ${{ matrix.host }}
     timeout-minutes: 28
     env:
@@ -100,6 +100,11 @@ jobs:
       - name: Exercise an ordinary Mobile Safari tab with native input
         if: startsWith(matrix.mode, 'normal-tab')
         run: |
+          runner_python=python3
+          if python3 -m venv "$RUNNER_TEMP/dojo-ipad-tools" &&
+             "$RUNNER_TEMP/dojo-ipad-tools/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: pillow; then
+            runner_python="$RUNNER_TEMP/dojo-ipad-tools/bin/python"
+          fi
           if [ "$IPAD_TEST_MODE" = normal-tab-latest ]; then
             export IPAD_CONSENT_DELAY=0
             for service in microphone speech-recognition; do
@@ -110,7 +115,7 @@ jobs:
               fi
             done
           fi
-          python3 -u tests/ipad_normal_tab.py
+          "$runner_python" -u tests/ipad_normal_tab.py
       - name: Save simulator screenshots and results
         if: always()
         uses: actions/upload-artifact@v4

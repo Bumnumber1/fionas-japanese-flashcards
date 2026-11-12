@@ -307,10 +307,10 @@ def main():
         starts=lambda:sum(e["stage"]=="live-request" for e in REPORT.get("nativeEvents",[]))
         baseline=starts()
         with ThreadPoolExecutor(max_workers=1) as pool:
+            touch.tap("handsfree-toggle")
             permission=pool.submit(audio.allow_prompt,stop_monitor,(card["screenWidth"],card["screenHeight"]),
                                    delay_first=delay)
             try:
-                touch.tap("handsfree-toggle")
                 state=wait_for(lambda s:s["serial"]>card["serial"] and (listening(s) or retry_button(s)),
                                "native readiness or retry cue",90)
                 stop_monitor.set()
