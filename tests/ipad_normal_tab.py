@@ -272,14 +272,38 @@ def play_native_cards(audio, state):
     return answers
 
 
+def open_game(url):
+    # A newly booted simulator can report ready before Safari handles openurl.
+    # No match or microphone request has begun while waiting for this page.
+    for attempt in range(2):
+        launch = subprocess.Popen(["xcrun", "simctl", "openurl", UDID, url],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        try:
+            return wait_for(lambda s: s["ready"], "ordinary Safari loading the dojo", 100)
+        except RuntimeError:
+            if attempt:
+                raise
+        finally:
+            if launch.poll() is None:
+                launch.kill()
+            _, stderr = launch.communicate()
+            REPORT.setdefault("navigation", []).append({"exit": launch.returncode,
+                                                       "detail": stderr[-400:], "pageObserved": bool(latest)})
+        save("Safari did not load the first tab; reopening the still-unstarted game")
+        try:
+            subprocess.run(["xcrun", "simctl", "terminate", UDID, "com.apple.mobilesafari"],
+                           timeout=25, check=False)
+        except subprocess.TimeoutExpired:
+            pass
+
+
 def main():
     audio = NativeAudio(UDID)
     REPORT["audioSetup"] = audio.prepare()
     server = ThreadingHTTPServer(("127.0.0.1",0), functools.partial(ObserverServer,directory=str(ROOT)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://127.0.0.1:{server.server_port}/taekwondo.html"
-    subprocess.Popen(["xcrun","simctl","openurl",UDID,url])
-    state = wait_for(lambda s:s["ready"], "ordinary Safari loading the dojo", 120)
+    state = open_game(url)
     REPORT["environment"] = {k:state[k] for k in ("ua","screenWidth","screenHeight","touchPoints","secure","provider")}
     assert state["touchPoints"]>0 and "Safari/" in state["ua"] and state["secure"], REPORT["environment"]
     device_list=json.loads(subprocess.check_output(["xcrun","simctl","list","devices","--json"]))["devices"]
