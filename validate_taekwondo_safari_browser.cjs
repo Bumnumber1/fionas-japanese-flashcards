@@ -23,7 +23,7 @@ const diagnosticsReviewOnly = process.env.DOJO_DIAGNOSTICS_REVIEW_ONLY === '1';
 const diagnosticsOnly = process.env.DOJO_DIAGNOSTICS_ONLY === '1' || diagnosticsReviewOnly;
 const syllablesOnly = process.env.DOJO_SYLLABLES_ONLY === '1';
 const micOnly = process.env.DOJO_MIC_ONLY === '1';
-const currentBuild = '2026-11-12 mic-2';
+const currentBuild = '2026-11-12 mic-3';
 const runtimeFiles = ['taekwondo.css','taekwondo-engine.js','taekwondo-writing.js','taekwondo-safari-stream.js','taekwondo-diagnostics.js','taekwondo-voice.js','taekwondo-scene.js','taekwondo.js'];
 let controls = [], cacheEvidence = null, diagnosticsEvidence = null;
 const server = http.createServer((request, response) => {
@@ -762,7 +762,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     assert.equal(offlineRuntime.urls.length, 8);
     for (const url of offlineRuntime.urls) {
         const asset = new URL(url);
-        assert.equal(asset.searchParams.get('v'), 'practice-20261112-1');
+        assert.equal(asset.searchParams.get('v'), 'practice-20261112-2');
     }
     assert.deepEqual(offlineRuntime.files, expectedRuntimeHashes, 'All eight offline query URLs return current source bytes');
     assert.equal(offlineRuntime.build, currentBuild); assert.equal(offlineRuntime.micUI, true); assert.equal(offlineRuntime.capture, false); assert.equal(offlineRuntime.starts, 0);
