@@ -15,6 +15,7 @@ jobs:
       matrix:
         include:
           - { mode: normal-tab, host: macos-15 }
+          - { mode: normal-tab-latest, host: macos-26 }
           - { mode: webdriver, host: macos-26 }
     runs-on: ${{ matrix.host }}
     timeout-minutes: 28
@@ -97,8 +98,19 @@ jobs:
           done
           python3 -u tests/ipad_safari_playtest.py
       - name: Exercise an ordinary Mobile Safari tab with native input
-        if: matrix.mode == 'normal-tab'
-        run: python3 -u tests/ipad_normal_tab.py
+        if: startsWith(matrix.mode, 'normal-tab')
+        run: |
+          if [ "$IPAD_TEST_MODE" = normal-tab-latest ]; then
+            export IPAD_CONSENT_DELAY=0
+            for service in microphone speech-recognition; do
+              if xcrun simctl privacy "$IPAD_UDID" grant "$service" com.apple.mobilesafari; then
+                echo "Simulator pre-granted $service to Safari"
+              else
+                echo "Simulator must show its own $service sheet"
+              fi
+            done
+          fi
+          python3 -u tests/ipad_normal_tab.py
       - name: Save simulator screenshots and results
         if: always()
         uses: actions/upload-artifact@v4

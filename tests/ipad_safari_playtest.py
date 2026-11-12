@@ -5,6 +5,7 @@ import atexit
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import subprocess
+import threading
 import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -211,6 +212,7 @@ def native_probe(driver, audio):
     env = driver.js("""
         return {ua:navigator.userAgent,platform:navigator.platform,touch:navigator.maxTouchPoints,
           width:innerWidth,height:innerHeight,secure:isSecureContext,
+          screenWidth:screen.width,screenHeight:screen.height,
           recognition:typeof (window.SpeechRecognition || window.webkitSpeechRecognition),
           tapHeight:document.querySelector('#handsfree-toggle').getBoundingClientRect().height};
     """)
@@ -239,24 +241,29 @@ def native_probe(driver, audio):
         return
     try:
         # Safari can hold the WebDriver click until its native consent sheet closes.
+        stop_watcher = threading.Event()
         with ThreadPoolExecutor(max_workers=1) as executor:
-            approval = executor.submit(audio.allow_prompt)
+            approval = executor.submit(audio.allow_prompt, stop_watcher, (env["screenWidth"], env["screenHeight"]))
             try:
-                driver.tap("#handsfree-toggle")
-            except (OSError, RuntimeError) as error:
-                native["startCommand"] = str(error)[:260]
-            native["permission"] = approval.result()
-        deadline = time.monotonic() + 19
-        while time.monotonic() < deadline:
-            state = driver.state()
-            observation = {k: state[k] for k in ("cue", "capture", "fault", "on", "turns")}
-            if not native["states"] or observation != native["states"][-1]:
-                native["states"].append(observation)
-                save("Observed native capture " + state["capture"] + " / " + state["cue"])
-            if not state["on"] or state["capture"] == "on" or state["turns"] > before["turns"]:
-                break
-            time.sleep(.5)
-        state = try_native_answers(driver, audio, state)
+                try:
+                    driver.tap("#handsfree-toggle")
+                except (OSError, RuntimeError) as error:
+                    native["startCommand"] = str(error)[:260]
+                deadline = time.monotonic() + 94
+                while True:
+                    state = driver.state()
+                    observation = {k: state[k] for k in ("cue", "capture", "fault", "on", "turns")}
+                    if not native["states"] or observation != native["states"][-1]:
+                        native["states"].append(observation)
+                        save("Observed native capture " + state["capture"] + " / " + state["cue"])
+                    if not state["on"] or state["capture"] == "on" or time.monotonic() >= deadline:
+                        break
+                    time.sleep(.4)
+                stop_watcher.set()
+                state = try_native_answers(driver, audio, state)
+            finally:
+                stop_watcher.set()
+                native["permission"] = approval.result()
         screenshot("02-native-microphone")
         native["outcome"] = "native final observed" if state["turns"] > before["turns"] else (
             "native capture ready, no spoken answer verified" if state["capture"] == "on" else

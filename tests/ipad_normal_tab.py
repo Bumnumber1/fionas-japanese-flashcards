@@ -52,8 +52,11 @@ OBSERVER = r"""
       if (document.elementFromPoint(x,y)?.closest('button') === button)
         controls[id] = {x,y,label:button.textContent.trim()};
     }
-    let saved;
+    let saved, diagnostics;
     try { saved = JSON.parse(localStorage.getItem(window.DojoGame?.SAVE_VERSION)); } catch (_) {}
+    try { diagnostics = JSON.parse(localStorage.getItem(window.DojoMicDiagnostics?.STORAGE_KEY)); } catch (_) {}
+    const nativeEvents=(diagnostics?.events||[]).filter(e=>e.stage.startsWith('live-')).slice(-60)
+      .map(e=>({ms:e.ms,stage:e.stage,...(e.code?{code:e.code}:{})}));
     const chrome = Math.max(0,screen.height-(viewport?.height||innerHeight));
     let neutral = null;
     // An initial native touch on this corridor cannot hit a link or form control
@@ -77,7 +80,8 @@ OBSERVER = r"""
       screenWidth:screen.width,screenHeight:screen.height,viewportHeight:viewport?.height||innerHeight,
       pause:el('pause-dialog')?.open,cue:el('voice-status')?.textContent,
       mic:el('mic-session-controls')?.dataset.captureState,on:el('handsfree-toggle')?.getAttribute('aria-pressed')==='true',
-      fault:window.DojoMicDiagnostics?.getSavedReport()?.snapshot?.errorCode||'',
+      fault:diagnostics?.errorCode||window.DojoMicDiagnostics?.getSavedReport()?.snapshot?.errorCode||'',
+      build:diagnostics?.build,nativeEvents,timeMs:Math.round(performance.now()),
       errors,phase:saved?.phase,card:saved?.question?.id,kana:saved?.question?.prompt,
       turns:saved?.fight?.journal?.length,hp:saved?.fight?.playerHp,opponent:saved?.fight?.opponentHp};
     fetch('/__observe/__TOKEN__',{method:'POST',body:JSON.stringify(state)}).catch(()=>{});
@@ -114,10 +118,14 @@ class ObserverServer(SimpleHTTPRequestHandler):
             latest = state
             if state.get("errors"):
                 REPORT["pageErrors"] = state["errors"]
+            evidence = REPORT.setdefault("nativeEvents", [])
+            for event in state.get("nativeEvents", []):
+                if event not in evidence:
+                    evidence.append(event)
             summary = {k:state.get(k) for k in ("mic","cue","fault","on","turns")}
             events = REPORT["captureEvents"]
-            if not events or events[-1] != summary:
-                events.append(summary)
+            if not events or any(events[-1].get(k) != v for k,v in summary.items()):
+                events.append({**summary, "timeMs": state.get("timeMs")})
         self.send_response(204)
         self.end_headers()
 
@@ -221,6 +229,49 @@ def turn(state):
     return [state.get(key) for key in ("card","turns","hp","opponent")]
 
 
+def listening(state):
+    return (state.get("phase")=="question" and state["on"] and state["mic"]=="on" and
+            state["cue"].startswith("Listening") and state.get("kana"))
+
+
+def retry_button(state):
+    return not state["on"] and state["controls"].get("handsfree-toggle",{}).get("label","").startswith("Try")
+
+
+def play_native_cards(audio, state):
+    answers=REPORT["nativeAnswers"]
+    for _ in range(3):
+        before=state
+        answer={"card":before["card"], "kana":before["kana"], "before":turn(before)}
+        answers.append(answer)
+        answer["injection"]=audio.inject(before["kana"])
+        if not answer["injection"].get("ok"):
+            break
+        try:
+            state=wait_for(lambda s:s["turns"]>before["turns"] or retry_button(s),
+                           "a native graded answer or retry", 14)
+        except RuntimeError:
+            state=latest
+        answer["after"]=turn(state)
+        if state["turns"]==before["turns"]:
+            assert turn(before)==turn(state), (turn(before),turn(state))
+            answer["outcome"]="no graded response; same card and energy"
+            break
+        correct=(state["turns"]==before["turns"]+1 and state["opponent"]<before["opponent"]
+                 and state["hp"]==before["hp"])
+        answer["outcome"]="correct" if correct else "graded without a correct attack"
+        save("Native Japanese audio graded: "+answer["outcome"])
+        if not correct or len(answers)==3:
+            break
+        try:
+            state=wait_for(lambda s:s["turns"]==before["turns"]+1 and listening(s),
+                           "next card ready for Japanese audio", 12)
+        except RuntimeError:
+            REPORT["nextCardCue"]=latest.get("cue")
+            break
+    return answers
+
+
 def main():
     audio = NativeAudio(UDID)
     REPORT["audioSetup"] = audio.prepare()
@@ -249,31 +300,36 @@ def main():
         raise RuntimeError("Ordinary Safari did not expose a speech recognition provider")
     for attempt in range(2):
         card=latest
-        if attempt and not card["controls"].get("handsfree-toggle",{}).get("label","").startswith("Try"):
+        if attempt and not retry_button(card):
             break
-        before = card["serial"]
+        stop_monitor=threading.Event()
+        delay=int(os.environ.get("IPAD_CONSENT_DELAY","20")) if not attempt else 0
+        starts=lambda:sum(e["stage"]=="live-request" for e in REPORT.get("nativeEvents",[]))
+        baseline=starts()
         with ThreadPoolExecutor(max_workers=1) as pool:
-            permission = pool.submit(audio.allow_prompt)
-            touch.tap("handsfree-toggle")
-            REPORT.setdefault("permissions",[]).append(permission.result())
-        state=wait_for(lambda s:s["serial"]>before and (s["mic"]=="on" or
-                   not s["on"] and s["controls"].get("handsfree-toggle",{}).get("label","").startswith("Try")),
-                   "native readiness or retry cue",35)
-        save("Trusted microphone tap observed: "+state["cue"])
-        if state["mic"]=="on":
-            if REPORT["audioSetup"].get("ok"):
-                injected=audio.inject(state["kana"])
-                record={"kana":state["kana"],"injection":injected}
-                REPORT["nativeAnswers"].append(record)
-                if injected.get("ok"):
-                    try:
-                        after=wait_for(lambda s:s["turns"]>state["turns"],"a native graded answer",12)
-                        record["correct"]=after["opponent"]<state["opponent"] and after["hp"]==state["hp"]
-                    except RuntimeError:
-                        record["correct"]=False
-            if latest["on"]:
+            permission=pool.submit(audio.allow_prompt,stop_monitor,(card["screenWidth"],card["screenHeight"]),
+                                   delay_first=delay)
+            try:
                 touch.tap("handsfree-toggle")
-            break
+                state=wait_for(lambda s:s["serial"]>card["serial"] and (listening(s) or retry_button(s)),
+                               "native readiness or retry cue",90)
+                stop_monitor.set()
+                save("Trusted microphone tap observed: "+state["cue"])
+                if listening(state):
+                    if REPORT["audioSetup"].get("ok"):
+                        play_native_cards(audio,state)
+                    if latest["on"]:
+                        touch.tap("handsfree-toggle")
+                    # Persistence of the built-in diagnostics is debounced.
+                    time.sleep(.8)
+                    attempts=REPORT["nativeAnswers"]
+                    correct=sum(a.get("outcome")=="correct" for a in attempts)
+                    REPORT["nativeReading"]={"correct":correct,"nativeRequests":starts()-baseline,
+                                              "threeOnOneStream":correct==3 and starts()-baseline==1}
+                    break
+            finally:
+                stop_monitor.set()
+                REPORT.setdefault("permissions",[]).append(permission.result())
         assert turn(state)==turn(card), (turn(card),turn(state))
         REPORT["retryKeptCard"]=True
     REPORT["completed"]=True
