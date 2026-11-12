@@ -152,7 +152,7 @@ class Touch:
         self.offset = None
         self.viewport_height = None
 
-    def send(self, x, y, kind):
+    def send(self, x, y, kind, expected_id=None):
         previous = (latest.get(kind) or {}).get("number", 0)
         item = {"point":[round(x),round(y)],"await":kind}
         REPORT.setdefault("nativeInput",[]).append(item)
@@ -162,8 +162,13 @@ class Touch:
             def received(state):
                 if proc.poll() not in (None,0):
                     raise RuntimeError("idb tap exited " + str(proc.returncode) + ": " + proc.stderr.read()[-500:])
-                return (state.get(kind) or {}).get("number",0)>previous
-            event = wait_for(received, "trusted "+kind, 23)[kind]
+                event = state.get(kind) or {}
+                if event.get("number", 0) <= previous:
+                    return False
+                # Mobile Safari may deliver the delayed click from a neutral
+                # calibration touch after this button tap has been issued.
+                return expected_id is None or event.get("id") == expected_id
+            event = wait_for(received, "trusted "+(expected_id or kind), 35)[kind]
             item["received"] = event
             self.offset = (x-event["x"], y-event["y"])
             self.viewport_height = latest["viewportHeight"]
@@ -219,9 +224,7 @@ class Touch:
                     raise RuntimeError("Expected a neutral touch during screen calibration")
         state = wait_for(lambda s:control in s["controls"], control)
         point = state["controls"][control]
-        event = self.send(point["x"]+self.offset[0],point["y"]+self.offset[1],"lastTap")
-        if event["id"] != control:
-            raise RuntimeError(f"Expected {control}; trusted click reached {event['id']!r}")
+        self.send(point["x"]+self.offset[0],point["y"]+self.offset[1],"lastTap",control)
         REPORT["taps"].append(control)
 
 
