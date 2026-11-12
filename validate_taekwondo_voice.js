@@ -16,6 +16,7 @@ function test(name, callback) {
 
 function environment(options = {}) {
     let now = 0;
+    let wallTime = 0;
     let nextTimer = 1;
     const timers = new Map();
     const events = new Map();
@@ -38,6 +39,7 @@ function environment(options = {}) {
         console,
         navigator: { ...(options.navigator || {}) },
         performance: { now: () => now },
+        Date: class extends Date { static now() { return wallTime; } },
         isSecureContext: options.secure !== false,
         setTimeout(callback, delay) { const id = nextTimer++; timers.set(id, { at: now + delay, callback }); return id; },
         clearTimeout(id) { timers.delete(id); },
@@ -61,15 +63,16 @@ function environment(options = {}) {
     const voice = new sandbox.DojoVoice({ onState: state => states.push(state), onResult: result => results.push(result), onError: error => errors.push(error) });
     return {
         voice, sandbox, instances, states, results, errors, timers, events, documentEvents,
+        elapseWhileSuspended(milliseconds) { wallTime += milliseconds; },
         tick(milliseconds) {
             const until = now + milliseconds;
             while (true) {
                 let earliest = null;
                 for (const [id, timer] of timers) if (timer.at <= until && (!earliest || timer.at < earliest[1].at)) earliest = [id, timer];
                 if (!earliest) break;
-                timers.delete(earliest[0]); now = earliest[1].at; earliest[1].callback();
+                timers.delete(earliest[0]); wallTime += earliest[1].at - now; now = earliest[1].at; earliest[1].callback();
             }
-            now = until;
+            wallTime += until - now; now = until;
         }
     };
 }
@@ -957,7 +960,7 @@ test('Safari keeps a healthy continuous capture through slow interim-to-final de
     assert.equal(env.instances.length, 1); assert.equal(rec.starts, 1); env.voice.destroy();
 });
 
-test('A quiet Safari question expires softly and retries on the same live native capture', () => {
+test('A quiet Safari retry reuses capture; an expired in-flight utterance needs a fresh native owner', () => {
     for (const hadInterim of [false, true]) {
         const env = safariEnvironment(); env.voice.start(wordQuestion, { keepAlive: true });
         const rec = env.instances[0]; rec.onstart(); rec.onaudiostart();
@@ -966,9 +969,12 @@ test('A quiet Safari question expires softly and retries on the same live native
         assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, hadInterim ? 'no-match' : 'no-speech');
         assert.equal(env.results.length, 0); assert.equal(rec.stops, 0); assert.equal(rec.aborts, 0); assert.equal(env.voice.captureActive, true);
         env.voice.start(wordQuestion, { keepAlive: true });
-        const groups = hadInterim ? [['猫', true], ['猫', true]] : [['猫', true]];
-        rec.onresult(cumulative(groups, groups.length - 1));
-        assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true); assert.equal(env.instances.length, 1);
+        if (hadInterim) {
+            rec.onresult(cumulative([['猫', true]])); assert.equal(env.results.length, 0, 'The expired utterance never answers its retry');
+            rec.end(); env.tick(120); const fresh = env.instances[1]; fresh.onstart(); fresh.onaudiostart();
+            fresh.onresult(cumulative([['猫', true]]));
+        } else rec.onresult(cumulative([['猫', true]]));
+        assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true); assert.equal(env.instances.length, hadInterim ? 2 : 1);
         env.voice.destroy(); assert.equal(env.timers.size, 0);
     }
 });
@@ -992,7 +998,7 @@ test('Microphone diagnostics retain bounded lifecycle metadata without answers o
     const diagnostics = env.voice.getDiagnostics(), encoded = JSON.stringify(diagnostics);
     assert.ok(diagnostics && typeof diagnostics === 'object');
     assert.equal(encoded.includes('猫'), false); assert.equal(encoded.includes('ねこ'), false);
-    assert.match(encoded, /2026-11-05\s+syllables-1/);
+    assert.match(encoded, /2026-11-12\s+mic-2/);
     assert.ok(encoded.length < 30000, 'A bounded event history cannot grow into an audio log');
     env.voice.destroy();
 });
@@ -1041,6 +1047,210 @@ test('A requested stop followed by its final and native end does not manufacture
     rec.end(); env.tick(120); const next = env.instances[1]; assert.equal(next.starts, 1);
     next.onstart(); next.onaudiostart(); next.onresult(cumulative([['猫', true]]));
     assert.equal(env.results.length, 2); assert.equal(env.errors.length, 0); env.voice.destroy();
+});
+
+test('Safari native end just after rearm retries only the untouched target and invalidates speed timing', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    env.voice.start(wordQuestion, { keepAlive: true }); const stale = rec.onresult;
+    rec.end(); assert.equal(env.errors.length, 0); assert.equal(env.states.at(-1).status, 'starting');
+    env.tick(119); assert.equal(env.instances.length, 1); env.tick(1);
+    const fresh = env.instances[1]; assert.equal(fresh.starts, 1); fresh.onstart(); fresh.onaudiostart();
+    stale(cumulative([['し', true], ['猫', true]], 1)); assert.equal(env.results.length, 1);
+    env.tick(40); fresh.onresult(cumulative([['猫', true]]));
+    assert.equal(env.results.length, 2); assert.equal(env.results[1].correct, true);
+    assert.equal(env.results[1].readingMs, null, 'A transport restart cannot reset the speed clock for a bonus');
+    env.voice.destroy(); assert.equal(env.timers.size, 0);
+
+    const bounded = safariEnvironment(); bounded.voice.start(kanaQuestion, { keepAlive: true });
+    const first = bounded.instances[0]; first.onstart(); first.onaudiostart(); first.onresult(cumulative([['し', true]]));
+    bounded.voice.start(wordQuestion, { keepAlive: true }); first.end(); bounded.tick(120);
+    bounded.instances[1].end(); bounded.tick(20000);
+    assert.equal(bounded.instances.length, 2, 'One target cannot loop native restarts');
+    assert.equal(bounded.results.length, 1); assert.equal(bounded.errors.length, 1); bounded.voice.destroy();
+});
+
+test('Safari idle transient errors retire old capture without failing a future target', () => {
+    for (const code of ['no-speech', 'no-match', 'aborted']) {
+        const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+        const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+        if (code === 'no-match') rec.onnomatch(); else rec.onerror({ error: code });
+        assert.equal(env.errors.length, 0, code); assert.equal(env.voice.captureState, 'closing', code);
+        env.voice.start(wordQuestion, { keepAlive: true }); assert.equal(env.instances.length, 1);
+        rec.end(); env.tick(120); const fresh = env.instances[1]; fresh.onstart(); fresh.onaudiostart();
+        fresh.onresult(cumulative([['猫', true]]));
+        assert.equal(env.results.length, 2, code); assert.equal(env.results[1].correct, true, code);
+        assert.equal(env.errors.length, 0, code); env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+    const hard = safariEnvironment(); hard.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = hard.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    rec.onerror({ error: 'network' });
+    assert.equal(hard.errors.length, 1); assert.equal(hard.errors[0].code, 'network'); hard.voice.destroy();
+});
+
+test('Safari abort after rearm can retire an untouched old capture but never an utterance already in progress', () => {
+    for (const hadOwnSpeech of [false, true]) {
+        const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+        const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+        env.voice.start(wordQuestion, { keepAlive: true });
+        if (hadOwnSpeech) rec.onspeechstart();
+        rec.onerror({ error: 'aborted' });
+        assert.equal(env.results.length, 1);
+        if (hadOwnSpeech) {
+            assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'aborted');
+            rec.end(); env.tick(1000); assert.equal(env.instances.length, 1);
+        } else {
+            assert.equal(env.errors.length, 0); rec.end(); env.tick(120);
+            const fresh = env.instances[1]; fresh.onstart(); fresh.onaudiostart(); fresh.onresult(cumulative([['猫', true]]));
+            assert.equal(env.results.length, 2); assert.equal(env.results[1].readingMs, null);
+        }
+        env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+});
+
+test('Explicitly finishing a silent Safari target never reopens it as an automatic transport retry', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    env.voice.start(wordQuestion, { keepAlive: true }); env.voice.stop(); rec.end(); env.tick(20000);
+    assert.equal(env.results.length, 1); assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'no-speech');
+    assert.equal(env.instances.length, 1); env.voice.destroy(); assert.equal(env.timers.size, 0);
+});
+
+test('Safari feedback speech without an interim cannot donate its delayed final to the next question', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    rec.onspeechstart(); rec.onspeechend();
+    env.voice.start(wordQuestion, { keepAlive: true });
+    assert.equal(rec.aborts, 1); assert.equal(env.voice.captureState, 'closing');
+    rec.onresult(cumulative([['し', true], ['猫', true]], 1));
+    rec.onaudiostart(); rec.onspeechstart();
+    assert.equal(env.results.length, 1); assert.equal(env.states.at(-1).status, 'starting');
+    rec.end(); env.tick(120); const fresh = env.instances[1]; fresh.onstart(); fresh.onaudiostart();
+    fresh.onresult(cumulative([['猫', true]]));
+    assert.equal(env.results.length, 2); assert.equal(env.results[1].correct, true);
+    assert.equal(env.errors.length, 0); env.voice.destroy();
+});
+
+test('Disarming a Safari target preserves ownership of its unfinished native speech even without an interim', () => {
+    for (const cause of ['disarm', 'timeout']) {
+        const env = safariEnvironment(); env.voice.start(wordQuestion, { keepAlive: true });
+        const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onspeechstart();
+        if (cause === 'timeout') {
+            env.tick(10000); assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'no-speech');
+        } else env.voice.disarm();
+        env.voice.start(wordQuestion, { keepAlive: true });
+        assert.equal(rec.aborts, 1, cause); assert.equal(env.instances.length, 1, cause);
+        rec.onresult(cumulative([['猫', true]]));
+        assert.equal(env.results.length, 0, cause + ': old speech cannot answer even an identical new prompt');
+        rec.end(); env.tick(120); const fresh = env.instances[1]; fresh.onstart(); fresh.onaudiostart();
+        fresh.onresult(cumulative([['猫', true]]));
+        assert.equal(env.results.length, 1, cause); assert.equal(env.results[0].correct, true, cause);
+        assert.equal(env.errors.length, cause === 'timeout' ? 1 : 0, cause);
+        env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+});
+
+test('Safari closing-capture finals, malformed history, and cleanup aborts cannot own a queued target', () => {
+    for (const closing of ['audio-end', 'requested-stop']) {
+        const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+        const rec = env.instances[0]; rec.onstart(); rec.onaudiostart();
+        if (closing === 'requested-stop') env.voice.stop();
+        rec.onresult(cumulative([['し', true]]));
+        if (closing === 'audio-end') rec.onaudioend();
+        env.voice.start(wordQuestion, { keepAlive: true });
+        rec.onresult(cumulative([['し', true], ['猫', true]], 1));
+        rec.onresult(cumulative([['猫', true]], 0));
+        rec.onresult({ resultIndex: 999, results: [] });
+        rec.onaudiostart(); rec.onspeechstart(); rec.onerror({ error: 'aborted' });
+        assert.equal(env.results.length, 1, closing); assert.equal(env.errors.length, 0, closing);
+        assert.equal(env.states.at(-1).status, 'starting', closing);
+        rec.end(); env.tick(120); const fresh = env.instances[1]; fresh.onstart(); fresh.onaudiostart();
+        fresh.onresult(cumulative([['猫', true]]));
+        assert.equal(env.results.length, 2, closing); assert.equal(env.results[1].correct, true, closing);
+        env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+});
+
+test('A Safari capture that never releases reports one bounded error and cannot grade its pending target', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    rec.onaudioend(); env.voice.start(wordQuestion, { keepAlive: true });
+    env.tick(1500); assert.equal(rec.aborts, 1);
+    rec.onresult(cumulative([['し', true], ['猫', true]], 1)); env.tick(2500);
+    assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'microphone-busy');
+    assert.equal(env.results.length, 1); assert.equal(env.instances.length, 1);
+    rec.end(); env.tick(20000); assert.equal(env.instances.length, 1, 'Release alone cannot restart a failed target');
+    env.voice.destroy(); assert.equal(env.timers.size, 0);
+});
+
+test('Safari event-hook rearming cannot be disarmed by the preceding final callback', () => {
+    const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+    const stream = env.voice.stream, originalEvent = stream.onEvent;
+    let replaced = false;
+    stream.onEvent = (stage, details) => {
+        originalEvent(stage, details);
+        if (stage === 'final' && !replaced) { replaced = true; env.voice.start(wordQuestion, { keepAlive: true }); }
+    };
+    const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    assert.equal(env.results.length, 0, 'Changing ownership invalidates the old pending delivery');
+    assert.ok(stream.armed); assert.equal(stream.armed.target.prompt, wordQuestion.prompt);
+    rec.onresult(cumulative([['し', true], ['猫', true]], 1));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true); env.voice.destroy();
+});
+
+test('Only an explicit Safari tap skips the release gap after native capture has already ended', () => {
+    for (const fromTap of [false, true]) {
+        const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
+        const rec = env.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]])); rec.end();
+        env.voice.start(wordQuestion, { keepAlive: true, fromTap });
+        assert.equal(env.instances.length, fromTap ? 2 : 1);
+        if (!fromTap) env.tick(120);
+        assert.equal(env.instances[1].starts, 1); env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+    const blocked = safariEnvironment(); blocked.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = blocked.instances[0]; rec.onstart(); rec.onaudiostart(); blocked.voice.stop();
+    rec.onresult(cumulative([['し', true]])); blocked.voice.start(wordQuestion, { keepAlive: true, fromTap: true });
+    assert.equal(blocked.instances.length, 1, 'A gesture cannot bypass a still-active native microphone lock');
+    blocked.voice.destroy();
+});
+
+test('A returning Safari tap recovers an overdue untargeted release even while timers and performance time were suspended', () => {
+    const env = safariEnvironment({ releaseOnAbort: true }); env.voice.start(wordQuestion, { keepAlive: true });
+    const old = env.instances[0], staleFinal = old.onresult, staleEnd = old.onend;
+    old.onstart(); old.onaudiostart();
+    env.sandbox.document.hidden = true; env.documentEvents.get('visibilitychange')();
+    assert.equal(old.nativeActive, false, 'The native hardware released, but Safari omitted onend');
+    assert.equal(env.voice.stream.armed, null); assert.equal(env.voice.stream.releaseStalled, false);
+    env.elapseWhileSuspended(3999); assert.equal(env.voice.stream.releaseStalled, false);
+    env.elapseWhileSuspended(1); assert.equal(env.voice.stream.releaseStalled, true, 'The same four-second watchdog deadline applies at its boundary');
+    assert.equal(env.sandbox.performance.now(), 0, 'The suspended performance clock cannot supply elapsed sleep time');
+    assert.equal(env.errors.length, 0, 'An untargeted lease has no question error to deliver');
+    env.sandbox.document.hidden = false;
+    env.voice.start(wordQuestion, { keepAlive: true, fromTap: true });
+    assert.equal(env.instances.length, 2, 'One returning user tap starts the replacement synchronously');
+    const fresh = env.instances[1]; assert.equal(fresh.starts, 1); fresh.onstart(); fresh.onaudiostart();
+    staleFinal(cumulative([['猫', true]])); staleEnd(); assert.equal(env.results.length, 0);
+    fresh.onresult(cumulative([['猫', true]]));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true); assert.equal(env.errors.length, 0);
+    env.voice.destroy(); assert.equal(env.timers.size, 0);
+});
+
+test('Early Safari taps and automatic retries cannot bypass a native release lease, and healthy captures never appear stalled', () => {
+    for (const [elapsed, fromTap] of [[3999, true], [4000, false]]) {
+        const env = safariEnvironment({ releaseOnAbort: true }); env.voice.start(wordQuestion, { keepAlive: true });
+        const old = env.instances[0]; old.onstart(); old.onaudiostart(); env.voice.cancel();
+        env.elapseWhileSuspended(elapsed);
+        assert.equal(env.voice.stream.releaseStalled, elapsed >= 4000);
+        env.voice.start(wordQuestion, { keepAlive: true, fromTap });
+        assert.equal(env.instances.length, 1, JSON.stringify({ elapsed, fromTap }));
+        assert.equal(env.results.length, 0); env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+    const healthy = safariEnvironment(); healthy.voice.start(kanaQuestion, { keepAlive: true });
+    const rec = healthy.instances[0]; rec.onstart(); rec.onaudiostart(); rec.onresult(cumulative([['し', true]]));
+    healthy.elapseWhileSuspended(50000); assert.equal(healthy.voice.stream.releaseStalled, false);
+    healthy.voice.start(wordQuestion, { keepAlive: true, fromTap: true });
+    assert.equal(healthy.instances.length, 1); assert.equal(rec.aborts, 0, 'The healthy persistent path is unchanged');
+    healthy.voice.destroy();
 });
 
 test('A broken optional diagnostics hook cannot interrupt recognition or error recovery', () => {

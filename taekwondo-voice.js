@@ -354,16 +354,17 @@
 
     const ERROR_MESSAGES = {
         unsupported: 'This browser cannot recognize Japanese speech. Open the game in a browser with Web Speech recognition, such as Chrome or Edge, using localhost or HTTPS. Reading fights require a microphone and recognized speech.',
-        'not-allowed': 'Microphone permission was blocked. Allow microphone access for this site in your browser, then tap Speak again. No health was lost.',
+        'not-allowed': 'Allow microphone access for this site in your browser, then tap Try microphone again.',
         'service-not-allowed': 'The browser blocked its speech service. Enable speech recognition or try another supported browser. No health was lost.',
         'audio-capture': 'The microphone is unavailable. Connect or select a microphone in your browser settings, then try again. No health was lost.',
         network: 'The browser could not reach its speech service. Check your connection and try again. No health was lost.',
-        'no-speech': 'No clear speech was heard. Tap Speak and say the whole Japanese answer near your microphone. No health was lost.',
-        'no-match': 'The browser could not confidently recognize that speech. Tap Speak and try once more. No health was lost.',
+        'no-speech': 'The microphone did not hear a clear answer. Try the same Japanese sound again.',
+        'no-match': 'The speech service could not make out the answer. Try the same card again.',
         'language-not-supported': 'This browser speech service does not support Japanese. Try another browser or install its Japanese speech support. No health was lost.',
-        'recognition-timeout': 'The speech service did not finish. Tap Speak to retry; no health was lost.',
-        'microphone-busy': 'The previous microphone session has not finished. Tap Speak to retry, or reload the tab if it stays busy. No health was lost.',
-        aborted: 'Listening was interrupted. Tap Speak when you are ready. No health was lost.',
+        'recognition-timeout': 'The speech service did not finish. Tap Try microphone again to start a new session.',
+        'microphone-busy': 'The previous microphone session is still closing. Tap Try microphone again. If it stays busy, use Reload saved fight.',
+        'stream-history-reset': 'The speech service changed an earlier answer. Tap Try microphone again to start a new session.',
+        aborted: 'Listening was interrupted. Try this card again when you are ready.',
         'invalid-question': 'This activity is not a Japanese reading question. Choose a reading fight to use the microphone.',
         'recognition-error': 'Speech recognition could not start. Check the browser microphone permission and speech settings, then retry. No health was lost.'
     };
@@ -374,7 +375,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-11-05 syllables-1';
+    const VOICE_BUILD = '2026-11-12 mic-2';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
@@ -617,7 +618,10 @@
             if (this.generation === session.generation) this.emitError(code, details);
         }
 
-        startStream(question) {
+        startStream(question, fromTap) {
+            // iOS can freeze the page while closing its mic, then omit onend.
+            // Use the returning child's tap to replace an overdue capture.
+            if (fromTap && this.stream && this.stream.releaseStalled) this.reset();
             this.disarm();
             if (!this.supported) { this.emitError('unsupported'); return false; }
             if (!aliasesFor(question).length) { this.emitError('invalid-question'); return false; }
@@ -658,7 +662,8 @@
                 } catch (error) { this.emitError('recognition-error', { nativeMessage: error && error.message }); return false; }
             }
             const target = { ...question, voiceAliases: Array.isArray(question.voiceAliases) ? question.voiceAliases.slice() : [] };
-            this.streamTarget = { target, epoch: this.generation };
+            this.streamTarget = { target, epoch: this.generation, fromTap };
+            if (fromTap && !this.draining) this.readyAfter = 0;
             this.pendingStreamArm = true;
             this.emitState('starting', undefined, { captureReady: false, live: true });
             return this.queueStreamArm();
@@ -677,7 +682,7 @@
             }
             const entry = this.streamTarget;
             this.pendingStreamArm = false;
-            return this.stream.arm(entry.target, entry.epoch);
+            return this.stream.arm(entry.target, entry.epoch, entry.fromTap);
         }
 
         failStream(code) {
@@ -690,7 +695,7 @@
 
         start(question, options = {}) {
             if (this.destroyed) return false;
-            if (this.safariMode && options.keepAlive && global.DojoSafariStream) return this.startStream(question);
+            if (this.safariMode && options.keepAlive && global.DojoSafariStream) return this.startStream(question, options.fromTap === true);
             this.cancel();
             if (!this.supported) { this.emitError('unsupported'); return false; }
             if (!aliasesFor(question).length) { this.emitError('invalid-question'); return false; }

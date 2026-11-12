@@ -44,6 +44,7 @@
   let listening = false;
   let voiceStatus = 'idle';
   let voiceLive = false;
+  let micNotice = '', micFault = null;
   let micReport = null;
   let micReportExport = null;
   const MIC_REPORT_INBOX = window.DOJO_MIC_REPORT_URL || 'https://fionas-dojo-mic-reports.bumnumber1.chatgpt.site/import';
@@ -131,11 +132,11 @@
     if (options.focus !== false && tabletReturnFocus && tabletReturnFocus.isConnected && tabletReturnFocus.getClientRects().length) tabletReturnFocus.focus({ preventScroll: true });
     tabletReturnFocus = null;
     fitTabletWriting();
-    if (options.resume !== false) { if (phase === 'answered') advanceHandsFree(); else queueHandsFree(); }
+    if (options.resume !== false) resumeReading(options.fromTap === true);
   }
   function openTabletPanel(kind) {
     if (!tabletQuery.matches || !['question', 'answered'].includes(phase)) return;
-    if (tabletPanel === kind) { closeTabletPanel(); return; }
+    if (tabletPanel === kind) { closeTabletPanel({ fromTap: true }); return; }
     closeTabletPanel({ resume: false, focus: false });
     tabletReturnFocus = $('show-' + kind + '-button');
     resetFlurry(); cancelVoice();
@@ -166,7 +167,7 @@
   function captureMicReport(reason = 'details') {
     try {
       if (!window.DojoMicDiagnostics) return null;
-      const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: '2026-10-29 mic-report-1', captureState: 'off' };
+      const details = voice && typeof voice.getDiagnostics === 'function' ? voice.getDiagnostics() : { build: 'unknown', captureState: 'off' };
       micReport = DojoMicDiagnostics.capture(details, { reason, mode: handsFree ? 'hands-free' : 'manual', phase });
       return micReport;
     } catch (_) { return null; }
@@ -202,7 +203,7 @@
     const report = captureMicReport('details') || savedMicReport();
     if (report) { try { micReportFile(); } catch (_) { /* Keep the readable report available. */ } }
     resetFlurry(); cancelVoice();
-    $('mic-build').textContent = 'Microphone build · ' + (voice && voice.getDiagnostics ? voice.getDiagnostics().build : '2026-10-29 mic-report-1');
+    $('mic-build').textContent = 'Microphone build · ' + (voice && voice.getDiagnostics ? voice.getDiagnostics().build : 'unknown');
     $('mic-diagnostics').value = report ? JSON.stringify(report, null, 2) : '';
     const retained = Boolean(window.DojoMicDiagnostics && DojoMicDiagnostics.storageAvailable);
     $('mic-report-retained').textContent = report ? `Saved report: ${new Date(report.createdAt).toLocaleString()} · ${retained ? 'retained on this device after reload' : 'available in this tab; download or send before closing'}.` : 'No report was captured. Reload the game to load microphone diagnostics.';
@@ -377,14 +378,14 @@
         button.append(icon, label);
         button.addEventListener('click', () => {
           if (button.disabled) return;
-          if (move.id === selectedMove) { if (tabletPanel === 'moves') closeTabletPanel(); return; }
+          if (move.id === selectedMove) { if (tabletPanel === 'moves') closeTabletPanel({ fromTap: true }); return; }
           cancelVoice(); selectedMove = move.id;
           if (phase === 'question') {
             if (challengeSet) challengeSet.switched = true;
             selectQuestion();
           }
           else { renderMoves(); save(); if (scene) scene.play({ actor: 'player', move: move.id, hit: false, combo: 0 }); }
-          if (tabletPanel === 'moves') closeTabletPanel();
+          if (tabletPanel === 'moves') closeTabletPanel({ fromTap: true });
           updatePlayView();
         });
         grid.append(button);
@@ -400,8 +401,8 @@
     phase = 'lobby';
     $('welcome-panel').hidden = false; $('challenge-panel').hidden = true;
     $('activity-label').textContent = `${String(selectedBelt + 1).padStart(2, '0')} / ${activityLabel(G.BELTS[selectedBelt])}`;
-    $('practice-heading').textContent = progress.mastered && selectedBelt === FINAL_BELT ? 'A champion always keeps learning.' : selectedBelt === 0 && !fight ? 'A little courage goes a long way.' : G.BELTS[selectedBelt].description + '.';
-    $('start-button').textContent = fight ? 'Resume your match →' : selectedBelt < progress.belt ? 'Replay this rival →' : 'Step onto the mat →';
+    $('practice-heading').textContent = progress.mastered && selectedBelt === FINAL_BELT ? 'A champion always keeps learning.' : selectedBelt === 0 && !fight ? 'Ready for your match?' : G.BELTS[selectedBelt].description + '.';
+    $('start-button').textContent = fight ? 'Resume your match →' : selectedBelt < progress.belt ? 'Replay this rival →' : 'Start match →';
     $('welcome-note').textContent = fight ? `${formatHealth(fight.playerHp)} energy · ${fight.streak} clean answers in a row. Your match is saved.` : `${G.OPPONENTS[selectedBelt].name} is ready. ${G.BELTS[selectedBelt].description}.`;
     updateHud(); updateFighters(); renderProgress(); renderMoves(); save();
   }
@@ -424,6 +425,12 @@
     updateHud(); renderProgress(); renderMoves(); save();
     if (scene) scene.play({ actor: 'player', move: 'bow', hit: false });
     queueHandsFree();
+    if (window.matchMedia('(max-width: 599px)').matches) {
+      // On a stacked phone screen the fight starts below the lobby and arena.
+      // Reveal the playable card once, so reading later cards never moves the page.
+      const card = phase === 'answered' ? $('feedback') : document.querySelector('.challenge-layout');
+      card.scrollIntoView({ block: 'nearest' });
+    }
   }
   function exchangeIdentity() {
     return { beltIndex: fight.beltIndex, originBelt: fight.originBelt, turns: fight.journal.length, defense: fight.pendingDamage > 0 };
@@ -490,34 +497,43 @@
     const area = $('mic-session-controls');
     area.dataset.captureState = capture;
     area.classList.toggle('mic-is-open', active);
-    $('mic-capture-status').textContent = capture === 'opening' ? '◌ Opening microphone…' : capture === 'closing' ? '◌ Closing microphone…' : capture === 'on' ? voiceStatus === 'listening' ? '● Mic on · listening' : voiceStatus === 'processing' ? '● Mic on · checking speech' : handsFree ? '● Mic on · waiting for the next prompt' : phase === 'answered' ? '● Mic on · waiting for Next' : '● Mic on · waiting for Speak' : 'Mic off';
-    $('stop-microphone').hidden = !active;
+    $('mic-capture-status').textContent = { off: 'Mic off', opening: 'Mic opening', on: '● Mic on', closing: 'Mic closing' }[capture];
+    $('stop-microphone').hidden = !active || handsFree || (capture === 'closing' && micFault !== null);
     $('stop-microphone').disabled = capture === 'closing';
     $('stop-listening').hidden = !listening || Boolean(voice && voice.safariMode && voiceLive);
-    const defense = phase === 'question' && fight && fight.pendingDamage > 0;
-    $('listen-button').textContent = voice && voice.safariMode && capture !== 'on' ? '● Open mic & speak' : defense ? '● Speak to block' : '● Speak to strike';
-    if (phase === 'answered' && !writingMode() && voiceStatus === 'idle') {
-      $('voice-status').textContent = capture === 'on' ? handsFree ? 'Microphone stays on · wait for the next prompt.' : 'Microphone stays on · press Next, then Speak when ready.' : capture === 'closing' ? 'Microphone is closing.' : capture === 'opening' ? 'Microphone is opening · wait for Listening.' : 'Microphone off · continue when you are ready.';
-    }
+    let cue = micNotice || 'Tap once for all the cards. Choose Allow if asked.';
+    if (!voice || !voice.supported) cue = 'Ask a grown-up to open the game in a browser with Japanese speech recognition.';
+    else if (voiceStatus === 'starting') cue = 'Getting the microphone ready…';
+    else if (voiceStatus === 'listening') cue = 'Listening. Say the card out loud!';
+    else if (voiceStatus === 'processing') cue = 'Checking your answer…';
+    else if (!micNotice && phase === 'answered') cue = handsFree ? 'Get ready for the next card.' : 'Tap Next when you’re ready.';
+    else if (!micNotice && handsFree) cue = 'Get ready for your turn.';
+    else if (!micNotice && capture === 'on') cue = 'Tap Speak one answer when you’re ready.';
+    if ($('voice-status').textContent !== cue) $('voice-status').textContent = cue;
   }
   function updateHandsFree(note) {
+    if (note !== undefined) micNotice = note;
+    $('handsfree-toggle').hidden = listening && !handsFree;
     $('handsfree-toggle').setAttribute('aria-pressed', String(handsFree));
-    $('handsfree-toggle').textContent = handsFree ? '■ Stop hands-free' : '● Start hands-free';
+    $('handsfree-toggle').textContent = handsFree ? 'Stop microphone' : micFault ? 'Try microphone again' : 'Start microphone';
     $('handsfree-toggle').disabled = !handsFree && (!voice || !voice.supported || !fight || fight.status !== 'fighting');
-    $('handsfree-status').textContent = note || (handsFree ? voiceStatus === 'starting' ? voice && voice.safariMode ? 'Opening Safari’s Japanese microphone · wait for Listening before speaking.' : 'Opening Japanese microphone · wait for Listening before speaking.' : voiceStatus === 'processing' ? 'Checking your Japanese · wait for the next prompt.' : listening ? 'Japanese mic ready · say the current answer. Stop to change technique.' : voice && voice.safariMode && voice.captureActive ? 'Japanese microphone stays open between answers · wait for the next prompt.' : 'Hands-free ready · the next reading starts automatically.' : voice && voice.safariMode ? 'Both Safari speech buttons keep the microphone on between answers. Stop mic, Pause, or leave to turn it off.' : 'Start once, then speak each new prompt. Fast clean answers earn +3 or +6 damage.');
     document.querySelector('.arena').classList.toggle('handsfree-active', handsFree);
     updateMicrophoneControls();
   }
-  function stopHandsFree(note) {
+  function stopHandsFree(note = '') {
     resetFlurry();
     handsFree = false; quietRetries = 0; transientRetries = 0;
     cancelVoice();
     if (phase === 'question') { lockInputs(false); renderMoves(); }
     updateHandsFree(note);
   }
-  function startReading(automatic = false) {
+  function startReading(automatic = false, fromTap = false) {
     if (!readingReady() || !voice || !voice.supported) return;
     recoveryHandsFree = handsFree;
+    // Keep a healthy open stream for unclear speech. A failed or unreleased
+    // recognizer must be replaced inside the child's retry tap.
+    if (fromTap && micFault && (voice.captureState === 'closing' || !['no-match', 'no-speech'].includes(micFault.code))) voice.reset();
+    micNotice = ''; micFault = null;
     $('voice-recovery').hidden = true;
     $('voice-transcript').hidden = true;
     readingStartedAt = 0;
@@ -526,7 +542,18 @@
     if (voice.safariMode && audioContext && audioContext.state === 'running') {
       try { const suspended = audioContext.suspend(); if (suspended && suspended.catch) suspended.catch(() => {}); } catch (_) { /* Sound is optional. */ }
     }
-    if (voice.start({ ...question, expectedKana: question.prompt, voiceAliases }, { keepAlive: Boolean(voice.safariMode || handsFree) })) updateHandsFree();
+    if (voice.start({ ...question, expectedKana: question.prompt, voiceAliases }, { keepAlive: Boolean(voice.safariMode || handsFree), fromTap })) updateHandsFree();
+  }
+  function resumeReading(fromTap = false) {
+    if (!handsFree || listening) return;
+    if (phase === 'answered') {
+      if (!fromTap || !fight || fight.status !== 'fighting' || document.hidden || tabletPanel || document.querySelector('dialog[open]')) { advanceHandsFree(); return; }
+      nextQuestion();
+    }
+    if (readingReady()) {
+      clearTimeout(autoListenTimer);
+      startReading(true, fromTap);
+    }
   }
   function queueHandsFree(delay = 40) {
     clearTimeout(autoListenTimer);
@@ -540,7 +567,7 @@
     clearTimeout(autoAdvanceTimer);
     if (!handsFree || phase !== 'answered' || !fight || fight.status !== 'fighting' || document.hidden || tabletPanel || $('pause-dialog').open || $('help-dialog').open || $('reward-dialog').open || $('result-dialog').open || $('mic-details-dialog').open || $('reset-game-dialog').open) return;
     const target = question, bout = fight;
-    updateHandsFree('Hands-free flow · the next prompt is coming. Say it when the mic is ready.');
+    updateHandsFree('Get ready for the next card.');
     autoAdvanceTimer = setTimeout(() => {
       if (handsFree && phase === 'answered' && question === target && fight === bout && !document.hidden && !tabletPanel && !$('pause-dialog').open && !$('help-dialog').open && !$('reward-dialog').open && !$('result-dialog').open && !$('mic-details-dialog').open && !$('reset-game-dialog').open) nextQuestion();
     }, delay);
@@ -593,16 +620,15 @@
     document.querySelector('.practice-card').classList.toggle('defending', defense);
     $('block-description').textContent = `Correct stops all ${fight.pendingDamage} incoming damage. This answer is a block, not an attack.`;
     $('activity-label').textContent = `${defense ? 'BLOCK CHANCE' : String(selectedBelt + 1).padStart(2, '0')} / ${activityLabel(question)}`;
-    $('listen-button').textContent = defense ? '● Speak to block' : '● Speak to strike';
     $('check-writing').textContent = defense ? 'Check & block' : 'Check & strike';
     $('voice-transcript').hidden = true;
     $('voice-recovery').hidden = true;
-    $('voice-status').textContent = voice && voice.supported ? voice.safariMode ? 'Safari · tap the microphone and wait for Listening · Japanese (日本語).' : 'Tap the microphone, then read aloud in Japanese.' : 'Speech recognition is unavailable here. Open the game in a browser with Japanese speech recognition and microphone access.';
+    micNotice = ''; micFault = null;
     const glyph = $('question-glyph'); glyph.className = 'question-glyph'; glyph.textContent = question.prompt;
     $('word-progress').hidden = !writingMode() || question.chars.length <= 1;
     if (question.mode === 'kana-read') {
       $('question-instruction').textContent = special ? `Read the full ${scriptName(question)} challenge aloud` : `Say this ${scriptName(question)} aloud`;
-      $('question-context').textContent = special ? 'Say every sound in order to power this special technique.' : 'Speak its sound in Japanese. Your voice powers the move.';
+      $('question-context').textContent = special ? 'Say all the sounds in order.' : 'Say its sound in Japanese.';
       if (question.prompt.length > 1) glyph.classList.add('word');
     } else if (question.mode === 'word-read') {
       $('question-instruction').textContent = 'Read this word aloud'; glyph.classList.add('word'); $('question-context').textContent = 'Say the Japanese word, rather than its English meaning.';
@@ -799,10 +825,8 @@
         else if (!voice || !voice.captureActive) voiceLive = false;
         listening = ['starting', 'listening', 'processing'].includes(voiceStatus);
         if (voiceStatus === 'listening' && !readingStartedAt) readingStartedAt = performance.now();
-        $('listen-button').classList.toggle('listening', voiceStatus === 'listening');
         $('stop-listening').textContent = voiceStatus === 'starting' ? 'Cancel microphone' : voiceStatus === 'processing' ? 'Finish & check' : 'Finish speaking';
         if (phase === 'question') {
-          $('voice-status').textContent = voiceStatus === 'starting' ? voice && voice.safariMode ? 'Opening Safari’s microphone… wait for Listening.' : 'Starting Japanese microphone… wait for Listening.' : voiceStatus === 'listening' ? state.speechDetected ? 'Voice detected · Japanese (日本語). Keep going.' : 'Listening · Japanese (日本語). Say it now.' : voiceStatus === 'processing' ? voice && voice.safariMode && voiceLive ? 'Checking the final Japanese result… Stop mic to cancel.' : 'Checking your speech… use Finish & check if it waits.' : voice && voice.captureActive ? handsFree ? 'Microphone is open · wait for the next prompt.' : 'Microphone is open · tap Speak when you are ready.' : 'Tap the microphone to try again.';
           if (state.transcript) { $('voice-transcript').textContent = 'Hearing: ' + state.transcript; $('voice-transcript').hidden = false; }
           lockInputs(false);
           renderMoves();
@@ -822,35 +846,36 @@
       },
       onError: error => {
         captureMicReport('error');
+        if (!readingReady()) return;
         // Unclear speech is not an answer. Its retry uses the same real-time
         // window without adding a hit or erasing accepted correct answers.
         if (!['no-speech', 'no-match'].includes(error.code)) resetFlurry();
         listening = false; $('stop-listening').hidden = true;
-        if (error.transcript) { $('voice-transcript').textContent = 'Heard: ' + error.transcript + ' · unclear; try again'; $('voice-transcript').hidden = false; }
+        if (error.transcript) { $('voice-transcript').textContent = 'I heard “' + error.transcript + '”.'; $('voice-transcript').hidden = false; }
         readingSpeedEligible = false;
         if (handsFree) recoveryHandsFree = true;
-        let recoveryNote = '';
-        if (handsFree && error.retryable === true && !error.requiresGesture && transientRetries < 1 && readingReady()) {
+        const quiet = ['no-speech', 'no-match'].includes(error.code);
+        let cue;
+        if (handsFree && error.retryable === true && !error.requiresGesture && transientRetries < 1) {
           transientRetries++;
-          recoveryNote = 'Microphone interrupted · reconnecting once. Your question and energy are unchanged.';
+          cue = 'One moment. I’m turning the mic back on.';
           queueHandsFree(850);
-        } else if (handsFree && ['no-speech', 'no-match'].includes(error.code) && !error.requiresGesture && quietRetries < 2 && readingReady()) {
+        } else if (handsFree && quiet && !error.requiresGesture && quietRetries < 2) {
           quietRetries++;
-          recoveryNote = `No clear speech · listening again (${quietRetries}/2). Your energy is unchanged.`;
+          cue = 'Let’s try that card again. Wait for Listening.';
           queueHandsFree(850);
-        } else if (handsFree) {
-          recoveryNote = error.requiresGesture ? 'Microphone needs a tap · press Start hands-free to reconnect. No energy lost.' : error.code === 'no-speech' || error.code === 'no-match' ? 'Mic paused after silence · Start hands-free when you are ready. No energy lost.' : 'Hands-free stopped · check the speech service or microphone, then start again. No energy lost.';
-          stopHandsFree();
+        } else {
+          if (handsFree) stopHandsFree();
+          micFault = error;
+          if (error.code === 'not-allowed') cue = 'Ask a grown-up to allow the microphone, then try again.';
+          else if (error.code === 'network') cue = 'Ask a grown-up to check the internet, then try again.';
+          else if (['service-not-allowed', 'language-not-supported', 'unsupported'].includes(error.code)) cue = 'Ask a grown-up to check the speech settings in Microphone options.';
+          else cue = quiet ? 'Mic paused. Try this card again when you’re ready.' : 'Your card is still here. Tap Try microphone again.';
         }
-        if (phase === 'question') { lockInputs(false); renderMoves(); }
-        if (recoveryNote) updateHandsFree(recoveryNote);
-        $('voice-status').textContent = error.message + ' Your turn and energy are unchanged.';
-        if (phase === 'question' && !writingMode()) {
-          $('voice-recovery').hidden = false;
-          if (tabletQuery.matches) requestAnimationFrame(() => {
-            if (phase === 'question' && !$('voice-recovery').hidden && !tabletPanel) $('voice-recovery').scrollIntoView({ block: 'nearest', inline: 'nearest' });
-          });
-        }
+        $('mic-error-detail').textContent = error.message;
+        $('voice-recovery').hidden = !micFault;
+        lockInputs(false); renderMoves();
+        updateHandsFree(cue);
       }
     });
   } catch (_) { voice = null; }
@@ -860,11 +885,11 @@
   }, 5000);
   $('show-moves-button').addEventListener('click', () => openTabletPanel('moves'));
   $('show-journey-button').addEventListener('click', () => openTabletPanel('journey'));
-  document.querySelectorAll('[data-close-panel]').forEach(button => button.addEventListener('click', () => closeTabletPanel()));
-  $('tablet-panel-backdrop').addEventListener('click', () => closeTabletPanel());
+  document.querySelectorAll('[data-close-panel]').forEach(button => button.addEventListener('click', () => closeTabletPanel({ fromTap: true })));
+  $('tablet-panel-backdrop').addEventListener('click', () => closeTabletPanel({ fromTap: true }));
   document.addEventListener('keydown', event => {
     if (!tabletPanel) return;
-    if (event.key === 'Escape') { event.preventDefault(); closeTabletPanel(); return; }
+    if (event.key === 'Escape') { event.preventDefault(); closeTabletPanel({ fromTap: true }); return; }
     if (event.key !== 'Tab') return;
     const panel = $(tabletPanel === 'moves' ? 'moves-panel' : 'journey-panel');
     const items = [...panel.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')]
@@ -907,30 +932,30 @@
       handsFree = false; quietRetries = 0; transientRetries = 0;
       resetFlurry(); cancelVoice(true);
     }
-    startReading();
+    startReading(false, true);
   });
   $('handsfree-toggle').addEventListener('click', () => {
-    if (handsFree) { stopHandsFree('Hands-free off · microphone stopped. Choose a technique or speak one answer at a time.'); return; }
+    if (handsFree) { stopHandsFree('Tap Start microphone when you’re ready.'); return; }
     if (!voice || !voice.supported || !fight || fight.status !== 'fighting' || writingMode()) return;
-    handsFree = true; quietRetries = 0; transientRetries = 0;
+    const retry = Boolean(micFault);
+    handsFree = true; quietRetries = 0; transientRetries = retry ? 1 : 0;
     updateHandsFree();
     // Keep the explicit microphone start inside this tap, including a restart
     // from feedback. Timed activation can be rejected by Safari's service.
     if (phase === 'answered') nextQuestion();
     clearTimeout(autoListenTimer); clearTimeout(autoAdvanceTimer);
-    startReading(true);
+    startReading(!retry, true);
   });
   $('stop-listening').addEventListener('click', () => {
     if (!voice) return;
     if (voiceStatus === 'starting') {
-      if (handsFree) stopHandsFree('Microphone cancelled · tap Start hands-free when you are ready.');
+      if (handsFree) stopHandsFree();
       else voice.cancel();
     } else voice.stop();
   });
   $('stop-microphone').addEventListener('click', () => {
-    stopHandsFree('Microphone off · open it again when you are ready.');
+    stopHandsFree('Tap Start microphone when you’re ready.');
     $('voice-recovery').hidden = true;
-    if (phase === 'question') $('voice-status').textContent = 'Microphone off · your question and energy are unchanged.';
     updateMicrophoneControls();
   });
   $('reconnect-mic').addEventListener('click', () => {
@@ -938,10 +963,11 @@
     const resumeHandsFree = recoveryHandsFree;
     stopHandsFree(); save();
     if (typeof voice.reset === 'function') voice.reset();
+    micFault = null;
     handsFree = resumeHandsFree;
     // A recovery is never a new timed attempt at the same exchange.
     quietRetries = 0; transientRetries = 1;
-    startReading(false);
+    startReading(false, true);
   });
   $('reload-fight').addEventListener('click', () => { stopHandsFree(); save(); location.reload(); });
   $('mic-details-button').addEventListener('click', openMicReport);
@@ -999,11 +1025,15 @@
   $('undo-writing').addEventListener('click', () => { if (phase === 'question' && writing) writing.undo(); });
   $('hint-button').addEventListener('click', () => showHint());
   $('help-button').addEventListener('click', () => { resetFlurry(); cancelVoice(); open($('help-dialog')); });
-  document.querySelectorAll('[data-close]').forEach(button => { button.addEventListener('click', () => button.closest('dialog').close()); });
+  function closeAndResume(dialog) {
+    dialog.close();
+    resumeReading(true);
+  }
+  document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => closeAndResume(button.closest('dialog'))));
   $('pause-button').addEventListener('click', () => { resetFlurry(); cancelVoice(); save(); open($('pause-dialog')); });
-  $('resume-button').addEventListener('click', () => $('pause-dialog').close());
+  $('resume-button').addEventListener('click', () => closeAndResume($('pause-dialog')));
   [$('pause-dialog'), $('help-dialog'), $('reward-dialog'), $('mic-details-dialog')].forEach(dialog => dialog.addEventListener('close', () => {
-    if (phase === 'answered') advanceHandsFree(); else queueHandsFree();
+    if (handsFree && !listening && !micFault) { if (phase === 'answered') advanceHandsFree(); else queueHandsFree(); }
   }));
   $('leave-button').addEventListener('click', () => { $('pause-dialog').close(); saved = { phase }; renderLobby(); });
   $('result-continue').addEventListener('click', () => {
@@ -1029,7 +1059,7 @@
   });
   $('sound-toggle').addEventListener('click', () => { soundEnabled = !soundEnabled; applyPreferences(); save(); if (soundEnabled) sound('hit'); });
   $('motion-toggle').addEventListener('click', () => { reducedMotion = !reducedMotion; applyPreferences(); save(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { resetResumeHandsFree = false; stopHandsFree('Microphone stopped while the dojo is hidden. Start hands-free to continue.'); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { resetResumeHandsFree = false; stopHandsFree('Your card is still here. Tap the microphone to keep playing.'); } });
   window.addEventListener('pagehide', () => { resetResumeHandsFree = false; stopHandsFree(); save(); if (window.DojoMicDiagnostics) DojoMicDiagnostics.flush(); });
   function canonicalQuestion(candidate, allowLegacy = false) {
     if (!fight || !candidate || typeof candidate !== 'object' || Array.isArray(candidate) || typeof candidate.id !== 'string' || typeof candidate.answer !== 'string' || typeof candidate.prompt !== 'string') return null;

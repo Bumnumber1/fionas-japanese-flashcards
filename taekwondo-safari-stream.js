@@ -7,6 +7,7 @@
 
     const transcriptKey = value => String(value || '').normalize('NFKC').trim().replace(/\s+/gu, ' ');
     const now = () => global.performance && typeof global.performance.now === 'function' ? global.performance.now() : Date.now();
+    const RELEASE_TIMEOUT_MS = 4000;
 
     class DojoSafariStream {
         constructor(options) {
@@ -32,6 +33,18 @@
 
         get active() { return Boolean(this.capture || this.armed || this.launchTimer !== null); }
 
+        releaseElapsed(capture) {
+            if (!capture || capture.releaseStartedAt === undefined) return 0;
+            // Device sleep may pause performance.now() as well as queued timers.
+            // Wall-clock elapsed time keeps an overdue native lease detectable
+            // on the returning user's tap, without waiting for a timer to run.
+            return Math.max(0, now() - capture.releaseStartedAt, Date.now() - capture.releaseWallStartedAt);
+        }
+
+        get releaseStalled() {
+            return Boolean(this.capture && this.capture.retiring && this.releaseElapsed(this.capture) >= RELEASE_TIMEOUT_MS);
+        }
+
         event(stage, details) {
             this.stage = stage;
             this.counts.events[stage] = (this.counts.events[stage] || 0) + 1;
@@ -51,37 +64,58 @@
         clearTargetTimers(context) {
             if (!context) return;
             for (const timer of [context.recordTimer, context.finalTimer]) global.clearTimeout(timer);
+            context.recordTimer = context.finalTimer = null;
         }
 
         disarm() {
             this.targetVersion++;
             const context = this.armed;
+            const capture = this.capture;
+            if (context && capture && context.captureId === capture.id && !context.completed &&
+                (context.speechDetected || context.interim)) {
+                // Removing the question does not end its native utterance. Its
+                // first final may still be pending even when no interim arrived.
+                capture.unownedSpeech = true;
+            }
             this.clearTargetTimers(context);
             this.armed = null;
             global.clearTimeout(this.launchTimer); this.launchTimer = null;
             if (context) this.event('disarm');
         }
 
-        arm(target, epoch) {
+        arm(target, epoch, fromTap = false) {
             if (this.destroyed || !target || typeof this.Recognition !== 'function') return false;
             this.disarm();
             const context = { target: Object.assign({}, target, {
                 voiceAliases: Array.isArray(target.voiceAliases) ? target.voiceAliases.slice() : []
             }), epoch, floor: this.highestSeen + 1, startedAt: null, endedAt: null,
-                interim: '', waitingFinal: false, speechDetected: false };
+                interim: '', waitingFinal: false, speechDetected: false, completed: false,
+                captureId: null, transportRetries: 0, timingInvalid: false };
             this.armed = context;
             this.counts.arms++;
             this.event('arm', { floor: context.floor });
             const capture = this.capture;
-            if (!capture) return this.queueLaunch(context);
+            // A new user gesture may open an already-released native capture
+            // immediately. Automatic attempts retain the ordinary release gap.
+            if (!capture) return fromTap === true ? this.launch(context) : this.queueLaunch(context);
             if (!capture.nativeRequested) { this.release(capture, false); return this.launch(context); }
-            if (capture.cancelled || capture.failed || capture.nativeStopRequested || capture.audioEnded) {
+            if (capture.cancelled || capture.failed || capture.nativeStopRequested || capture.audioEnded || capture.retiring || capture.unownedSpeech) {
                 this.state('starting', context);
                 this.watchRelease(capture);
-            } else if (this.captureReady) {
-                this.beginTarget(context, now());
-                this.state('listening', context);
-            } else this.state('starting', context);
+                // Speech which began during feedback has no new-question owner.
+                // Its first result may arrive only after this arm. Retire that
+                // capture rather than guess which question a late final belongs to.
+                if (capture.unownedSpeech && !capture.retireAbortRequested) {
+                    capture.retireAbortRequested = true;
+                    try { capture.rec.abort(); } catch (_) { /* Release watchdog remains bounded. */ }
+                }
+            } else {
+                context.captureId = capture.id;
+                if (this.captureReady) {
+                    this.beginTarget(context, now());
+                    this.state('listening', context);
+                } else this.state('starting', context);
+            }
             return true;
         }
 
@@ -96,7 +130,7 @@
         }
 
         beginTarget(context, timestamp) {
-            if (this.armed !== context) return;
+            if (this.armed !== context || !this.current(this.capture) || context.captureId !== this.capture.id || this.capture.retiring) return;
             if (context.startedAt === null && timestamp !== null) context.startedAt = timestamp;
             if (context.recordTimer == null && !context.waitingFinal) {
                 context.recordTimer = global.setTimeout(() => {
@@ -124,11 +158,11 @@
 
         ready(capture, source) {
             if (!this.current(capture)) return;
-            this.captureReady = !capture.audioEnded;
+            this.captureReady = !capture.audioEnded && !capture.retiring;
             global.clearTimeout(capture.startTimer);
             if (source !== 'audio') capture.speechDetected = true;
             const context = this.armed;
-            if (context) {
+            if (context && context.captureId === capture.id && !capture.retiring) {
                 if (source !== 'audio') context.speechDetected = true;
                 // A first final without any capture/speech/interim evidence can
                 // score the sound, but cannot manufacture a 1ms speed bonus.
@@ -141,6 +175,47 @@
             return Boolean(capture) && !this.destroyed && this.capture === capture && !capture.cancelled && !capture.failed;
         }
 
+        canRecoverUntouched(capture, context) {
+            return Boolean(context && context.captureId === capture.id && capture.acceptedFinal &&
+                !capture.cancelled && !capture.failed && !capture.nativeStopRequested &&
+                context.transportRetries < 1 && !context.speechDetected && !context.interim && this.highestSeen < context.floor);
+        }
+
+        prepareRecovery(context) {
+            this.clearTargetTimers(context);
+            context.captureId = null;
+            context.startedAt = context.endedAt = null;
+            context.waitingFinal = false;
+            context.transportRetries++;
+            // Reconnection must not restart a speed-bonus clock.
+            context.timingInvalid = true;
+            this.event('transport-retry');
+            this.state('starting', context);
+        }
+
+        nativeFailure(capture, code, nativeMessage) {
+            if (!this.current(capture)) return;
+            const context = this.armed;
+            const transient = ['aborted', 'no-speech', 'no-match'].includes(code);
+            if (transient && this.canRecoverUntouched(capture, context)) {
+                this.prepareRecovery(context);
+                if (this.current(capture)) this.watchRelease(capture);
+                return;
+            }
+            if (transient && (!context || context.captureId !== capture.id && capture.retiring)) {
+                // Idle/cleanup events belong to the old native capture, not a
+                // future question. Keep its release lock until native onend.
+                this.event('idle-interruption', { code });
+                this.watchRelease(capture);
+                if (!capture.retireAbortRequested) {
+                    capture.retireAbortRequested = true;
+                    try { capture.rec.abort(); } catch (_) { /* Native end or the release watchdog owns cleanup. */ }
+                }
+                return;
+            }
+            this.fail(capture, code, nativeMessage);
+        }
+
         launch(context) {
             if (this.destroyed || this.armed !== context || this.capture) return false;
             let rec;
@@ -148,29 +223,40 @@
             catch (_) { this.fail(null, 'recognition-error', '', context); return false; }
             const capture = { rec, id: ++this.serial, nativeRequested: false, nativeStarted: false, speechDetected: false,
                 nativeStopRequested: false, finalAfterStop: false, acceptedFinal: false, audioEnded: false, cancelled: false, failed: false,
-                requestedAt: now(), finalHistory: [], previousLength: 0 };
+                retiring: false, unownedSpeech: false, requestedAt: now(), finalHistory: [], previousLength: 0 };
             this.capture = capture;
             this.captureReady = false;
             this.highestSeen = -1;
             context.floor = 0;
+            context.captureId = capture.id;
             rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 10;
             rec.onstart = () => {
                 if (!this.current(capture)) return;
                 capture.nativeStarted = true;
                 this.event('start');
-                this.state(this.armed && this.armed.waitingFinal ? 'processing' : this.captureReady ? 'listening' : 'starting', this.armed);
+                const owned = this.armed && this.armed.captureId === capture.id && !capture.retiring;
+                this.state(owned && this.armed.waitingFinal ? 'processing' : owned && this.captureReady ? 'listening' : 'starting', this.armed);
             };
             rec.onaudiostart = () => { if (this.current(capture)) { this.event('audio-start'); this.ready(capture, 'audio'); } };
-            rec.onspeechstart = () => { if (this.current(capture)) { this.event('speech-start'); this.ready(capture, 'speech'); } };
+            rec.onspeechstart = () => {
+                if (!this.current(capture)) return;
+                this.event('speech-start');
+                if (!this.armed || this.armed.captureId !== capture.id) {
+                    capture.unownedSpeech = true;
+                    this.event('unarmed-speech');
+                    return;
+                }
+                this.ready(capture, 'speech');
+            };
             rec.onspeechend = () => { if (this.current(capture)) this.event('speech-end'); };
             rec.onaudioend = () => {
                 if (!this.current(capture)) return;
                 capture.audioEnded = true; this.captureReady = false; this.event('audio-end');
-                if (this.armed) this.waitForFinal(this.armed);
+                if (this.armed && this.armed.captureId === capture.id) this.waitForFinal(this.armed);
                 else this.watchRelease(capture);
             };
             rec.onresult = event => this.results(capture, event);
-            rec.onnomatch = () => this.fail(capture, 'no-match');
+            rec.onnomatch = () => this.nativeFailure(capture, 'no-match');
             rec.onerror = error => {
                 if (!this.current(capture)) return;
                 const code = error && error.error || 'recognition-error';
@@ -180,7 +266,7 @@
                 if (code === 'aborted' && capture.nativeStopRequested && capture.finalAfterStop) {
                     this.event('closing-abort', { code }); this.watchRelease(capture); return;
                 }
-                this.fail(capture, code, error && error.message);
+                this.nativeFailure(capture, code, error && error.message);
             };
             rec.onend = () => this.end(capture);
             this.counts.starts++;
@@ -200,6 +286,12 @@
 
         results(capture, event) {
             if (!this.current(capture)) return;
+            if (capture.retiring || this.armed && this.armed.captureId !== capture.id) {
+                // No result from a closing capture owns a queued target, even
+                // malformed or rewritten history. Do not validate it as though
+                // it were the pending target's failed recognition attempt.
+                this.event('closing-result'); return;
+            }
             const results = event && event.results;
             const length = results && results.length;
             if (!Number.isSafeInteger(length) || length < 0 || length > 512 ||
@@ -251,13 +343,15 @@
             for (const group of windowGroups) alternatives = alternatives.flatMap(prefix => group.alternatives.map(value => (prefix + ' ' + value).trim())).slice(0, 100);
             alternatives = [...new Set(alternatives.filter(value => transcriptKey(value)))];
             if (!alternatives.length) { this.fail(capture, 'no-speech'); return; }
-            const readingMs = context.startedAt === null ? null : Math.max(1, (context.endedAt === null ? now() : context.endedAt) - context.startedAt);
+            const readingMs = context.timingInvalid || context.startedAt === null ? null : Math.max(1, (context.endedAt === null ? now() : context.endedAt) - context.startedAt);
             const answer = { epoch: context.epoch, target: context.target, alternatives, readingMs };
+            context.completed = true;
             capture.acceptedFinal = true;
             if (capture.nativeStopRequested) capture.finalAfterStop = true;
             this.counts.finals++; this.event('final', { groups: windowGroups.length, alternatives: alternatives.length,
                 firstIndex: context.floor, lastIndex: length - 1,
                 changedIndex: event.resultIndex === undefined ? null : event.resultIndex });
+            if (this.armed !== context || !this.current(capture)) return;
             this.disarm();
             const deliveryVersion = this.targetVersion;
             if (capture.nativeStopRequested || capture.audioEnded) this.watchRelease(capture);
@@ -266,7 +360,7 @@
         }
 
         waitForFinal(context) {
-            if (this.armed !== context) return;
+            if (this.armed !== context || !this.current(this.capture) || context.captureId !== this.capture.id || this.capture.retiring) return;
             context.waitingFinal = true;
             if (context.endedAt === null) context.endedAt = now();
             global.clearTimeout(context.recordTimer);
@@ -279,6 +373,7 @@
         stop() {
             const capture = this.capture;
             if (!this.current(capture)) return false;
+            if (this.armed && this.armed.captureId !== capture.id) { this.cancel(); return true; }
             if (this.armed) this.waitForFinal(this.armed);
             if (!this.current(capture)) return false;
             if (capture.nativeStopRequested) return true;
@@ -290,7 +385,14 @@
         }
 
         watchRelease(capture) {
-            if (this.capture !== capture || capture.releaseTimer != null) return;
+            if (this.capture !== capture) return;
+            capture.retiring = true; this.captureReady = false;
+            if (capture.releaseStartedAt === undefined) {
+                capture.releaseStartedAt = now();
+                capture.releaseWallStartedAt = Date.now();
+            }
+            global.clearTimeout(capture.startTimer);
+            if (capture.releaseTimer != null) return;
             capture.abortTimer = global.setTimeout(() => {
                 if (this.capture === capture) { try { capture.rec.abort(); } catch (_) {} }
             }, 1500);
@@ -298,7 +400,7 @@
                 if (this.capture !== capture) return;
                 capture.releaseTimer = null;
                 if (this.armed) this.fail(null, 'microphone-busy', '', this.armed);
-            }, 4000);
+            }, Math.max(0, RELEASE_TIMEOUT_MS - this.releaseElapsed(capture)));
         }
 
         fail(capture, code, nativeMessage, explicitContext) {
@@ -335,11 +437,15 @@
         end(capture) {
             if (this.capture !== capture) return;
             this.event('end');
-            const expected = capture.cancelled || capture.failed || capture.nativeStopRequested && capture.finalAfterStop || !this.armed && capture.acceptedFinal;
-            if (expected) { this.release(capture, true); return; }
             const context = this.armed;
+            if (this.canRecoverUntouched(capture, context)) {
+                this.prepareRecovery(context);
+                this.release(capture, true); return;
+            }
+            const expected = capture.cancelled || capture.failed || !context || context.captureId !== capture.id;
+            if (expected) { this.release(capture, true); return; }
             this.release(capture, false);
-            this.fail(null, context ? context.interim ? 'no-match' : 'no-speech' : 'stream-ended', '', context);
+            this.fail(null, context.interim ? 'no-match' : 'no-speech', '', context);
         }
 
         cancel() {
@@ -364,7 +470,7 @@
             return { stage: this.stage, active: this.active, captureReady: this.captureReady,
                 nativeStarted: Boolean(capture && capture.nativeStarted), speechDetected: Boolean(capture && capture.speechDetected),
                 armed: Boolean(this.armed), stopping: Boolean(capture && capture.nativeStopRequested),
-                releasing: Boolean(capture && (capture.cancelled || capture.failed || capture.audioEnded)),
+                releasing: Boolean(capture && (capture.cancelled || capture.failed || capture.audioEnded || capture.retiring)),
                 highestSeen: this.highestSeen, starts: this.counts.starts, arms: this.counts.arms,
                 finals: this.counts.finals, errors: this.counts.errors, lastErrorCode: this.lastErrorCode,
                 elapsedMs: capture ? Math.max(0, Math.round(now() - capture.requestedAt)) : 0,

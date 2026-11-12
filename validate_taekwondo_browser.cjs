@@ -832,7 +832,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   await freshReadingFight();
   await evaluate('window.__dojoSpeech.startDelay=2250');
   await click('#handsfree-toggle'); await pause(300);
-  assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),/starting Japanese microphone/i,
+  assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),/getting the microphone ready/i,
     'Provider startup must not tell the student to speak before the actual listening event');
   assert.equal(await evaluate('window.__dojoSpeech.instances.at(-1).ready'),false);
   assert.ok((await moveButtons()).every(button=>button.disabled),'Starting the microphone locks move selection');
@@ -1036,14 +1036,14 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
   }
   assert.equal(await automaticOn(),false); const boundedCount=await speechCount(); await pause(1100);
   assert.equal(await speechCount(),boundedCount); state=await snapshot(); assert.equal(state.save.fight.turns,0); assert.equal(state.player,100); assert.equal(state.opponent,150);
-  assert.match(await evaluate(`document.querySelector('#handsfree-status').textContent`),/silence|paused/i);
+  assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),/paused/i);
   pass('Silence retries automatically twice, never grades or causes damage, and stops after the third silent result without manufacturing a speed bonus');
 
   for(const code of ['network','not-allowed']){
     const previous=await speechCount(); await click('#handsfree-toggle'); await autoReady(previous);
     await emitSpeechError(code); assert.equal(await automaticOn(),false); const stopped=await speechCount();
-    assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),code==='network'?/could not reach its speech service/:/permission was blocked/,
-      'The actual microphone or speech-service diagnostic remains visible after cancellation');
+    assert.match(await evaluate(`document.querySelector('#voice-status').textContent`),code==='network'?/check the internet/i:/allow the microphone/i,
+      'The child sees the relevant recovery step after cancellation');
     await pause(1100); assert.equal(await speechCount(),stopped,'Speech-service and permission errors must not create retry loops');
     state=await snapshot(); assert.equal(state.player,100); assert.equal(state.save.fight.turns,0);
   }
@@ -1386,7 +1386,7 @@ function pass(name) { checks.push(name); console.log('PASS ' + name); }
     const answered=await evaluate(`document.body.classList.contains('is-answered')`);
     const selectors = answered ? ['#dojo-canvas','#show-moves-button','#show-journey-button','#screen-mode-button','#next-button'] :
       ['#dojo-canvas','#question-glyph','#hint-button','#pause-button','#show-moves-button','#show-journey-button','#screen-mode-button',
-      ...(writingMode ? ['#writing-canvas','#undo-writing','#clear-writing','#check-writing'] : ['#handsfree-toggle','#listen-button']), ...extra];
+      ...(writingMode ? ['#writing-canvas','#undo-writing','#clear-writing','#check-writing'] : ['#handsfree-toggle','#voice-options summary']), ...extra];
     const evidence = await evaluate(`(() => {
       const selectors=${JSON.stringify(selectors)}, box=element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
       const targets=selectors.map(selector=>{const element=document.querySelector(selector);if(!element)return {selector,missing:true};

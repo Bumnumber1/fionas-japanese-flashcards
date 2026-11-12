@@ -1342,13 +1342,9 @@ dialog p{
 .master-rule{display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 14px;margin-bottom:18px;border:1px solid #bb8571;border-radius:6px;background:#fcf0e8;color:#854932;font-size:11px;line-height:1.6}
 .master-rule strong{font-size:10px;letter-spacing:1.2px}
 .practice-card.defending{border-color:#81a9af}
-.voice-instruction{font-size:12px;font-weight:800;line-height:1.5;margin-bottom:12px}
-.voice-button{min-height:46px;font-size:13px;width:100%}
-.voice-button.listening{background:#326759;box-shadow:0 0 0 5px #32675918}
-.handsfree-controls{border:1px solid #a6b8aa;border-radius:6px;padding:10px;margin-bottom:12px;background:#edf4ee}
-.handsfree-toggle{width:100%;min-height:40px;border:0;border-radius:4px;background:#275f67;color:#fff;font-size:12px;font-weight:800;padding:10px}
+.voice-button{min-height:46px;width:100%;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font-size:14px;font-weight:700}
+.handsfree-toggle{width:100%;min-height:48px;border:0;border-radius:6px;background:#275f67;color:#fff;font-size:16px;font-weight:800;padding:10px;touch-action:manipulation}
 .handsfree-toggle[aria-pressed=true]{background:#854932}
-#handsfree-status{font-size:10px;line-height:1.6;margin:8px 0 0;color:#365c58}
 .speed-notice{position:absolute;z-index:3;top:111px;left:50%;transform:translateX(-50%);width:max-content;max-width:90%;border:1px solid #a8eef2;border-radius:6px;background:#163e48ed;color:#c8fcff;padding:9px 15px;text-align:center;font-size:12px;font-weight:900;letter-spacing:1px;box-shadow:0 3px 20px #43d4ee30;pointer-events:none}
 .speed-notice[data-tier=quick]{border-color:#f5d58a;color:#ffe7aa;background:#57452aee}
 .speed-pop{animation:speed-pop .3s ease-out}
@@ -1369,17 +1365,18 @@ dialog p{
 @media(max-width:420px){.flurry-notice{font-size:9px;letter-spacing:0;padding:7px 9px}.action-callout.combo-callout{font-size:16px}.flurry-rule{font-size:11px}}
 @media(max-width:420px){.speed-notice{top:100px;font-size:9px;letter-spacing:.3px;padding:7px 9px;max-width:92%}}
 @media(max-width:420px){.speed-notice.combo-speed{top:auto;bottom:52px;font-size:8px;letter-spacing:0}.action-callout.combo-callout{bottom:83px;font-size:19px}}
-#voice-status{font-size:11px;line-height:1.7;color:var(--muted);margin:12px 0 0}
+#voice-status{font-size:17px;font-weight:800;line-height:1.4;color:var(--ink);margin:0}
+#voice-options summary,#game-rules summary{min-height:44px;padding:12px 2px;font-size:13px;font-weight:700;color:#365c58;cursor:pointer}
+#help-dialog .quick-help{font-size:16px;line-height:1.5}
+#mic-error-detail{grid-column:1/-1;font-size:13px;line-height:1.5;margin:0}
 .voice-transcript{font-size:14px;line-height:1.7;background:#edf3e6;border:1px solid #cfddc8;border-radius:5px;padding:9px 11px;overflow-wrap:anywhere;margin:10px 0 0}
-.voice-note{font-size:9px;color:var(--muted);line-height:1.7;margin:10px 0 0}
 .voice-recovery{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .voice-recovery button{min-height:44px;border:1px solid #b2c2b8;border-radius:7px;background:#edf4ee;color:#244b4c;font-size:12px;font-weight:700;padding:8px;touch-action:manipulation}
 .mic-details-button{min-height:44px;margin:4px 0 0;padding:8px 0;font-size:11px;color:var(--muted);text-align:left;touch-action:manipulation}
-.mic-session-controls{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:4px;border-radius:7px;padding:0 7px;background:#eef0e8}
-.mic-session-controls.mic-is-open{background:#e4f1e6;border:1px solid #83a991}
+.mic-session-controls{display:grid;gap:7px;border:1px solid #c9d5c8;border-radius:8px;padding:10px 12px;background:#eff4ec}
+.mic-session-controls.mic-is-open{background:#e4f1e6;border-color:#83a991}
 .mic-session-controls[data-capture-state=closing]{background:#f2ede0;border-color:#c5b38f}
-#mic-capture-status{flex:1;min-width:0;font-size:11px;line-height:1.4;font-weight:800;color:#365c48}
-.mic-session-controls .mic-details-button{flex:none;margin:0;font-size:11px;padding:8px 0}
+#mic-capture-status{font-size:12px;line-height:1.3;font-weight:700;color:#365c48}
 #stop-microphone{flex:none;min-height:44px;min-width:72px;border:0;border-radius:5px;background:#854932;color:#fff;padding:7px 9px;font-size:12px;font-weight:800;touch-action:manipulation}
 .mic-build{font-weight:700;color:var(--ink)}
 .mic-report-label{display:block;font-size:12px;margin:14px 0 6px;color:var(--ink)}
@@ -1405,7 +1402,8 @@ dialog p{
 .ice-cream-art[data-reward=words] b,.ice-cream-art[data-reward=kanji] b{clip-path:polygon(0 0,100% 0,83% 60%,57% 70%,57% 89%,85% 95%,85% 100%,15% 100%,15% 95%,43% 89%,43% 70%,17% 60%);width:95px;left:17px;background:linear-gradient(90deg,#79a8b4,#b4d5cf,#79a8b4)}
 .ice-cream-art[data-reward=words] i,.ice-cream-art[data-reward=kanji] i{width:77px}
 .ice-cream-art[data-reward=kanji] span{font-size:40px;color:#bb8d33;right:-8px;top:-10px}
-@media(max-width:420px){.voice-button{font-size:11px;padding:10px}.voice-instruction{font-size:11px}.voice-note{font-size:8px}.block-banner{font-size:10px}}
+@media(max-width:420px){.voice-button{padding:10px}.block-banner{font-size:10px}}
+@media(max-width:599px){body:not(.is-playing) .main-column>.practice-card{order:-1}}
 .technique-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .move-section+.move-section{border-top:1px solid var(--line);margin-top:18px;padding-top:16px}
 .move-section h3{font-size:13px;font-weight:900;margin:0 0 11px;line-height:1.6}
@@ -1462,8 +1460,6 @@ dialog p{
   .technique-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .question-glyph{font-size:88px}
   .voice-button,.handsfree-toggle{min-height:48px;font-size:14px}
-  #handsfree-status,#voice-status{font-size:12px}
-  .voice-note{font-size:11px}
   .feedback strong{font-size:14px}
   .feedback p,.hint-text{font-size:12px}
 
@@ -1520,15 +1516,10 @@ dialog p{
   body.is-playing .question-area:has(.question-glyph.word) p,body.is-playing.is-writing .question-area p{margin-top:5px}
   body.is-playing .word-progress{margin-top:7px;gap:5px;flex-wrap:wrap}
   body.is-playing .word-progress span{padding:4px 7px;min-width:30px;font-size:14px}
-  body.is-playing .voice-instruction{display:none}
-  body.is-playing .handsfree-controls{padding:8px;margin-bottom:8px;border-radius:8px}
-  body.is-playing .handsfree-toggle{font-size:14px;min-height:46px;padding:9px 12px;border-radius:6px}
-  body.is-playing #handsfree-status{font-size:12px;line-height:1.4;margin-top:6px}
+  body.is-playing .handsfree-toggle{font-size:16px;min-height:48px;padding:9px 12px}
   body.is-playing .voice-button{font-size:15px;min-height:48px;border-radius:7px}
   body.is-playing #stop-listening{margin-top:6px;width:100%;background:#eef2e9;border-radius:6px}
-  body.is-playing #voice-status{font-size:12px;line-height:1.45;margin:8px 0 0}
   body.is-playing .voice-transcript{font-size:14px;line-height:1.4;padding:7px 9px;margin-top:8px}
-  body.is-playing .voice-note{display:none}
   body.is-playing .answer-tools{gap:10px;margin-top:8px}
   body.is-playing .answer-tools button{flex:1;min-height:44px}
   body.is-playing .writing-label{font-size:12px;margin-bottom:6px}
@@ -1595,8 +1586,7 @@ dialog p{
   body.is-playing .challenge-layout{gap:8px}
   body.is-playing #writing-canvas{width:min(100%,var(--tablet-ink-size,280px))}
   body.is-playing.is-writing .question-area p{font-size:11px;line-height:1.4}
-  body.is-playing .handsfree-controls{padding:7px}
-  body.is-playing #handsfree-status{font-size:11px}
+  body.is-playing .mic-session-controls{padding:8px}
   body.is-playing .feedback{padding:8px;gap:6px;margin-top:8px}
   body.is-playing .feedback p{font-size:11px}
   body.is-playing .block-banner,body.is-playing .master-rule{font-size:11px;padding:6px 8px;margin-bottom:7px}
