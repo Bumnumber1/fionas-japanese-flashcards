@@ -11,6 +11,9 @@ import wave
 from pathlib import Path
 
 
+SETUP_ERRORS = (OSError, RuntimeError, ValueError, wave.Error, subprocess.TimeoutExpired)
+
+
 class NativeAudio:
     def __init__(self, udid):
         self.env = {**os.environ, "IDB_UDID": udid}
@@ -28,36 +31,64 @@ class NativeAudio:
     def prepare(self):
         """Call after booting the simulator and before opening the WebDriver session."""
         try:
-            if shutil.which("say"):
-                voices = self.run(["say", "-v", "?"], 8)
-                for line in voices.splitlines():
-                    match = re.match(r"^(.+?)\s+ja[_-]JP\s", line)
-                    if match:
-                        self.voice = match.group(1).strip()
-                        break
-            if not self.voice and shutil.which("espeak-ng"):
-                if re.search(r"\sja\s", self.run(["espeak-ng", "--voices=ja"], 5)):
-                    self.voice = "espeak-ng/ja"
+            failures = []
+            # Verify an actual Japanese utterance before opening the mic. Querying
+            # the macOS voice catalogue can stall on a freshly booted runner.
+            with tempfile.TemporaryDirectory(prefix="dojo-ipad-voice-probe-") as tmp:
+                wav = Path(tmp, "probe.wav")
+                if shutil.which("espeak-ng"):
+                    try:
+                        self.synthesize("espeak-ng/ja", "あ", wav)
+                        self.voice = "espeak-ng/ja"
+                    except SETUP_ERRORS as error:
+                        failures.append(str(error))
+                if not self.voice and shutil.which("say"):
+                    try:
+                        voices = self.run(["say", "-v", "?"], 15)
+                        match = re.search(r"^(.+?)\s+ja[_-]JP\s", voices, flags=re.MULTILINE)
+                        if match:
+                            name = match.group(1).strip()
+                            self.synthesize(name, "あ", wav)
+                            self.voice = name
+                    except SETUP_ERRORS as error:
+                        failures.append(str(error))
             if not self.voice:
-                raise RuntimeError("No Japanese text-to-speech voice is installed")
+                raise RuntimeError("No usable Japanese voice: " + ("; ".join(failures) or "none installed"))
 
             if shutil.which("SwitchAudioSource") and shutil.which("afplay"):
-                routes = [self.run(["SwitchAudioSource", "-c", "-t", kind], 4).strip()
-                          for kind in ("input", "output")]
+                try:
+                    routes = [self.run(["SwitchAudioSource", "-c", "-t", kind], 8).strip()
+                              for kind in ("input", "output")]
+                except SETUP_ERRORS as error:
+                    failures.append(str(error))
+                    routes = ["", ""]
                 if routes[0] == routes[1] and "blackhole" in routes[0].lower():
                     self.transport = "Core Audio loopback"
                     return {"ok": True, "transport": self.transport, "route": routes[0], "voice": self.voice}
 
             if not shutil.which("idb"):
-                raise RuntimeError("No selected Core Audio loopback or idb command")
+                raise RuntimeError("No selected Core Audio loopback or idb command. " + "; ".join(failures))
             # idb v1.7.8 prepares microphone injection in the app launch environment.
             # Launch before safaridriver attaches. Its injection command reports
             # when a recording process actually claims and consumes the WAV.
             self.run(["idb", "launch", "com.apple.mobilesafari"], 35)
             self.transport = "idb audio inject"
             return {"ok": True, "transport": self.transport, "voice": self.voice}
-        except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+        except SETUP_ERRORS as error:
             return {"ok": False, "reason": str(error)}
+
+    def synthesize(self, voice, kana, wav):
+        if voice == "espeak-ng/ja":
+            self.run(["espeak-ng", "-v", "ja", "-s", "135", "-w", str(wav), kana], 8)
+        else:
+            aiff = wav.with_suffix(".aiff")
+            self.run(["say", "-v", voice, "-r", "140", "-o", str(aiff), kana], 10)
+            self.run(["afconvert", "-f", "WAVE", "-d", "LEI16", str(aiff), str(wav)], 8)
+        with wave.open(str(wav), "rb") as audio:
+            count = audio.getnframes()
+            if audio.getsampwidth() != 2 or count < 1 or not any(audio.readframes(count)):
+                raise RuntimeError("The synthesized sound did not contain 16-bit PCM audio")
+            return round(count / audio.getframerate(), 3)
 
     def inject(self, kana):
         """Return transport evidence only. The caller verifies a fresh game result."""
@@ -68,17 +99,7 @@ class NativeAudio:
         try:
             with tempfile.TemporaryDirectory(prefix="dojo-ipad-speech-") as tmp:
                 wav = Path(tmp, "card.wav")
-                if self.voice == "espeak-ng/ja":
-                    self.run(["espeak-ng", "-v", "ja", "-s", "135", "-w", str(wav), kana], 8)
-                else:
-                    aiff = Path(tmp, "card.aiff")
-                    self.run(["say", "-v", self.voice, "-r", "140", "-o", str(aiff), kana], 10)
-                    self.run(["afconvert", "-f", "WAVE", "-d", "LEI16", str(aiff), str(wav)], 5)
-                with wave.open(str(wav), "rb") as audio:
-                    count = audio.getnframes()
-                    if audio.getsampwidth() != 2 or count < 1 or not any(audio.readframes(count)):
-                        raise RuntimeError("The synthesized sound did not contain 16-bit PCM audio")
-                    seconds = round(count / audio.getframerate(), 3)
+                seconds = self.synthesize(self.voice, kana, wav)
                 command = ["afplay"] if self.transport == "Core Audio loopback" else ["idb", "audio", "inject"]
                 self.run([*command, str(wav)], 48)
             return {"ok": True, "transport": self.transport, "durationSeconds": seconds, "voice": self.voice}

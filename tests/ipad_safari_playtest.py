@@ -1,6 +1,8 @@
 """Exercise the deployed dojo in Mobile Safari on the specified booted iPad Simulator."""
 import json
 import os
+import atexit
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import subprocess
 import time
@@ -24,9 +26,22 @@ def save(label):
     print(label, flush=True)
 
 
+screenshots = []
+
+
 def screenshot(name):
-    subprocess.run(["xcrun", "simctl", "io", UDID, "screenshot", str(OUT / (name + ".png"))],
-                   timeout=20, check=True)
+    proc = subprocess.Popen(["xcrun", "simctl", "io", UDID, "screenshot", str(OUT / (name + ".png"))])
+    screenshots.append(proc)
+
+
+@atexit.register
+def finish_screenshots():
+    deadline = time.monotonic() + 12
+    for proc in screenshots:
+        try:
+            proc.wait(timeout=max(0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            proc.kill()
 
 
 def command(method, path, body=None, timeout=25):
@@ -87,7 +102,6 @@ class Safari:
                  "published dojo controller", 35)
         if "lobbyStartVisible" not in REPORT:
             REPORT["lobbyStartVisible"] = self.visible("#start-button")
-            screenshot("00-lobby")
         self.tap("#start-button")
         wait_for(lambda: self.js("return !document.querySelector('#challenge-panel').hidden"), "first card")
 
@@ -177,11 +191,14 @@ def native_probe(driver, audio):
         native["outcome"] = "microphone start disabled in this simulator"
         return
     try:
-        try:
-            driver.tap("#handsfree-toggle")
-        except (OSError, RuntimeError) as error:
-            native["startCommand"] = str(error)[:260]
-        native["permission"] = audio.allow_prompt()
+        # Safari can hold the WebDriver click until its native consent sheet closes.
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            approval = executor.submit(audio.allow_prompt)
+            try:
+                driver.tap("#handsfree-toggle")
+            except (OSError, RuntimeError) as error:
+                native["startCommand"] = str(error)[:260]
+            native["permission"] = approval.result()
         deadline = time.monotonic() + 19
         while time.monotonic() < deadline:
             state = driver.state()
@@ -192,12 +209,16 @@ def native_probe(driver, audio):
             if not state["on"] or state["capture"] == "on" or state["turns"] > before["turns"]:
                 break
             time.sleep(.5)
-        screenshot("02-native-microphone")
         state = try_native_answers(driver, audio, state)
+        screenshot("02-native-microphone")
         native["outcome"] = "native final observed" if state["turns"] > before["turns"] else (
             "native capture ready, no spoken answer verified" if state["capture"] == "on" else
             "native microphone did not become ready during observation")
-        if state["on"]:
+        if state["on"] and state["capture"] == "on":
+            current = wait_for(lambda: listening_card(driver), "next ready native card", 8)
+            native["appSwitch"] = {}
+            app_switch(driver, lambda: listening_card(driver), current, native["appSwitch"], already_on=True)
+        elif state["on"]:
             driver.tap("#handsfree-toggle")
         if state["turns"] == before["turns"]:
             same_turn(before, driver.state())
@@ -229,10 +250,15 @@ FIXTURE = """
 """
 
 
-def app_switch(driver, ready, before):
-    detail = REPORT["controlled"]["appSwitch"] = {}
-    driver.tap("#handsfree-toggle")
-    active = wait_for(ready, "active controlled session before switching apps")
+def listening_card(driver):
+    state = driver.state()
+    return state if state["on"] and state["phase"] == "question" and state["capture"] == "on" and state["cue"].startswith("Listening") else False
+
+
+def app_switch(driver, ready, before, detail, already_on=False):
+    if not already_on:
+        driver.tap("#handsfree-toggle")
+    active = wait_for(ready, "active session before switching apps")
     driver.js("""
         window.dojoObservedVisibility=[];
         document.addEventListener('visibilitychange',e => {
@@ -258,7 +284,8 @@ def app_switch(driver, ready, before):
         driver.tap("#handsfree-toggle")
         restarted = wait_for(ready, "first tap after app switching")
         same_turn(before, restarted)
-        assert restarted["starts"]==active["starts"]+1, restarted
+        if not already_on:
+            assert restarted["starts"]==active["starts"]+1, restarted
         driver.tap("#handsfree-toggle")
         detail["result"] = "real app switch stopped capture; one tap resumed the same card"
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
@@ -291,7 +318,6 @@ def controlled_game(driver):
     ready = lambda: (lambda s: s if s["on"] and s["capture"] == "on" and s["cue"].startswith("Listening") else False)(driver.state())
     before = wait_for(ready, "first controlled listening cue")
     assert before["starts"] == 1, before
-    screenshot("03-controlled-listening")
     result = REPORT["controlled"]
     result["finals"] = []
     for turn in range(1, 4):
@@ -340,7 +366,8 @@ def controlled_game(driver):
     assert driver.js("return !document.querySelector('#hint-text').hidden")
     same_turn(stopped, driver.state())
     result["hintVisible"] = True
-    app_switch(driver, ready, stopped)
+    result["appSwitch"] = {}
+    app_switch(driver, ready, stopped, result["appSwitch"])
     save("iPad foreground/background observation: " + result["appSwitch"]["result"])
 
 
