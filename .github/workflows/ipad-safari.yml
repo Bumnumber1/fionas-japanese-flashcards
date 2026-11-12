@@ -9,22 +9,37 @@ permissions:
 
 jobs:
   playtest:
-    runs-on: macos-15
-    timeout-minutes: 18
+    runs-on: macos-26
+    timeout-minutes: 22
     env:
       DOJO_URL: https://bumnumber1.github.io/fionas-japanese-flashcards/taekwondo.html
       SAFARIDRIVER_URL: http://127.0.0.1:4444
+      HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Prepare Japanese speech and a simulator audio input
+        continue-on-error: true
+        run: |
+          brew install espeak-ng switchaudio-osx
+          brew install --cask blackhole-2ch
+          if ! SwitchAudioSource -a -t input | grep -Fxq 'BlackHole 2ch'; then
+            sudo killall coreaudiod || true
+            sleep 4
+          fi
+          SwitchAudioSource -t input -s 'BlackHole 2ch'
+          SwitchAudioSource -t output -s 'BlackHole 2ch'
+      - name: Prepare simulator input controls
+        continue-on-error: true
+        run: |
+          brew tap meta/fb
+          brew trust meta/fb
+          brew install meta/fb/idb
       - name: Boot an iPad
         shell: bash
         run: |
           set -eu
-          for app in /Applications/Xcode_26.3.app /Applications/Xcode_26.2.app; do
-            if [ -d "$app" ]; then sudo xcode-select --switch "$app/Contents/Developer"; break; fi
-          done
           xcodebuild -version
           mkdir -p artifacts/ipad-safari
           python3 - <<'PY'
@@ -53,14 +68,13 @@ jobs:
           PY
           udid=$(python3 -c 'import json;print(json.load(open("artifacts/ipad-safari/device.json"))["udid"])')
           xcrun simctl bootstatus "$udid" -b
-          open -g -a "$(xcode-select -p)/Applications/Simulator.app"
+          open -g -a "$(xcode-select -p)/Applications/Simulator.app" --args -CurrentDeviceUDID "$udid"
       - name: Open the published game in Mobile Safari
         run: |
           xcrun simctl openurl "$IPAD_UDID" "$DOJO_URL"
           sleep 10
           xcrun simctl io "$IPAD_UDID" screenshot artifacts/ipad-safari/launch.png
       - name: Exercise the reading controls
-        if: ${{ hashFiles('tests/ipad_safari_playtest.py') != '' }}
         shell: bash
         run: |
           set -eu
