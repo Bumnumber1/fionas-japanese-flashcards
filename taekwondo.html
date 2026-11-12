@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Fiona’s Dojo">
   <title>Fiona's Dojo · Japanese Taekwondo Adventure</title>
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="taekwondo.css?v=practice-20261112-1">
+  <link rel="stylesheet" href="taekwondo.css?v=practice-20261112-2">
   <script>
     // Install updates independently of game startup, including recovery from an
     // older cached controller paired with a newly fetched page.
@@ -28,13 +28,13 @@
   <script defer src="year1-review-data.js"></script>
   <script defer src="garden-material.js"></script>
   <script defer src="kanjivg_data.js"></script>
-  <script defer src="taekwondo-engine.js?v=practice-20261112-1"></script>
-  <script defer src="taekwondo-writing.js?v=practice-20261112-1"></script>
-  <script defer src="taekwondo-diagnostics.js?v=practice-20261112-1"></script>
-  <script defer src="taekwondo-safari-stream.js?v=practice-20261112-1"></script>
-  <script defer src="taekwondo-voice.js?v=practice-20261112-1"></script>
-  <script defer src="taekwondo-scene.js?v=practice-20261112-1"></script>
-  <script defer src="taekwondo.js?v=practice-20261112-1"></script>
+  <script defer src="taekwondo-engine.js?v=practice-20261112-2"></script>
+  <script defer src="taekwondo-writing.js?v=practice-20261112-2"></script>
+  <script defer src="taekwondo-diagnostics.js?v=practice-20261112-2"></script>
+  <script defer src="taekwondo-safari-stream.js?v=practice-20261112-2"></script>
+  <script defer src="taekwondo-voice.js?v=practice-20261112-2"></script>
+  <script defer src="taekwondo-scene.js?v=practice-20261112-2"></script>
+  <script defer src="taekwondo.js?v=practice-20261112-2"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -119,7 +119,7 @@
 
   <div id="tablet-panel-backdrop" class="tablet-panel-backdrop" aria-hidden="true" hidden></div>
   <dialog id="reset-game-dialog" aria-labelledby="reset-game-heading" aria-describedby="reset-game-copy"><p class="eyebrow">A FRESH START</p><h2 id="reset-game-heading">Start over from white belt?</h2><p id="reset-game-copy">This clears Fiona’s Dojo belts, wins and losses, the current fight and question, and all ice cream rewards on this device. Other Japanese lessons and your Sound and Calm motion preferences stay saved.</p><div class="reset-dialog-actions"><button id="cancel-reset-game" type="button" autofocus>Cancel</button><button id="confirm-reset-game" class="danger-button" type="button">Reset game and start over</button></div></dialog>
-  <dialog id="mic-details-dialog" aria-labelledby="mic-details-heading"><button class="dialog-close" data-close type="button" aria-label="Close microphone details">×</button><p class="eyebrow">MICROPHONE HELP</p><h2 id="mic-details-heading">Send your microphone report</h2><p>Your latest report is saved on this device. Send it or download/share its file without copying text.</p><p id="mic-build" class="mic-build">Microphone build · 2026-11-12 mic-2</p><p id="mic-report-retained" role="status">The latest microphone report stays on this device after reload.</p><div class="mic-dialog-actions"><button id="send-mic-report" class="primary" type="button">Send report</button><button id="download-mic-report" type="button">Download file</button><button id="share-mic-report" type="button">Share report</button><button id="copy-mic-details" type="button">Copy details</button><button class="text-button" data-close type="button">Back to fight</button></div><p id="mic-copy-status" role="status">These details stay on this device unless you choose to copy and share them.</p><p>Send report uses the private report page. Download file and Share report work without copying text. Reports include browser version and microphone timing, with no audio, transcripts, or answers.</p><label class="mic-report-label" for="mic-diagnostics">Local microphone details · no audio or transcripts</label><textarea id="mic-diagnostics" class="mic-diagnostics" rows="9" readonly spellcheck="false"></textarea><p>Allow microphone access for this site and enable Siri in iPad Settings. Use a normal Safari tab if speech is unavailable from a Home Screen shortcut. If the microphone stays stuck, Reconnect mic or Reload saved fight keeps your assigned question, health, belts, and treats.</p></dialog>
+  <dialog id="mic-details-dialog" aria-labelledby="mic-details-heading"><button class="dialog-close" data-close type="button" aria-label="Close microphone details">×</button><p class="eyebrow">MICROPHONE HELP</p><h2 id="mic-details-heading">Send your microphone report</h2><p>Your latest report is saved on this device. Send it or download/share its file without copying text.</p><p id="mic-build" class="mic-build">Microphone build · 2026-11-12 mic-3</p><p id="mic-report-retained" role="status">The latest microphone report stays on this device after reload.</p><div class="mic-dialog-actions"><button id="send-mic-report" class="primary" type="button">Send report</button><button id="download-mic-report" type="button">Download file</button><button id="share-mic-report" type="button">Share report</button><button id="copy-mic-details" type="button">Copy details</button><button class="text-button" data-close type="button">Back to fight</button></div><p id="mic-copy-status" role="status">These details stay on this device unless you choose to copy and share them.</p><p>Send report uses the private report page. Download file and Share report work without copying text. Reports include browser version and microphone timing, with no audio, transcripts, or answers.</p><label class="mic-report-label" for="mic-diagnostics">Local microphone details · no audio or transcripts</label><textarea id="mic-diagnostics" class="mic-diagnostics" rows="9" readonly spellcheck="false"></textarea><p>Allow microphone access for this site and enable Siri in iPad Settings. Use a normal Safari tab if speech is unavailable from a Home Screen shortcut. If the microphone stays stuck, Reconnect mic or Reload saved fight keeps your assigned question, health, belts, and treats.</p></dialog>
   <dialog id="help-dialog" aria-labelledby="help-heading"><button class="dialog-close" data-close type="button" aria-label="Close instructions">×</button><p class="eyebrow">WELCOME TO THE DOJO</p><h2 id="help-heading">How to play</h2>
     <ol class="help-list quick-help">
       <li><strong>Start your match.</strong> Fiona already has a kick ready.</li>

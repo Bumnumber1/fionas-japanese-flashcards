@@ -375,7 +375,7 @@
         return /AppleWebKit/.test(ua) && (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(ua)));
     }
 
-    const VOICE_BUILD = '2026-11-12 mic-2';
+    const VOICE_BUILD = '2026-11-12 mic-3';
 
     function judgeAlternatives(target, alternatives, readingMs) {
         alternatives = [...new Set(alternatives.filter(text => normalizeTranscript(text)))];
@@ -427,6 +427,7 @@
             this.launchTimer = null;
             this.readyAfter = 0;
             this.stream = null;
+            this.hasRequestedSafariMic = false;
             this.streamTarget = null;
             this.pendingStreamArm = false;
             this.events = [];
@@ -630,13 +631,14 @@
                 try {
                     this.stream = new global.DojoSafariStream({ Recognition: global.SpeechRecognition || global.webkitSpeechRecognition,
                         onEvent: (stage, details) => {
+                            if (stage === 'request') this.hasRequestedSafariMic = true;
                             this.record('live-' + stage, details);
                             if (['released', 'cancel'].includes(stage) && !this.streamTarget && !this.session) this.emitState('idle');
                         },
                         onState: state => {
                             const entry = this.streamTarget;
                             if (entry && entry.epoch === state.epoch && this.generation === entry.epoch) {
-                                this.emitState(state.status, state.transcript, { captureReady: Boolean(state.captureReady), speechDetected: Boolean(state.speechDetected), live: true });
+                                this.emitState(state.status, state.transcript, { captureReady: Boolean(state.captureReady), awaitingPermission: state.awaitingPermission, speechDetected: Boolean(state.speechDetected), live: true });
                             }
                         },
                         onResult: value => {
@@ -682,7 +684,7 @@
             }
             const entry = this.streamTarget;
             this.pendingStreamArm = false;
-            return this.stream.arm(entry.target, entry.epoch, entry.fromTap);
+            return this.stream.arm(entry.target, entry.epoch, entry.fromTap, !this.hasRequestedSafariMic);
         }
 
         failStream(code) {

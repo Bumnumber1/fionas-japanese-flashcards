@@ -43,6 +43,7 @@
   let voice = null;
   let listening = false;
   let voiceStatus = 'idle';
+  let awaitingMicPermission = false;
   let voiceLive = false;
   let micNotice = '', micFault = null;
   let micReport = null;
@@ -503,7 +504,7 @@
     $('stop-listening').hidden = !listening || Boolean(voice && voice.safariMode && voiceLive);
     let cue = micNotice || 'Tap once for all the cards. Choose Allow if asked.';
     if (!voice || !voice.supported) cue = 'Ask a grown-up to open the game in a browser with Japanese speech recognition.';
-    else if (voiceStatus === 'starting') cue = 'Getting the microphone ready…';
+    else if (voiceStatus === 'starting') cue = awaitingMicPermission ? 'Getting the microphone ready. Tap Allow if your device asks.' : 'Getting the microphone ready…';
     else if (voiceStatus === 'listening') cue = 'Listening. Say the card out loud!';
     else if (voiceStatus === 'processing') cue = 'Checking your answer…';
     else if (!micNotice && phase === 'answered') cue = handsFree ? 'Get ready for the next card.' : 'Tap Next when you’re ready.';
@@ -821,6 +822,7 @@
     voice = new DojoVoice({
       onState: state => {
         voiceStatus = state.status === 'listening' && state.captureReady === false ? 'starting' : state.status;
+        awaitingMicPermission = state.awaitingPermission === true;
         if (typeof state.live === 'boolean') voiceLive = state.live;
         else if (!voice || !voice.captureActive) voiceLive = false;
         listening = ['starting', 'listening', 'processing'].includes(voiceStatus);

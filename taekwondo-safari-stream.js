@@ -8,6 +8,8 @@
     const transcriptKey = value => String(value || '').normalize('NFKC').trim().replace(/\s+/gu, ' ');
     const now = () => global.performance && typeof global.performance.now === 'function' ? global.performance.now() : Date.now();
     const RELEASE_TIMEOUT_MS = 4000;
+    const FIRST_PERMISSION_TIMEOUT_MS = 90000;
+    const AUDIO_START_TIMEOUT_MS = 15000;
 
     class DojoSafariStream {
         constructor(options) {
@@ -55,6 +57,7 @@
             if (this.destroyed || typeof this.onState !== 'function') return;
             const value = { status, epoch: context ? context.epoch : null,
                 captureReady: this.captureReady,
+                awaitingPermission: Boolean(status === 'starting' && this.capture && this.capture.awaitingPermission),
                 speechDetected: Boolean(context && context.speechDetected) };
             if (context) value.target = context.target;
             if (transcript !== undefined) value.transcript = transcript;
@@ -83,7 +86,7 @@
             if (context) this.event('disarm');
         }
 
-        arm(target, epoch, fromTap = false) {
+        arm(target, epoch, fromTap = false, firstRequest = false) {
             if (this.destroyed || !target || typeof this.Recognition !== 'function') return false;
             this.disarm();
             const context = { target: Object.assign({}, target, {
@@ -97,7 +100,7 @@
             const capture = this.capture;
             // A new user gesture may open an already-released native capture
             // immediately. Automatic attempts retain the ordinary release gap.
-            if (!capture) return fromTap === true ? this.launch(context) : this.queueLaunch(context);
+            if (!capture) return fromTap === true ? this.launch(context, firstRequest) : this.queueLaunch(context);
             if (!capture.nativeRequested) { this.release(capture, false); return this.launch(context); }
             if (capture.cancelled || capture.failed || capture.nativeStopRequested || capture.audioEnded || capture.retiring || capture.unownedSpeech) {
                 this.state('starting', context);
@@ -159,6 +162,7 @@
         ready(capture, source) {
             if (!this.current(capture)) return;
             this.captureReady = !capture.audioEnded && !capture.retiring;
+            capture.awaitingPermission = false;
             global.clearTimeout(capture.startTimer);
             if (source !== 'audio') capture.speechDetected = true;
             const context = this.armed;
@@ -216,14 +220,21 @@
             this.fail(capture, code, nativeMessage);
         }
 
-        launch(context) {
+        watchStartup(capture, timeout) {
+            global.clearTimeout(capture.startTimer);
+            capture.startTimer = global.setTimeout(() => {
+                if (this.current(capture)) this.fail(capture, 'recognition-timeout');
+            }, timeout);
+        }
+
+        launch(context, awaitingPermission = false) {
             if (this.destroyed || this.armed !== context || this.capture) return false;
             let rec;
             try { rec = new this.Recognition(); }
             catch (_) { this.fail(null, 'recognition-error', '', context); return false; }
             const capture = { rec, id: ++this.serial, nativeRequested: false, nativeStarted: false, speechDetected: false,
                 nativeStopRequested: false, finalAfterStop: false, acceptedFinal: false, audioEnded: false, cancelled: false, failed: false,
-                retiring: false, unownedSpeech: false, requestedAt: now(), finalHistory: [], previousLength: 0 };
+                retiring: false, unownedSpeech: false, awaitingPermission, requestedAt: now(), finalHistory: [], previousLength: 0 };
             this.capture = capture;
             this.captureReady = false;
             this.highestSeen = -1;
@@ -233,6 +244,12 @@
             rec.onstart = () => {
                 if (!this.current(capture)) return;
                 capture.nativeStarted = true;
+                if (capture.awaitingPermission) {
+                    // Safari's first permission sheets can stay open until a
+                    // child or parent responds. Native start ends that wait.
+                    capture.awaitingPermission = false;
+                    if (!capture.audioEnded && !capture.retiring) this.watchStartup(capture, AUDIO_START_TIMEOUT_MS);
+                }
                 this.event('start');
                 const owned = this.armed && this.armed.captureId === capture.id && !capture.retiring;
                 this.state(owned && this.armed.waitingFinal ? 'processing' : owned && this.captureReady ? 'listening' : 'starting', this.armed);
@@ -272,9 +289,7 @@
             this.counts.starts++;
             this.event('request'); this.state('starting', context);
             if (!this.current(capture) || this.armed !== context) return false;
-            capture.startTimer = global.setTimeout(() => {
-                if (this.current(capture)) this.fail(capture, 'recognition-timeout');
-            }, 15000);
+            this.watchStartup(capture, awaitingPermission ? FIRST_PERMISSION_TIMEOUT_MS : AUDIO_START_TIMEOUT_MS);
             capture.nativeRequested = true;
             try { rec.start(); return true; }
             catch (error) {
@@ -387,6 +402,7 @@
         watchRelease(capture) {
             if (this.capture !== capture) return;
             capture.retiring = true; this.captureReady = false;
+            capture.awaitingPermission = false;
             if (capture.releaseStartedAt === undefined) {
                 capture.releaseStartedAt = now();
                 capture.releaseWallStartedAt = Date.now();

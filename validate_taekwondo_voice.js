@@ -934,6 +934,64 @@ test('Safari rejects rewritten immutable final history instead of attaching it t
     env.voice.destroy();
 });
 
+test('Safari waits for first-tap permission and starts the reading clock when audio opens', () => {
+    const env = safariEnvironment();
+    env.voice.start(kanaQuestion, { keepAlive: true, fromTap: true });
+    const rec = env.instances[0];
+    env.tick(45000);
+    assert.equal(env.states.at(-1).awaitingPermission, true);
+    assert.equal(rec.aborts, 0); assert.equal(env.errors.length, 0);
+    rec.onstart();
+    assert.equal(env.states.at(-1).awaitingPermission, false);
+    assert.equal(env.states.at(-1).status, 'starting');
+    env.tick(14999); rec.onaudiostart(); env.tick(125);
+    rec.onresult(cumulative([['し', true]]));
+    assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
+    assert.equal(env.results[0].readingMs, 125); assert.equal(env.errors.length, 0);
+    env.voice.destroy(); assert.equal(env.timers.size, 0);
+});
+
+test('Safari bounds first-tap permission and audio startup independently', () => {
+    for (const phase of ['permission', 'audio', 'automatic']) {
+        const env = safariEnvironment();
+        env.voice.start(kanaQuestion, { keepAlive: true, fromTap: phase !== 'automatic' });
+        const rec = env.instances[0], lateAudio = rec.onaudiostart, lateResult = rec.onresult;
+        if (phase === 'audio') {
+            env.tick(85000); rec.onstart(); env.tick(10000); rec.onstart();
+            env.tick(4999);
+        } else env.tick(phase === 'permission' ? 89999 : 14999);
+        assert.equal(env.errors.length, 0, phase);
+        env.tick(1);
+        assert.equal(env.errors.length, 1); assert.equal(env.errors[0].code, 'recognition-timeout');
+        assert.equal(rec.aborts, 1);
+        lateAudio(); lateResult(cumulative([['し', true]]));
+        assert.equal(env.results.length, 0); assert.equal(env.states.at(-1).status, 'idle');
+        env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+});
+
+test('Cancelling or denying first-tap permission drops stale callbacks and allows a fresh tap', () => {
+    for (const action of ['cancel', 'deny']) {
+        const env = safariEnvironment({ releaseOnAbort: true });
+        env.voice.start(kanaQuestion, { keepAlive: true, fromTap: true });
+        const rec = env.instances[0], staleStart = rec.onstart, staleAudio = rec.onaudiostart, staleResult = rec.onresult;
+        env.tick(30000);
+        if (action === 'cancel') env.voice.cancel();
+        else rec.onerror({ error: 'not-allowed' });
+        assert.equal(env.errors.length, action === 'deny' ? 1 : 0);
+        if (action === 'deny') assert.equal(env.errors[0].code, 'not-allowed');
+        assert.equal(env.states.at(-1).status, 'idle');
+        rec.end(); env.voice.reset();
+        env.voice.start(kanaQuestion, { keepAlive: true, fromTap: true });
+        const fresh = env.instances[1];
+        staleStart(); staleAudio(); staleResult(cumulative([['し', true]]));
+        assert.equal(env.results.length, 0); assert.equal(env.states.at(-1).awaitingPermission, false);
+        fresh.onstart(); fresh.onaudiostart(); fresh.onresult(cumulative([['し', true]]));
+        assert.equal(env.results.length, 1); assert.equal(env.results[0].correct, true);
+        env.voice.destroy(); assert.equal(env.timers.size, 0);
+    }
+});
+
 test('Safari persistent reading clocks start at audio readiness or the new question arm', () => {
     const env = safariEnvironment(); env.voice.start(kanaQuestion, { keepAlive: true });
     const rec = env.instances[0]; env.tick(50); rec.onstart(); env.tick(2400); rec.onaudiostart();
@@ -998,7 +1056,7 @@ test('Microphone diagnostics retain bounded lifecycle metadata without answers o
     const diagnostics = env.voice.getDiagnostics(), encoded = JSON.stringify(diagnostics);
     assert.ok(diagnostics && typeof diagnostics === 'object');
     assert.equal(encoded.includes('猫'), false); assert.equal(encoded.includes('ねこ'), false);
-    assert.match(encoded, /2026-11-12\s+mic-2/);
+    assert.match(encoded, /2026-11-12\s+mic-3/);
     assert.ok(encoded.length < 30000, 'A bounded event history cannot grow into an audio log');
     env.voice.destroy();
 });
